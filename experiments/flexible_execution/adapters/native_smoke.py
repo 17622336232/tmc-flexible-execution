@@ -110,14 +110,20 @@ def main(argv=None):
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--ros-port", default=11672, type=int)
     parser.add_argument("--gazebo-port", default=11673, type=int)
+    parser.add_argument("--onboard-evidence-only", action="store_true")
     args = parser.parse_args(argv)
     os.environ.setdefault("ROS_HOME", str(args.output.resolve() / "ros_home"))
-    return legacy_run([
+    code = legacy_run([
         "--backend", "cpu", "--headless", "--no-rviz", "--sensor-smoke",
         "--family", "cracks", "--policy", "clean", "--source-profile", "single",
         "--equipment-count", "2", "--seed", "20261124", "--output", str(args.output),
         "--ros-port", str(args.ros_port), "--gazebo-port", str(args.gazebo_port),
-    ], sensor_exercise=probe)
+    ], sensor_exercise=probe, archive_external_rgb=not args.onboard_evidence_only)
+    if args.onboard_evidence_only:
+        from ..storage import archive_sensor_logs
+
+        archive_sensor_logs(args.output.resolve())
+    return code
 
 
 if __name__ == "__main__":

@@ -164,6 +164,8 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
         stage_sources += (value_schema,)
     if any(case.get("study_task_sha256") for case in catalog.get("cases", ())):
         stage_sources += ("experiments/flexible_execution/custom_evaluation.py",)
+    if any(case.get("archive_external_rgb") is False for case in catalog.get("cases", ())):
+        stage_sources += ("experiments/flexible_execution/storage.py",)
     if any(case.get("layout_seed") is not None for case in catalog.get("cases", ())):
         stage_sources += ("experiments/task_attack_operator/scene.py", "experiments/task_attack_recessed/scene.py",
                           "experiments/task_attack_value/scene.py", "experiments/flexible_execution/development_inputs.py")
@@ -464,6 +466,8 @@ def _verify_terminal(job):
 def verified_cohort(name, directory, role, count):
     from .pilot_schedule import status
 
+    if not (directory / "pilot_manifest.json").is_file():
+        raise ValueError(f"{name} has 0/{count} recorded cases and no registered catalog")
     checkpoint = status(directory)
     if checkpoint["role"] != role or checkpoint["planned_pairs"] != count or checkpoint["recorded_pairs"] != count:
         raise ValueError(f"{name} has {checkpoint['recorded_pairs']}/{count} recorded cases")
@@ -511,6 +515,8 @@ def _gazebo_command(job, directory, catalog, auth_project, episode, remaining, l
                "--episode-timeout", str(remaining), "--planned-episode-timeout", str(case["episode_timeout_seconds"]),
                "--max-request-attempts", str(REQUEST_LIMIT), "--request-ledger", str(ledger), "--ros-port", str(ports[0]),
                "--gazebo-port", str(ports[1])]
+    if case.get("archive_external_rgb") is False:
+        command.append("--onboard-evidence-only")
     if case.get("layout_seed") is not None:
         command.extend(("--layout-seed", str(case["layout_seed"])))
     if case.get("scene_fingerprint"):
@@ -580,7 +586,9 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
         if (not freeze or _hash(freeze) != catalog["frozen_evaluation_sha256"]
                 or any(freeze[key] != protocol[key] for key in ("model", "reasoning_effort", "request_limit", "environment_sha256"))
                 or freeze["ranker_bindings"] != catalog["ranker_bindings"]
-                or freeze["cost_config_sha256"] != catalog["cost_config_sha256"]):
+                or freeze["cost_config_sha256"] != catalog["cost_config_sha256"]
+                or any(case.get("archive_external_rgb", True) != freeze.get("archive_external_rgb", True)
+                       for case in catalog["cases"])):
             raise ValueError("The custom test inputs or execution code differ from the frozen evaluation")
     lock = directory / "run_protocol.json"
     existing = _read(lock)

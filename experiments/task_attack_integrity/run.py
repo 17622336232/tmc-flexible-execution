@@ -33,7 +33,7 @@ def _stop(process):
 
 
 def main(argv=None, *, sensor_exercise=None, agent_runner=run_agent, clean_study_task=None,
-         merge_report_fragments=False):
+         merge_report_fragments=False, archive_external_rgb=True):
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--policy',choices=('clean','belief','belief_blind','belief_known_task','direct_effect','redvla_external','randomized','uao_spsa','iccv_uada_spsa','iccv_upa_spsa'),default='clean')
     p.add_argument('--family',choices=FAMILIES,default='cracks')
@@ -61,6 +61,8 @@ def main(argv=None, *, sensor_exercise=None, agent_runner=run_agent, clean_study
     p.add_argument('--public-perception',type=Path,help='Shared, pre-task static RGB interpretation; never contains a current task or robot state')
     p.add_argument('--study-stage',choices=('development','heldout'),default='development')
     a=p.parse_args(argv)
+    if not archive_external_rgb and a.policy != 'clean':
+        p.error('External RGB archiving can only be disabled in clean evaluation')
     if (a.policy=='randomized')!=(a.calibration_seed is not None):p.error('A separate randomization seed is required only for randomized proxy collection')
     if a.episode_timeout<=0 or a.observer_calls<1:p.error('Positive experimental budgets required')
     if a.observer_calls!=1:p.error('The realtime paired comparison uses exactly one observer request')
@@ -206,7 +208,7 @@ def main(argv=None, *, sensor_exercise=None, agent_runner=run_agent, clean_study
                 env['OPENBLAS_NUM_THREADS']='1';env['OMP_NUM_THREADS']='1'
                 renderer=subprocess.Popen([sys.executable,'-m','experiments.task_attack_sensor_proxy.sensor_backend','--world',scene['world'],'--diagnostics',str(root/'private/sensor_timing.jsonl')],
                     env=env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
-        backend=GazeboBackend(root,scene,event)
+        backend=GazeboBackend(root,scene,event,archive_external_rgb=archive_external_rgb)
         backend.wait_ready()
         if not a.attach:owned_ros_core=capture_ros_core(root)
         if a.policy!='clean' and not a.sensor_smoke:

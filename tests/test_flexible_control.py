@@ -1,3 +1,4 @@
+import gzip
 import json
 from os.path import relpath
 import tempfile
@@ -9,10 +10,33 @@ from unittest.mock import patch
 from experiments.flexible_execution import cli, control
 from experiments.flexible_execution.pilot_report import _attempt_costs
 from experiments.flexible_execution.request_budget import RequestBudget
+from experiments.flexible_execution.storage import archive_sensor_logs
 from experiments.task_attack.runtime import write_json
 
 
 class SupervisorTest(unittest.TestCase):
+    def test_diagnostics_archive_is_lossless_and_can_resume_with_another_log(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            diagnostic = root / "private/sensor_timing.jsonl"
+            diagnostic.parent.mkdir()
+            raw = b'{"timing":0.05}\n'
+            diagnostic.write_bytes(raw)
+            evidence = root / "private/model_calls.jsonl"
+            evidence.write_bytes(b"model evidence")
+            archive_sensor_logs(root)
+            self.assertFalse(diagnostic.exists())
+            self.assertEqual(gzip.decompress(diagnostic.with_suffix(".jsonl.gz").read_bytes()), raw)
+            self.assertEqual(evidence.read_bytes(), b"model evidence")
+
+            roslog = root / "private/roslog/worker.log"
+            roslog.parent.mkdir()
+            roslog.write_bytes(b"native simulation log")
+            archive_sensor_logs(root)
+            manifest = json.loads((root / "storage_archive.json").read_text())
+            self.assertEqual(len(manifest["diagnostic_logs"]), 2)
+            self.assertEqual(gzip.decompress(roslog.with_suffix(".log.gz").read_bytes()), b"native simulation log")
+
     def test_truncated_timing_log_does_not_prevent_estimating_the_next_batch(self):
         with tempfile.TemporaryDirectory() as temp:
             control_dir = Path(temp)

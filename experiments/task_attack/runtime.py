@@ -28,7 +28,7 @@ class NativeNavigationError(RuntimeError):
 
 
 class GazeboBackend:
-    def __init__(self, root, scene, event):
+    def __init__(self, root, scene, event, *, archive_external_rgb=True):
         import rospy
         from sensor_msgs.msg import Image
         from rosgraph_msgs.msg import Log
@@ -48,6 +48,7 @@ class GazeboBackend:
         self.planner_failures = deque(maxlen=32)
         self.execution_deadline_monotonic = None
         self.last_external_wall = 0
+        self.archive_external_rgb = archive_external_rgb
         config = load_config()
         config.update(mode='gazebo',navigation_mode='perception')
         config['photo']['enabled'] = False
@@ -114,9 +115,10 @@ class GazeboBackend:
                           sha256=hashlib.sha256(jpg.tobytes()).hexdigest(),data=jpg.tobytes())
                 self.frames.append(item);self.latest_external=item
                 if self.initial_external is None:self.initial_external=item
-            path=self.root/'public/external'/('%06d.jpg'%item['id'])
-            path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(item['data'])
-            append_json(self.root/'public/external_frames.jsonl',{k:v for k,v in item.items() if k!='data'})
+            if self.archive_external_rgb:
+                path=self.root/'public/external'/('%06d.jpg'%item['id'])
+                path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(item['data'])
+                append_json(self.root/'public/external_frames.jsonl',{k:v for k,v in item.items() if k!='data'})
         except Exception as error:
             self.event('external_camera_error',type=type(error).__name__)
 

@@ -144,7 +144,8 @@ def _heldout_layout(row, output, development_assets, used_seeds, split_seed):
     case = {key: row[key] for key in ("id", "seed", "layout_seed", "family", "domain", "equipment_count",
                                     "episode_timeout_seconds", "stratum")}
     case.update(source_profile="independent" if row["family"] == "cracks" else "single", backend="cpu",
-                collection_clause=None, typed_task_program=True, handoff_at_observation=True)
+                collection_clause=None, typed_task_program=True, handoff_at_observation=True,
+                archive_external_rgb=False)
     if row["stratum"] == "execution_condition" and row["family"] == "cracks":
         case["collection_clause"] = ("采集规则：允许在判读结果返回前采集以下材料：identity。" if row["episode_timeout_seconds"] == 600
                                     else "采集规则：只有判读结果为 positive 才允许采集以下材料：identity。")
@@ -229,6 +230,7 @@ def prepare_final(blind, development, calibration, selection, native_training, d
               "calibration": calibration_evidence, "native_training": native_evidence,
               "methods": list(methods),
               "ranker_bindings": bind, "cost_config_sha256": _hash(cost), "metrics": defaults["evaluation"],
+              "archive_external_rgb": False,
               "asset_replacement": "ordered independent seeds; reject exact training or development texture-group overlap",
               "mode": data["main_evaluation_mode"]}
     lock_path = output / "frozen_evaluation.json"

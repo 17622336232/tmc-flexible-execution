@@ -1,8 +1,10 @@
 """Derive initial live scheduling costs from recorded development episodes."""
 
 from dataclasses import asdict
+from hashlib import sha256
 import json
-from math import dist
+from itertools import combinations
+from math import ceil, dist, isfinite
 from pathlib import Path
 from statistics import median
 
@@ -46,12 +48,61 @@ def calibrate(warmup, completed):
     return {"costs": asdict(cost), "samples": samples, "purpose": "SMALL_DEVELOPMENT_CALIBRATION"}
 
 
+def _camera_motion_samples(robot, events):
+    prior = active = finished = None
+    moves = {"move", "approach", "capture_view", "capture_initial_judgment_view",
+             "verified_common_handoff", "safe_recovery_return"}
+    samples = []
+    for event in events:
+        name, at, step = event["event"], event["monotonic_seconds"], event["step"]
+        if name == "action_started":
+            active = (step, at, prior) if event.get("action") in moves else None
+            prior = finished = None
+        elif name == "action_finished":
+            if active and active[0] == step and active[2] and event["ok"]:
+                finished = (step, at - active[1], active[2])
+            active = None
+        elif name == "observation_finished" and event["ok"]:
+            image_id = event.get("image_id") or f"probe_{step:04d}"
+            source = robot / (image_id + ".json")
+            meta = read_json(source) if source.is_file() else {}
+            image = source.with_suffix(".jpg")
+            position = meta.get("position", {})
+            point = tuple(position.get(axis) for axis in ("x", "y", "z"))
+            if (meta.get("image_id") != image_id or not image.is_file()
+                    or sha256(image.read_bytes()).hexdigest() != meta.get("sha256")
+                    or any(not isinstance(v, (int, float)) or not isfinite(v) for v in point)):
+                prior = finished = None
+                continue
+            if finished and finished[0] <= step and finished[1] > 0:
+                origin = finished[2]
+                meters = dist(origin["point"], point)
+                if meters >= 0.1:
+                    samples.append({"meters": meters, "seconds": finished[1], "action_step": finished[0],
+                                    "from_frame": origin["frame"], "to_frame": image_id})
+            prior, finished = {"point": point, "frame": image_id}, None
+    return samples
+
+
+def _motion_fit(samples):
+    data = sorted((row["meters"], row["seconds"]) for row in samples)
+    if len(data) < 8 or data[-1][0] - data[0][0] < 1.0:
+        return None
+    slopes = [(second_time - first_time) / (second_length - first_length)
+              for (first_length, first_time), (second_length, second_time) in combinations(data, 2)
+              if second_length - first_length >= 0.5]
+    slope = median(slopes)
+    start = median(seconds - meters * slope for meters, seconds in data)
+    return (start, slope) if start > 0 and slope > 0 else None
+
+
 def calibrate_visual(directory, previous):
     """Fit live timing estimates only from the matched calibration cohort."""
     manifest = read_json(directory / "pilot_manifest.json")
     if manifest["role"] != "VISUAL_METHOD_CALIBRATION":
         raise ValueError("Live cost fitting requires the designated calibration split")
-    samples = {"observed_runs": [], "completed_runs": [], "frozen_seconds": [], "photo_seconds": [], "report_seconds": []}
+    samples = {"observed_runs": [], "completed_runs": [], "frozen_seconds": [], "censored_query_seconds": [],
+               "photo_seconds": [], "report_seconds": [], "measured_motion": []}
     for case in manifest["cases"]:
         for method in case["order"]:
             job = read_json(directory / case["id"] / method / "job.json")
@@ -64,14 +115,20 @@ def calibrate_visual(directory, previous):
             completed = job["state"] == "FINISHED_VALID"
             with trace.open(encoding="utf8") as handle:
                 events = [json.loads(line) for line in handle]
+            samples["measured_motion"].extend({**sample, "job": job["id"]} for sample in
+                                               _camera_motion_samples(trace.parent, events))
             start = {}
             for event in events:
                 name, at = event["event"], event["monotonic_seconds"]
                 key = event["step"]
                 if name == "model_request_started" and event.get("purpose") == "judge_frozen_photo":
                     start[("model", key)] = at
-                elif name == "model_request_finished" and event.get("ok") and ("model", key) in start:
-                    samples["frozen_seconds"].append(at - start[("model", key)])
+                elif name == "model_request_finished" and event.get("purpose") == "judge_frozen_photo":
+                    began = start.pop(("model", key), None)
+                    if began is not None and event.get("ok"):
+                        samples["frozen_seconds"].append(at - began)
+                    elif began is not None and event.get("error_type") in ("ModelDeadlineExceeded", "TimeoutError"):
+                        samples["censored_query_seconds"].append(at - began)
                 elif name == "observation_started":
                     start[("photo", key)] = at
                 elif name == "observation_finished" and event.get("ok") and ("photo", key) in start:
@@ -85,17 +142,26 @@ def calibrate_visual(directory, previous):
                 samples["completed_runs"].append(job["id"])
 
     def empirical(values, fraction):
-        return sorted(values)[int((len(values) - 1) * fraction)]
+        return sorted(values)[ceil(len(values) * fraction) - 1]
 
     costs = dict(previous["costs"])
     if samples["frozen_seconds"]:
         costs["frozen_query_seconds"] = median(samples["frozen_seconds"])
-        costs["frozen_query_ceiling_seconds"] = max(costs["frozen_query_seconds"], empirical(samples["frozen_seconds"], .95))
+        costs["frozen_query_ceiling_seconds"] = max(costs["frozen_query_seconds"],
+                                                   empirical(samples["frozen_seconds"], .95))
+    if samples["censored_query_seconds"]:
+        costs["frozen_query_ceiling_seconds"] = max(costs["frozen_query_ceiling_seconds"],
+            previous["costs"]["frozen_query_ceiling_seconds"], max(samples["censored_query_seconds"]))
     if samples["photo_seconds"]:
         costs["observation_seconds"] = empirical(samples["photo_seconds"], .9)
     if samples["report_seconds"]:
         costs["remaining_controller_seconds"] = empirical(samples["report_seconds"], .75)
-    samples["inherited_motion_calibration"] = previous["costs"]["calibration_id"]
+    motion = _motion_fit(samples["measured_motion"])
+    if motion is not None:
+        costs["move_start_seconds"], costs["move_seconds_per_meter"] = motion
+        samples["motion_fit"] = "median_pairwise_slopes_and_median_intercept"
+    else:
+        samples["inherited_motion_calibration"] = previous["costs"]["calibration_id"]
     costs["calibration_id"] = _hash(samples)
     Costs(**costs)
     return {"costs": costs, "samples": samples, "purpose": "VISUAL_CALIBRATION_ONLY"}

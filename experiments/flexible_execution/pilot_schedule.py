@@ -154,6 +154,8 @@ def prepare_visual(directory, inputs, calibration, split, *, rankers=None, selec
         case.update(group_id=row["base_group_id"], scene_fingerprint=scene_fingerprint(row),
                     episode_timeout_seconds=480, collection_rule=row["collection_clause"],
                     handoff_at_observation=True, order=Random(_hash([row["id"], split])).sample(methods, len(methods)))
+        if selection_plan:
+            case["archive_external_rgb"] = False
         cases.append(case)
     if len(cases) != 48 or inputs["split_roles_share_exact_assets"]:
         raise ValueError("The development cohort needs the 48 isolated layouts for its role")
@@ -210,6 +212,7 @@ def _valid_preflight(preflight, case, method, directory):
             or preflight.get("typed_task_program", False) != case.get("typed_task_program", False)
             or preflight.get("layout_seed") != case.get("layout_seed")
             or preflight.get("collection_rule") != case.get("collection_rule")
+            or preflight.get("archive_external_rgb", True) != case.get("archive_external_rgb", True)
             or preflight.get("scene_fingerprint") != case.get("scene_fingerprint")
             or preflight.get("study_task_sha256") != case.get("study_task_sha256")
             or planned != case["episode_timeout_seconds"] or not isinstance(budget, (int, float))

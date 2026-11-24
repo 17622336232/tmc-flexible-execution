@@ -16,6 +16,7 @@ from experiments.flexible_execution.evidence import Frame
 from experiments.flexible_execution.executor import Snapshot, permitted_observation
 from experiments.flexible_execution.gpt_vision import JUDGE, LOCATE, Material, OUTCOMES, VisibleTarget
 from experiments.flexible_execution.live_audit import audit_capture_permissions
+from experiments.flexible_execution.live_calibration import _motion_fit
 from experiments.flexible_execution.live_planning import Costs, check_branchwise, checked, needs_body_identity, permission_for, select
 from experiments.flexible_execution.task_ir import Condition, QuerySpec, Requirement, Skill, TaskContract
 from experiments.flexible_execution.timeline import Timeline, summarize
@@ -36,6 +37,14 @@ def _task(rule):
 
 
 class LiveInspectionTests(unittest.TestCase):
+    def test_motion_calibration_requires_several_measured_legs_and_handles_an_outlier(self):
+        samples = [{"meters": distance, "seconds": 1.5 + 0.6 * distance} for distance in range(1, 10)]
+        self.assertIsNone(_motion_fit(samples[:7]))
+        samples[3]["seconds"] = 25.
+        start, slope = _motion_fit(samples)
+        self.assertAlmostEqual(start, 1.5)
+        self.assertAlmostEqual(slope, 0.6)
+
     def test_final_verifier_sees_scope_even_when_a_subject_has_no_claim(self):
         requests = []
 

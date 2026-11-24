@@ -72,6 +72,8 @@ def main(argv=None):
     parser.add_argument("--ranker-config", type=Path, help="Frozen candidate scoring and check budget")
     parser.add_argument("--compile-task-program", action="store_true", help="Check a typed task program at submission")
     parser.add_argument("--study-task", type=Path, help="Registered custom task with a private scoring contract")
+    parser.add_argument("--onboard-evidence-only", action="store_true",
+                        help="Archive onboard task evidence and leave the spectator video out of the recording")
     rules = parser.add_mutually_exclusive_group()
     rules.add_argument("--early-fields", help="Shared controlled-language grant for this development instance")
     rules.add_argument("--collection-rule", help="Recorded controlled-language collection clause")
@@ -144,6 +146,8 @@ def main(argv=None):
                      equipment_count=args.equipment_count, source_profile=args.source_profile,
                      episode_timeout_seconds=args.episode_timeout, planned_episode_timeout_seconds=planned,
                      request_budget=budget.summary())
+    if args.onboard_evidence_only:
+        preflight["archive_external_rgb"] = False
     if args.layout_seed is not None:
         preflight["layout_seed"] = args.layout_seed
     if args.collection_rule:
@@ -214,7 +218,12 @@ def main(argv=None):
     if args.layout_seed is not None:
         simulation_args.extend(("--layout-seed", str(args.layout_seed)))
     code = run_simulation(simulation_args, agent_runner=instrumented_agent, clean_study_task=study_task,
-                          merge_report_fragments=args.compile_task_program)
+                          merge_report_fragments=args.compile_task_program,
+                          archive_external_rgb=not args.onboard_evidence_only)
+    if args.onboard_evidence_only:
+        from ..storage import archive_sensor_logs
+
+        archive_sensor_logs(root)
     if code == 0 and args.method != "async-probe":
         write_json(root / "clean_coverage.json", audit_run(root))
     return code
