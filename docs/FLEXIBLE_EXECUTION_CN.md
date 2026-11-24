@@ -101,6 +101,12 @@ python3 -m experiments.flexible_execution.cli native-training-prepare \
   --output outputs/natural-pilot/native-training-check-v2
 python3 -m experiments.flexible_execution.cli pilot-run \
   --pilot-dir outputs/natural-pilot/native-training-check-v2 --resume --max-jobs 7
+python3 -m experiments.flexible_execution.cli ranker-native-replay \
+  --pilot-dir outputs/natural-pilot/native-training-check-v2 \
+  --output outputs/natural-pilot/reports/native-training-fixed-pools-completed.json
+python3 -m experiments.flexible_execution.evidence_figure \
+  --fixed-pools outputs/natural-pilot/reports/native-training-fixed-pools-completed.json \
+  --output outputs/figures/native-ranking-replay.png
 ```
 
 公开验证入口在 `experiments.flexible_execution.public_task`。AI2-THOR 固定在 5.0.0，从官方 ProcTHOR 验证集加载房屋。相机通过软件 OpenGL 取得初始和侧向图像。模型收到任务文字和执行过程中拍到的 RGB。独立评分用姿态和实例分割核对完整报告。公开房间是本研究的派生任务，正式测试取官方测试房屋，验证房用于调试。 [ProcTHOR 官方数据](https://github.com/allenai/procthor-10k/tree/439193522244720b86d8c81cde2e51e3a4d150cf)

@@ -1,10 +1,10 @@
-"""Draw a timing figure from two archived RGB acquisition episodes."""
+"""Draw timing and candidate-check figures from recorded visual evidence."""
 
 import argparse
 import json
 from pathlib import Path
 
-from .live_audit import audit_live_connection
+from .live_audit import _camera_frames, _verified_judgment, audit_live_connection
 
 
 def _rows(path):
@@ -23,9 +23,9 @@ def _uav(root):
     material = next(row for row in audit["accepted_materials"] if row["motion_started_while_pending"]
                     and row["required_source_verified"] and row["used_by_full_controller"])
     step = int(material["image_id"].split("_")[1])
-    binding = next(row["binding"] for row in trace if row["event"] == "query_submitted")
-    model = next(row for row in _rows(robot / "model_calls.jsonl")
-                 if row["input"].get("frame_id") == binding["frame_id"] and row.get("output", {}).get("outcome"))
+    _, model = _verified_judgment(trace, _rows(robot / "model_calls.jsonl"), _camera_frames(robot))
+    if not model:
+        raise ValueError("The plotted model reply must match the exact frozen query")
     response = ((model["dispatched_monotonic_seconds"], model["return_monotonic_seconds"])
                 if "dispatched_monotonic_seconds" in model else _interval(trace, "model_request", 3))
     shutter = next(row["monotonic_seconds"] for row in trace if row["event"] == "frozen_photo" and row["step"] == step)
@@ -34,7 +34,8 @@ def _uav(root):
 
 def _room(root):
     trace = _rows(root / "timeline.jsonl")
-    call = next(row for row in _rows(root / "model_calls.jsonl") if row["input"].get("frame") == "front")
+    call = next(row for row in _rows(root / "model_calls.jsonl")
+                if row["input"].get("frame") == "front" and "output" in row)
     motion = next(row["step"] for row in trace if row["event"] == "action_started")
     shutter = next(row["monotonic_seconds"] for row in trace if row["event"] == "camera_observation"
                    and row["step"] == "side")
@@ -75,12 +76,64 @@ def draw(uav, room, output):
     plt.close(figure)
 
 
+def draw_ranking_replay(report, output):
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    data = json.loads(report.read_text(encoding="utf8"))
+    if data["mode"] != "OFFLINE_FIXED_POOLS_FROM_ACTUAL_VISUAL_FRONTENDS" or not data["snapshots"]:
+        raise ValueError("Candidate-check plots require replayed pools from recorded visual inputs")
+    groups = {}
+    for snapshot in data["snapshots"]:
+        methods = snapshot["methods"]
+        groups.setdefault(snapshot["group"], []).append((methods["conditional-rank-b1"], methods["conditional-rank-c"]))
+    figure, axis = plt.subplots(figsize=(7.4, 3.8))
+    labels = []
+    matches = 0
+    for index, rows in enumerate(groups.values()):
+        labels.append(f"Layout {index + 1}\n{len(rows)} recorded pools")
+        matches += sum(fixed["selected"] == adaptive["selected"] for fixed, adaptive in rows)
+        for offset, method, color, key in ((-.17, "B1 · fixed budget", "#335D83", 0),
+                                            (.17, "C · adaptive budget", "#268270", 1)):
+            checks = sum(row[key]["checked"] for row in rows)
+            axis.bar(index + offset, checks, width=.29, color=color, label=method if index == 0 else None)
+            axis.annotate(str(checks), (index + offset, checks), xytext=(0, 3), textcoords="offset points",
+                          ha="center", va="bottom", fontsize=10)
+    axis.set_title("Offline replay of identical visual candidate pools", loc="left", fontweight="bold")
+    axis.set_ylabel("Candidate checks")
+    axis.set_xticks(range(len(labels)))
+    axis.set_xticklabels(labels)
+    axis.set_ylim(0, axis.get_ylim()[1] * 1.28)
+    axis.legend(frameon=False, loc="upper left", ncol=2)
+    for boundary in ("top", "right"):
+        axis.spines[boundary].set_visible(False)
+    axis.grid(axis="y", alpha=.18)
+    axis.set_axisbelow(True)
+    figure.text(.5, .02, f"Same execution decision in {matches}/{len(data['snapshots'])} replays. No new model requests.",
+                ha="center", fontsize=9, color="#46505B")
+    figure.tight_layout(rect=(0, .07, 1, 1))
+    output.parent.mkdir(parents=True, exist_ok=True)
+    figure.savefig(output, dpi=180, bbox_inches="tight")
+    plt.close(figure)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--uav-episode", required=True, type=Path)
-    parser.add_argument("--public-episode", required=True, type=Path)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--uav-episode", type=Path)
+    source.add_argument("--fixed-pools", type=Path)
+    parser.add_argument("--public-episode", type=Path)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
+    if args.fixed_pools:
+        if args.public_episode:
+            parser.error("--public-episode is only used with --uav-episode")
+        draw_ranking_replay(args.fixed_pools, args.output)
+        return
+    if not args.public_episode:
+        parser.error("--uav-episode also requires --public-episode")
     draw(args.uav_episode, args.public_episode, args.output)
 
 
