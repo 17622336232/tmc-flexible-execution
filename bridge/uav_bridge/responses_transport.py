@@ -15,6 +15,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from email.utils import parsedate_to_datetime
 
 from .planner import PlanError, _NoRedirect, _strict_json
 
@@ -131,6 +132,16 @@ def _remote_error(payload, fallback, message, status, request_id, token, body_sh
         identifier = _identifier(payload.get("request_id"), token)
     return TransportError(code, _REMOTE_ERROR_MESSAGES.get(code, message), status, identifier,
                           param, body_shape or _shape(payload))
+
+
+def _retry_after(headers):
+    value = headers.get("Retry-After", "") if headers is not None else ""
+    try:
+        if re.fullmatch(r"[0-9]{1,10}", value):
+            return float(value)
+        return max(0., parsedate_to_datetime(value).timestamp() - time.time())
+    except (TypeError, ValueError, OverflowError):
+        return None
 
 
 def _admission_error(error, token):
@@ -592,7 +603,9 @@ def _perform(request, deadline, control, token):
                     return result
                 consistency.observe(event)
     except urllib.error.HTTPError as error:
-        raise _admission_error(error, token) from None
+        rejected = _admission_error(error, token)
+        rejected.retry_after = _retry_after(error.headers)
+        raise rejected from None
     except TransportError:
         raise
     except PlanError:
@@ -613,20 +626,23 @@ def request_response(model, instructions, text, image_bytes, access_token, timeo
 
 def request_labeled_image_response(model, instructions, text, image_bytes, access_token,
                                    current_image_label, timeout=20, reasoning_effort=None,
-                                   context_images=None):
+                                   context_images=None, *, before_dispatch=None):
     """Explicit camera provenance for non-photography RGB callers."""
     return _request_response(model, instructions, text, access_token, timeout,
                              image_bytes=image_bytes, with_image=True, reasoning_effort=reasoning_effort,
-                             context_images=context_images, current_image_label=current_image_label)
+                             context_images=context_images, current_image_label=current_image_label,
+                             before_dispatch=before_dispatch)
 
 
-def request_text_response(model, instructions, text, access_token, timeout=20, reasoning_effort=None):
+def request_text_response(model, instructions, text, access_token, timeout=20, reasoning_effort=None, *,
+                          before_dispatch=None):
     """Send one text-only request; return strict JSON on completion only."""
-    return _request_response(model, instructions, text, access_token, timeout, reasoning_effort=reasoning_effort)
+    return _request_response(model, instructions, text, access_token, timeout, reasoning_effort=reasoning_effort,
+                             before_dispatch=before_dispatch)
 
 
 def _request_response(model, instructions, text, access_token, timeout, image_bytes=None, with_image=False,
-                      reasoning_effort=None, context_images=None, current_image_label=None):
+                      reasoning_effort=None, context_images=None, current_image_label=None, before_dispatch=None):
     """Common fixed-endpoint transport; modality never changes error handling.
 
     The caller supplies an already-authorized OAuth access token and a model
@@ -710,6 +726,8 @@ def _request_response(model, instructions, text, access_token, timeout, image_by
         finally:
             finished.set()
     thread = threading.Thread(target=worker, name="responses-transport", daemon=True)
+    if before_dispatch is not None:
+        before_dispatch()
     thread.start()
     if not finished.wait(max(0, deadline - time.monotonic())) or time.monotonic() > deadline:
         _abort(control)

@@ -17,6 +17,11 @@ from .fixtures import MODE, diagnostics
 from .simulation import METHODS, Episode
 
 
+MECHANISM_SOURCES = ("__init__.py", "evidence.py", "evaluate.py", "executor.py", "fixtures.py",
+                     "queries.py", "search.py", "simulation.py", "task_ir.py")
+MECHANISM_FIELDS = ("profile", "mode", "fixture_sha256", "case_ids", "methods", "limits", "evaluation")
+
+
 def read_json(path):
     return json.loads(path.read_text(encoding="utf8"))
 
@@ -31,19 +36,12 @@ def manifest(checkout, defaults):
     if len(cases) != defaults["data"]["local_smoke_instances"]:
         raise ValueError("The mechanism fixture count does not match the local protocol")
     source_directory = Path(__file__).resolve().parent
-    sources = list(source_directory.rglob("*.py")) + [source_directory / "experiment_defaults.yaml"]
-    sources += [checkout / name for name in (
-        "experiments/task_attack/tasks.py",
-        "experiments/task_attack/runtime.py",
-        "experiments/task_attack_integrity/run.py",
-        "scripts/run_flexible_cpu_smoke.sh",
-        "tests/test_flexible_execution.py",
-    )]
+    sources = [source_directory / filename for filename in MECHANISM_SOURCES]
     commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=checkout, check=True,
                             stdout=subprocess.PIPE, text=True, timeout=5).stdout.strip()
     methods = defaults["methods"]
     return {
-        "protocol_version": 1,
+        "protocol_version": 2,
         "profile": defaults["execution_profile"],
         "mode": MODE,
         "code_git_commit": commit,
@@ -57,6 +55,28 @@ def manifest(checkout, defaults):
                    "budget_ms": methods["initial_online_compute_budget_ms"]},
         "evaluation": "Fixed assumption cases for code checks. No external model calls or measured flight/energy.",
     }
+
+
+def compatible_protocol(recorded, current):
+    return (recorded.get("protocol_version") in {1, 2}
+            and all(recorded.get(field) == current[field] for field in MECHANISM_FIELDS)
+            and all(recorded.get("source_sha256", {}).get(path) == digest
+                    for path, digest in current["source_sha256"].items()))
+
+
+def _locked_protocol(directory, current):
+    recorded = read_json(directory / "protocol.json")
+    if not compatible_protocol(recorded, current):
+        raise ValueError("The locked mechanism inputs changed. Choose a new --run-id.")
+    if recorded != current:
+        write_json(directory / "protocol_compatibility.json", {
+            "original_protocol_sha256": _hash(recorded),
+            "original_code_git_commit": recorded["code_git_commit"],
+            "checked_code_git_commit": current["code_git_commit"],
+            "verified_behavioral_keys": list(MECHANISM_FIELDS),
+            "verified_source_sha256": current["source_sha256"],
+        })
+    return recorded
 
 
 def _record_name(directory, case_id, method):
@@ -204,8 +224,7 @@ def run(directory, checkout, defaults, resume):
         if protocol_path.exists():
             if not resume:
                 raise ValueError("This run already exists. Choose --resume or a new --run-id.")
-            if read_json(protocol_path) != current:
-                raise ValueError("The locked protocol changed. Choose a new --run-id.")
+            current = _locked_protocol(directory, current)
         else:
             write_json(protocol_path, current)
         capture(directory, checkout, defaults)
@@ -233,9 +252,7 @@ def run(directory, checkout, defaults, resume):
 def reproduce(directory, current):
     with (directory / ".run.lock").open("a") as handle:
         fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        recorded = read_json(directory / "protocol.json")
-        if current != recorded:
-            raise ValueError("The current source/configuration does not match the locked run")
+        recorded = _locked_protocol(directory, current)
         rows = collect(directory, recorded)
         total = len(recorded["case_ids"]) * len(recorded["methods"])
         if len(rows) != total:

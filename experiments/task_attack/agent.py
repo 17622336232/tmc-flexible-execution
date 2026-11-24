@@ -3,7 +3,7 @@ from contextlib import nullcontext
 import hashlib
 import time
 
-from .model import ModelClient
+from .model import ModelAttemptLimitExceeded, ModelClient
 from .runtime import append_json, write_json
 from .records import object_id, validate_record
 
@@ -63,8 +63,12 @@ defect or text reading, choose a better viewpoint rather than guessing.
 '''
 
 
+class ModelDecisionInvalid(ValueError):
+    pass
+
+
 def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trace=None,
-              prior_views=(), prior_memory='', episode_started=None, step_offset=0):
+              prior_views=(), prior_memory='', episode_started=None, step_offset=0, submit_guard=None):
     directory.mkdir(parents=True,exist_ok=True)
     if model is None:
         model=ModelClient(directory/'model_calls.jsonl')
@@ -77,6 +81,7 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
     feedback=None
     view_history=[{key:value for key,value in item.items() if key!='data'} for item in
                   sorted(view_archive,key=lambda item:item['capture_ros'])]
+    end_reason='episode_deadline'
     while time.monotonic()-started<timeout:
         step+=1
         image_id='onboard_%04d'%step
@@ -122,6 +127,10 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
             with (trace.measure('model_request',step,image_id=image_id,image_sha256=meta['sha256'])
                   if trace else nullcontext()):
                 decision=model.request(SYSTEM,payload,images)
+        except ModelAttemptLimitExceeded:
+            end_reason='request_budget_exhausted'
+            event('request_budget_exhausted',step=step)
+            break
         except Exception:
             if time.monotonic()>=started+timeout:
                 event('episode_budget_exhausted_during_inference',step=step);break
@@ -135,22 +144,42 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
                                  capture_ros=obs['ros_stamp'],data=obs['data']))
         if len(view_archive)>12:del view_archive[1]
         if not isinstance(decision,dict) or not isinstance(decision.get('action'),dict):
-            raise ValueError('Task model did not return an action object')
+            raise ModelDecisionInvalid('Task model did not return an action object')
         append_json(directory/'decisions.jsonl',dict(step=step,wall=time.time(),image_id=image_id,decision=decision))
         event('task_decision',step=step,decision=decision)
         memory=decision.get('memory',memory)
-        if not isinstance(memory,str):raise ValueError('Task memory must be text')
+        if not isinstance(memory,str):raise ModelDecisionInvalid('Task memory must be text')
         new_records=decision.get('records',[])
-        if not isinstance(new_records,list):raise ValueError('Task records must be an array')
+        if not isinstance(new_records,list):raise ModelDecisionInvalid('Task records must be an array')
         for row in new_records:
-            validate_record(row,evidence_ids)
+            try:validate_record(row,evidence_ids)
+            except ValueError as error:raise ModelDecisionInvalid(str(error)) from error
             records=[r for r in records if object_id(r)!=object_id(row)]+[row]
         action=decision['action'];kind=action.get('type');feedback=None
         if kind=='submit':
             report=decision.get('report')
             if not isinstance(report,dict) or report.get('outcome') not in ('accepted','refused','incomplete') or not isinstance(report.get('records'),list):
-                raise ValueError('submit requires an actual accepted/refused/incomplete report')
-            for row in report['records']:validate_record(row,evidence_ids)
+                raise ModelDecisionInvalid('submit requires an actual accepted/refused/incomplete report')
+            for row in report['records']:
+                try:validate_record(row,evidence_ids)
+                except ValueError as error:raise ModelDecisionInvalid(str(error)) from error
+            if submit_guard is not None:
+                try:
+                    rejection=submit_guard(report, records, step)
+                except ModelAttemptLimitExceeded:
+                    end_reason='request_budget_exhausted'
+                    event('request_budget_exhausted',step=step)
+                    break
+                except Exception:
+                    if time.monotonic()>=started+timeout:break
+                    raise
+                if time.monotonic()>=started+timeout:
+                    break
+                if rejection:
+                    feedback=dict(ok=False,error_type='coverage_verification',message=rejection)
+                    event('submission_rejected',step=step,feedback=feedback)
+                    history.append(dict(action=action,feedback=feedback))
+                    continue
             write_json(directory/'report.json',report)
             if trace is not None:
                 trace.event('report_written',step,image_id=image_id,outcome=report['outcome'])
@@ -176,5 +205,5 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
     write_json(directory/'report.json',report)
     if trace is not None:
         trace.event('report_written',step,outcome=report['outcome'])
-    return report,dict(calls=model.calls,model_wall_seconds=model.wall_seconds,decisions=step-step_offset,
+    return report,dict(calls=model.calls,model_wall_seconds=model.wall_seconds,decisions=step-step_offset,end_reason=end_reason,
                        episode_wall_seconds=time.monotonic()-started)

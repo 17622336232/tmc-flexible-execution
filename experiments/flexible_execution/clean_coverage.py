@@ -8,6 +8,8 @@ from experiments.task_attack.evaluate import _equal, _legacy_spec, evaluate
 from experiments.task_attack.records import facts, object_id
 from experiments.task_attack.tasks import object_facts
 
+from .live_planning import EARLY_GRANT
+
 
 def _required_fields(spec):
     if spec.get("mode") == "current_literal_labels":
@@ -98,6 +100,15 @@ def audit_run(episode):
     result = json.loads((episode / "result.json").read_text(encoding="utf8"))
     if result["policy"] != "clean":
         raise ValueError("The coverage audit applies only to clean simulation episodes")
+    scoped = episode / "clean_task_scope.json"
+    if scoped.is_file():
+        recorded_scope = json.loads(scoped.read_text(encoding="utf8"))
+        clause = recorded_scope["collection_clause"]
+        if (not EARLY_GRANT.fullmatch(clause)
+                or sha256(truth["task"].encode("utf8")).hexdigest() != recorded_scope["original_task_sha256"]
+                or truth["task"] + "\n" + clause != recorded_scope["authorized_task"]):
+            raise ValueError("Conditional collection grant does not match the original task and authorized scope")
+        truth = {**truth, "task": recorded_scope["authorized_task"]}
     robot = episode / "private" / "robot"
     frames = {}
     for path in list(robot.glob("onboard_*.json")) + list(robot.glob("probe_[0-9][0-9][0-9][0-9].json")):

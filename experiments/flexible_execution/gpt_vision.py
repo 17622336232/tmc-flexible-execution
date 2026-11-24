@@ -87,8 +87,8 @@ def _bbox(raw):
     return tuple(raw)
 
 
-def interpret(client, instruction):
-    draft = client.request(INTERPRET, {"authorized_task": instruction}, [])
+def interpret(client, instruction, *, instructions=INTERPRET):
+    draft = client.request(instructions, {"authorized_task": instruction}, [])
     if (not isinstance(draft, dict) or draft.get("status") != "supported"
             or set(draft) != {"status", "object_scope", "question", "materials"}):
         raise ValueError("The inspection is outside the initial structured task interface")

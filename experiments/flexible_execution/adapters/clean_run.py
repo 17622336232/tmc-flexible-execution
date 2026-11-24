@@ -4,6 +4,8 @@ import argparse
 import json
 import os
 import signal
+import time
+from hashlib import sha256
 from functools import partial
 from math import isfinite
 from pathlib import Path
@@ -16,13 +18,15 @@ from experiments.task_attack_integrity.run import main as run_simulation
 from uav_bridge.chatgpt_auth import CredentialStore
 
 from ..clean_coverage import audit_run
+from ..live_planning import CONDITIONAL_MODES, Costs, EARLY_GRANT
 from ..pilot_schedule import PAIRED_MODES
+from ..request_budget import RequestBudget
 from ..timeline import Timeline, summarize
 from .gpt_probe import run_paired, run_probe
 
 
 METHOD_MODES = {"serial": "ACTUAL_GPT_CLEAN_SERIAL", "async-probe": "ACTUAL_GPT_FROZEN_QUERY_INTEGRATION_PROBE",
-                **PAIRED_MODES}
+                **PAIRED_MODES, **CONDITIONAL_MODES}
 
 
 def status(store):
@@ -56,9 +60,35 @@ def main(argv=None):
     parser.add_argument("--ros-port", type=int, default=11674)
     parser.add_argument("--gazebo-port", type=int, default=11675)
     parser.add_argument("--episode-timeout", type=float, default=1800)
+    parser.add_argument("--planned-episode-timeout", type=float, help="Logical job time limit before partial attempts")
+    parser.add_argument("--max-request-attempts", type=int, default=24)
+    parser.add_argument("--request-ledger", type=Path, help="Persistent request ledger for this logical job")
+    parser.add_argument("--cost-config", type=Path, help="Calibrated design input for the conditional methods")
+    parser.add_argument("--early-fields", help="Shared controlled-language grant for this development instance")
     args = parser.parse_args(argv)
     if not isfinite(args.episode_timeout) or args.episode_timeout <= 0:
         parser.error("Choose a positive finite episode timeout")
+    if args.max_request_attempts < 1:
+        parser.error("Choose a positive transport attempt limit")
+    planned = args.episode_timeout if args.planned_episode_timeout is None else args.planned_episode_timeout
+    if not isfinite(planned) or planned < args.episode_timeout:
+        parser.error("The logical job duration must cover the attempt duration")
+    conditional = args.method in CONDITIONAL_MODES
+    if conditional != bool(args.cost_config) or (args.early_fields and not conditional):
+        parser.error("Conditional methods require a cost file and own the optional development grant")
+    clause = ""
+    early_fields = args.early_fields.split(",") if args.early_fields else []
+    if early_fields:
+        clause = "采集规则：允许在判读结果返回前采集以下材料：" + "、".join(early_fields) + "。"
+        if not EARLY_GRANT.fullmatch(clause) or len(set(early_fields)) != len(early_fields):
+            parser.error("Invalid or repeated field in the development grant")
+    costs = None
+    if conditional:
+        from .live_inspection import SUPPORTED_MATERIALS, run_live
+        if not set(early_fields) <= SUPPORTED_MATERIALS:
+            parser.error("The live material checker does not support one of the requested fields")
+        cost_document = json.loads(args.cost_config.read_text(encoding="utf8"))
+        costs = Costs(**cost_document["costs"])
 
     root = args.output.resolve()
     try:
@@ -67,11 +97,16 @@ def main(argv=None):
         parser.error("Choose a new episode directory")
     credentials = CredentialStore(directory=args.chatgpt_project / ".runtime" / "chatgpt"
                                   if args.chatgpt_project else None)
+    budget = RequestBudget((args.request_ledger or root / "request_attempts.jsonl").resolve(),
+                           args.max_request_attempts)
     preflight = status(credentials)
     mode = METHOD_MODES[args.method]
     preflight.update(mode=mode, backend=args.backend, family=args.family, seed=args.seed,
                      equipment_count=args.equipment_count, source_profile=args.source_profile,
-                     episode_timeout_seconds=args.episode_timeout)
+                     episode_timeout_seconds=args.episode_timeout, planned_episode_timeout_seconds=planned,
+                     request_budget=budget.summary())
+    if conditional:
+        preflight.update(early_fields=early_fields, calibration_id=costs.calibration_id)
     ready = (preflight["signed_in"] and preflight["plan_usage_enabled"] and preflight["model_in_catalog"]
              and (preflight["access_token_valid"] or preflight["refresh_available"]))
     preflight["ready_to_attempt_model_call"] = ready
@@ -82,14 +117,26 @@ def main(argv=None):
 
     def instrumented_agent(backend, task, directory, event, timeout):
         trace = Timeline(directory / "timeline.jsonl")
-        client = ModelClient(directory / "model_calls.jsonl", credential_store=credentials)
+        client = ModelClient(directory / "model_calls.jsonl", credential_store=credentials, request_budget=budget)
         execution = {"serial": run_agent, "async-probe": run_probe}.get(args.method)
-        if execution is None:
+        if conditional:
+            execution = partial(run_live, method=args.method, costs=costs)
+            if clause:
+                original_hash = sha256(task.encode("utf8")).hexdigest()
+                task = task + "\n" + clause
+                write_json(root / "clean_task_scope.json", {"original_task_sha256": original_hash,
+                           "collection_clause": clause, "authorized_task": task})
+        elif execution is None:
             execution = partial(run_paired, during_pending=args.method == "paired-async")
+        started = time.monotonic()
+        clock = {"started_wall": time.time(), "allowance_seconds": timeout}
+        write_json(root / "job_clock.json", clock)
         try:
             return execution(backend, task, directory, event, timeout, model=client, trace=trace)
         finally:
+            write_json(root / "job_clock.json", {**clock, "elapsed_seconds": time.monotonic() - started})
             write_json(root / "clean_timing.json", summarize(trace.path))
+            write_json(root / "request_budget_summary.json", budget.summary())
 
     os.environ.setdefault("ROS_HOME", str(root / "ros_home"))
     code = run_simulation([

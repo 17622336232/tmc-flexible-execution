@@ -9,7 +9,9 @@ import yaml
 
 from .audit import capture
 from .clean_coverage import audit_run
-from .pilot_schedule import prepare as prepare_pilot, status as pilot_status
+from .control import DEFAULT_AUTH_PROJECT, control_status, pilot_run
+from .live_calibration import calibrate
+from .pilot_schedule import prepare as prepare_pilot, prepare_conditional, status as pilot_status
 from .runner import manifest, read_json, reproduce, run
 
 
@@ -27,7 +29,7 @@ def _sensor_result(directory):
 
 def _gpt_results(output_root):
     trials = []
-    for preflight_path in sorted((output_root / "existing-gpt-pilot").glob("*/clean_preflight.json")):
+    for preflight_path in sorted((output_root / "existing-gpt-pilot").rglob("clean_preflight.json")):
         directory = preflight_path.parent
         try:
             preflight = read_json(preflight_path)
@@ -40,7 +42,8 @@ def _gpt_results(output_root):
         except json.JSONDecodeError:
             continue
         trials.append({
-            "run": directory.name, "mode": preflight["mode"], "model": preflight["model"],
+            "run": str(directory.relative_to(output_root / "existing-gpt-pilot")),
+            "mode": preflight["mode"], "model": preflight["model"],
             "family": preflight["family"], "seed": preflight["seed"],
             "ready_to_attempt_model_call": preflight["ready_to_attempt_model_call"],
             "runner_finished": result is not None,
@@ -69,19 +72,89 @@ def status(directory, defaults):
     gpt = _gpt_results(directory.parent)
     ready = any(trial["legacy_score"] == "correct" and trial["mode"] == "ACTUAL_GPT_CLEAN_SERIAL"
                 for trial in gpt)
+    live = control_status(directory.parent / "control")
+    pilot_manifest = directory.parent / "natural-pilot" / "pilot_manifest.json"
     return {
         "profile": defaults["execution_profile"],
-        "execution_status": "IN_PROGRESS",
-        "scientific_conclusion": "INCONCLUSIVE",
+        "execution_status": live["execution_status"],
+        "scientific_conclusion": live["scientific_conclusion"],
+        "control": live,
+        "development": pilot_status(pilot_manifest.parent) if pilot_manifest.is_file() else None,
         "run_directory": str(directory),
         "local_diagnostics": {"completed": completed, "planned": planned, "summary": stats},
         "legacy_cpu_sensor": _sensor_result(directory / "legacy_cpu_sensor"),
         "native_async_cpu": _sensor_result(directory / "native_async_cpu"),
         "existing_chatgpt_trials": gpt,
         "resources": read_json(audit_path)["resources"] if audit_path.exists() else None,
-        "next": ("Use the existing GPT front end for the complete task, then run the 48 paired development cases"
-                 if ready else "Measure the clean baseline on the original project vision service"),
+        "next": live.get("next_command") or ("pilot-run for the next bounded matched batch"
+                if ready else "Audit the original clean baseline evidence"),
     }
+
+
+def _online_args(parser):
+    parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--max-jobs", type=int, default=2, help="Maximum new launches in this batch")
+    parser.add_argument("--chatgpt-project", type=Path, default=DEFAULT_AUTH_PROJECT)
+    parser.add_argument("--retry-external", action="store_true",
+                        help="Retry a blocked job only after its external condition has changed")
+
+
+def _continue(output_root, directory, defaults, args):
+    control = output_root / "control"
+    state = control_status(control)
+    if state["active_jobs"] or (state["execution_status"] == "BLOCKED_EXTERNAL" and not args.retry_external):
+        return state
+    pilots = output_root / "natural-pilot"
+    if not (pilots / "pilot_manifest.json").is_file():
+        prepare_pilot(pilots, defaults, 480)
+    warmup = output_root / "existing-gpt-pilot/temperature-gpt-budgeted-seed1/attempt-001"
+    audit = warmup / "warmup_verification.json"
+    if (not audit.is_file() or
+            not all(read_json(audit).get(key) for key in ("frozen_query_binding_verified",
+                    "observed_safe_action_entirely_while_pending", "controller_request_attempt_using_new_frame",
+                    "all_attempts_match_ledger"))):
+        return {"execution_status": "READY", "stage": "warmup",
+                "next_action": "Record and verify the bounded live temperature integration job first"}
+
+    def run_batch(path):
+        return pilot_run(path, control, CHECKOUT, resume=args.resume, max_jobs=args.max_jobs,
+                         auth_project=args.chatgpt_project, unlock_external=args.retry_external)
+
+    development = pilot_status(pilots)
+    if development["recorded_pairs"] < 2:
+        return run_batch(pilots)
+    connection = pilots / "conditional-connection-v1"
+    if not (connection / "pilot_manifest.json").is_file():
+        crack = output_root / "existing-gpt-pilot/cracks-serial-seed1-recheck"
+        pair = pilots / "pair-001"
+        finished = [Path(read_json(pair / method / "job.json")["artifact_dir"])
+                    for method in ("paired-async", "paired-serial")]
+        calibration = calibrate(warmup, [crack, *finished])
+        prepare_conditional(connection, read_json(pilots / "pilot_manifest.json"), calibration, connection_only=True)
+    if not pilot_status(connection)["recorded_pairs"]:
+        return run_batch(connection)
+    arm = read_json(connection / "connection-001/conditional-a/job.json")
+    trace = Path(arm["artifact_dir"]) / "private/robot/timeline.jsonl"
+    events = [json.loads(line) for line in trace.read_text(encoding="utf8").splitlines()] if trace.is_file() else []
+    captured = {row["frame_id"] for row in events if row["event"] == "candidate_executed"
+                and row["finished_before_reply"] and row["candidate"].startswith("capture:")}
+    accepted = [row for row in events if row["event"] == "evidence_accepted" and row["frame_id"] in captured]
+    if not accepted:
+        return {"execution_status": "NEEDS_DIAGNOSIS", "stage": "conditional-development",
+                "scientific_conclusion": "INCONCLUSIVE", "development": development,
+                "connection_job": arm["id"], "captured_while_pending": len(captured),
+                "next_action": "Inspect the recorded permission, viewpoint, timing and material acceptance"}
+    comparison = pilots / "conditional-comparison-v1"
+    if not (comparison / "pilot_manifest.json").is_file():
+        calibration = read_json(connection / "calibrated_costs.json")
+        prepare_conditional(comparison, read_json(pilots / "pilot_manifest.json"), calibration)
+    if not pilot_status(comparison)["recorded_pairs"]:
+        return run_batch(comparison)
+    if development["recorded_pairs"] < development["planned_pairs"]:
+        return run_batch(pilots)
+    return {"execution_status": "READY", "stage": "ranker-data",
+            "scientific_conclusion": "INCONCLUSIVE", "run_directory": str(directory), "development": development,
+            "next_action": "Generate verified, independently grouped candidate-cost labels"}
 
 
 def main(argv=None):
@@ -94,20 +167,31 @@ def main(argv=None):
     plan.add_argument("--episode-timeout", type=float, default=480)
     pilot = commands.add_parser("pilot-status", help="Audit recorded pairs against their scheduled cases")
     pilot.add_argument("--pilot-dir", required=True, type=Path)
-    for name in ("audit", "run", "status", "reproduce"):
+    batch = commands.add_parser("pilot-run", help="Run the next bounded batch from the locked pilot schedule")
+    batch.add_argument("--pilot-dir", required=True, type=Path)
+    batch.add_argument("--control-dir", type=Path, default=CHECKOUT / "outputs/control")
+    _online_args(batch)
+    for name in ("audit", "run", "status", "reproduce", "continue"):
         command = commands.add_parser(name)
         command.add_argument("--profile", choices=("local5060",), default="local5060")
         command.add_argument("--run-id", default="local5060-start")
         command.add_argument("--output-root", type=Path, default=CHECKOUT / "outputs")
         if name == "run":
             command.add_argument("--resume", action="store_true")
+        if name == "continue":
+            _online_args(command)
     args = parser.parse_args(argv)
-    if args.command in ("pilot-prepare", "pilot-status"):
+    if args.command in ("pilot-prepare", "pilot-status", "pilot-run"):
         defaults = yaml.safe_load(DEFAULTS.read_text(encoding="utf8"))
         try:
             if args.command == "pilot-prepare":
                 prepare_pilot(args.pilot_dir, defaults, args.episode_timeout)
-            result = pilot_status(args.pilot_dir)
+            if args.command == "pilot-run":
+                result = pilot_run(args.pilot_dir, args.control_dir, CHECKOUT, resume=args.resume,
+                                   max_jobs=args.max_jobs, auth_project=args.chatgpt_project,
+                                   unlock_external=args.retry_external)
+            else:
+                result = pilot_status(args.pilot_dir)
         except (ValueError, OSError, KeyError) as error:
             parser.exit(1, f"{error}\n")
         print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
@@ -130,6 +214,8 @@ def main(argv=None):
             result = run(directory, CHECKOUT, defaults, args.resume)
         elif args.command == "reproduce":
             result = reproduce(directory, manifest(CHECKOUT, defaults))
+        elif args.command == "continue":
+            result = _continue(args.output_root.resolve(), directory, defaults, args)
         else:
             result = status(directory, defaults)
     except (ValueError, OSError) as error:

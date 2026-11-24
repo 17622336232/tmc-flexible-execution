@@ -5,7 +5,11 @@ from math import isfinite
 from random import Random
 
 from experiments.task_attack import FAMILIES
+from experiments.task_attack.runtime import write_json
 from experiments.task_attack.tasks import SCENES
+
+from .live_planning import CONDITIONAL_MODES, NEW_METHODS
+from .runner import _hash
 
 
 PAIRED_MODES = {"paired-serial": "ACTUAL_GPT_SHARED_SERIAL", "paired-async": "ACTUAL_GPT_SHARED_ASYNC"}
@@ -44,21 +48,65 @@ def _read(path):
     return json.loads(path.read_text(encoding="utf8")) if path.is_file() else None
 
 
+def prepare_conditional(directory, base, calibration, *, connection_only=False):
+    role = "CONDITIONAL_CONNECTION_DEVELOPMENT"
+    seed = base["split_seed"] + 1
+    if connection_only:
+        order = ["conditional-a"]
+        instance = "connection-001"
+    else:
+        order = Random(seed).sample(NEW_METHODS, len(NEW_METHODS))
+        instance = "conditional-001"
+    catalog = {"schema": 2, "role": role, "connection_only": connection_only,
+               "parent_schedule_sha256": _hash(base), "split_seed": seed,
+               "cost_config_sha256": _hash(calibration), "intended_pairs": 1,
+               "cases": [{"id": instance, "family": "cracks", "domain": "equipment", "seed": 1,
+                          "equipment_count": 2, "source_profile": "single", "backend": "cpu",
+                          "episode_timeout_seconds": 480, "early_fields": ["identity"], "order": order}]}
+    directory.mkdir(parents=True, exist_ok=True)
+    for filename, value in (("calibrated_costs.json", calibration), ("pilot_manifest.json", catalog)):
+        path = directory / filename
+        existing = _read(path)
+        if existing is not None and existing != value:
+            raise ValueError("The existing conditional schedule or calibration is already frozen")
+        if existing is None:
+            write_json(path, value)
+    return catalog
+
+
 def _arm(directory, case, method):
     base = directory / case["id"] / method
+    job = _read(base / "job.json")
+    if job:
+        if job["state"] not in {"FINISHED_VALID", "FINISHED_TASK_FAILURE", "TIMEOUT"}:
+            return None
+        return {"model": job["model"], "reasoning_effort": job["reasoning_effort"],
+                "completed_coverage": job["state"] == "FINISHED_VALID",
+                "outcome": job["result"].get("score", job["state"]),
+                "state": job["state"], "output": job.get("artifact_dir")}
     preflight = _read(base / "clean_preflight.json")
     result = _read(base / "result.json")
     coverage = _read(base / "clean_coverage.json")
     if preflight is None:
         return None
-    keys = ("family", "seed", "backend", "equipment_count", "source_profile", "episode_timeout_seconds")
-    if preflight.get("mode") != PAIRED_MODES[method] or any(preflight.get(key) != case[key] for key in keys):
-        raise ValueError("Run does not match the frozen case and method: " + str(base))
+    _valid_preflight(preflight, case, method, base)
     if result is None:
         return None
     return {"model": preflight["model"], "reasoning_effort": preflight["reasoning_effort"],
             "completed_coverage": bool(coverage and coverage["complete"]),
             "outcome": result["score"]["outcome"]}
+
+
+def _valid_preflight(preflight, case, method, directory):
+    keys = ("family", "seed", "backend", "equipment_count", "source_profile")
+    planned = preflight.get("planned_episode_timeout_seconds", preflight.get("episode_timeout_seconds"))
+    budget = preflight.get("episode_timeout_seconds")
+    mode = {**PAIRED_MODES, **CONDITIONAL_MODES}[method]
+    if (preflight.get("mode") != mode or any(preflight.get(key) != case[key] for key in keys)
+            or preflight.get("early_fields", []) != case.get("early_fields", [])
+            or planned != case["episode_timeout_seconds"] or not isinstance(budget, (int, float))
+            or not 0 < budget <= planned):
+        raise ValueError("Run does not match the frozen case and method: " + str(directory))
 
 
 def status(directory):
