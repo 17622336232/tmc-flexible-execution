@@ -8,6 +8,7 @@ from pathlib import Path
 import yaml
 
 from .audit import capture
+from .clean_coverage import audit_run
 from .runner import manifest, read_json, reproduce, run
 
 
@@ -85,6 +86,8 @@ def status(directory, defaults):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    clean = commands.add_parser("audit-clean", help="Recheck complete-object coverage and actual model image bindings")
+    clean.add_argument("--episode-dir", required=True, type=Path)
     for name in ("audit", "run", "status", "reproduce"):
         command = commands.add_parser(name)
         command.add_argument("--profile", choices=("local5060",), default="local5060")
@@ -93,6 +96,13 @@ def main(argv=None):
         if name == "run":
             command.add_argument("--resume", action="store_true")
     args = parser.parse_args(argv)
+    if args.command == "audit-clean":
+        try:
+            result = audit_run(args.episode_dir)
+        except (ValueError, OSError, KeyError) as error:
+            parser.exit(1, f"{error}\n")
+        print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
+        return
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,99}", args.run_id):
         parser.error("Invalid run ID")
     directory = args.output_root.resolve() / args.run_id

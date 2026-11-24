@@ -63,14 +63,20 @@ defect or text reading, choose a better viewpoint rather than guessing.
 '''
 
 
-def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trace=None):
+def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trace=None,
+              prior_views=(), prior_memory='', episode_started=None, step_offset=0):
     directory.mkdir(parents=True,exist_ok=True)
     if model is None:
         model=ModelClient(directory/'model_calls.jsonl')
-    started=time.monotonic();memory='';records=[];history=[];evidence_ids=set();step=0
+    started=time.monotonic() if episode_started is None else episode_started
+    memory=prior_memory;records=[];history=[];step=step_offset
+    view_archive=list(prior_views)
+    evidence_ids={item['image_id'] for item in view_archive}
     model.deadline_monotonic=started+timeout
     backend.execution_deadline_monotonic=started+timeout
-    feedback=None;view_archive=[];view_history=[]
+    feedback=None
+    view_history=[{key:value for key,value in item.items() if key!='data'} for item in
+                  sorted(view_archive,key=lambda item:item['capture_ros'])]
     while time.monotonic()-started<timeout:
         step+=1
         image_id='onboard_%04d'%step
@@ -148,7 +154,7 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
             write_json(directory/'report.json',report)
             if trace is not None:
                 trace.event('report_written',step,image_id=image_id,outcome=report['outcome'])
-            return report,dict(calls=model.calls,model_wall_seconds=model.wall_seconds,decisions=step,
+            return report,dict(calls=model.calls,model_wall_seconds=model.wall_seconds,decisions=step-step_offset,
                                episode_wall_seconds=time.monotonic()-started)
         try:
             with (trace.measure('action',step,action=kind,image_id=image_id) if trace else nullcontext()):
@@ -170,5 +176,5 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
     write_json(directory/'report.json',report)
     if trace is not None:
         trace.event('report_written',step,outcome=report['outcome'])
-    return report,dict(calls=model.calls,model_wall_seconds=model.wall_seconds,decisions=step,
+    return report,dict(calls=model.calls,model_wall_seconds=model.wall_seconds,decisions=step-step_offset,
                        episode_wall_seconds=time.monotonic()-started)

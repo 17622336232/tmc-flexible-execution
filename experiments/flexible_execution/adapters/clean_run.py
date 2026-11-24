@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import signal
+from functools import partial
 from math import isfinite
 from pathlib import Path
 
@@ -14,8 +15,13 @@ from experiments.task_attack.runtime import write_json
 from experiments.task_attack_integrity.run import main as run_simulation
 from uav_bridge.chatgpt_auth import CredentialStore
 
+from ..clean_coverage import audit_run
 from ..timeline import Timeline, summarize
-from .gpt_probe import run_probe
+from .gpt_probe import run_paired, run_probe
+
+
+METHOD_MODES = {"serial": "ACTUAL_GPT_CLEAN_SERIAL", "async-probe": "ACTUAL_GPT_FROZEN_QUERY_INTEGRATION_PROBE",
+                "paired-serial": "ACTUAL_GPT_SHARED_SERIAL", "paired-async": "ACTUAL_GPT_SHARED_ASYNC"}
 
 
 def status(store):
@@ -40,7 +46,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--chatgpt-project", type=Path, help="Project with the existing ChatGPT sign-in")
-    parser.add_argument("--method", choices=("serial", "async-probe"), default="serial")
+    parser.add_argument("--method", choices=METHOD_MODES, default="serial")
     parser.add_argument("--family", choices=FAMILIES, default="cracks")
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--source-profile", choices=SOURCE_PROFILES, default="single")
@@ -61,7 +67,7 @@ def main(argv=None):
     credentials = CredentialStore(directory=args.chatgpt_project / ".runtime" / "chatgpt"
                                   if args.chatgpt_project else None)
     preflight = status(credentials)
-    mode = "ACTUAL_GPT_CLEAN_SERIAL" if args.method == "serial" else "ACTUAL_GPT_FROZEN_QUERY_INTEGRATION_PROBE"
+    mode = METHOD_MODES[args.method]
     preflight.update(mode=mode, backend=args.backend, family=args.family, seed=args.seed,
                      equipment_count=args.equipment_count, source_profile=args.source_profile,
                      episode_timeout_seconds=args.episode_timeout)
@@ -76,20 +82,25 @@ def main(argv=None):
     def instrumented_agent(backend, task, directory, event, timeout):
         trace = Timeline(directory / "timeline.jsonl")
         client = ModelClient(directory / "model_calls.jsonl", credential_store=credentials)
-        execution = run_agent if args.method == "serial" else run_probe
+        execution = {"serial": run_agent, "async-probe": run_probe}.get(args.method)
+        if execution is None:
+            execution = partial(run_paired, during_pending=args.method == "paired-async")
         try:
             return execution(backend, task, directory, event, timeout, model=client, trace=trace)
         finally:
             write_json(root / "clean_timing.json", summarize(trace.path))
 
     os.environ.setdefault("ROS_HOME", str(root / "ros_home"))
-    return run_simulation([
+    code = run_simulation([
         "--backend", args.backend, "--headless", "--no-rviz", "--policy", "clean",
         "--family", args.family, "--source-profile", args.source_profile,
         "--equipment-count", str(args.equipment_count), "--seed", str(args.seed), "--output", str(root),
         "--ros-port", str(args.ros_port), "--gazebo-port", str(args.gazebo_port),
         "--episode-timeout", str(args.episode_timeout),
     ], agent_runner=instrumented_agent)
+    if code == 0 and args.method != "async-probe":
+        write_json(root / "clean_coverage.json", audit_run(root))
+    return code
 
 
 if __name__ == "__main__":

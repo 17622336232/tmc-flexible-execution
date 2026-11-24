@@ -5,7 +5,7 @@ from copy import deepcopy
 from pathlib import Path
 from threading import Event
 
-from experiments.flexible_execution.adapters.gpt_probe import run_probe
+from experiments.flexible_execution.adapters.gpt_probe import run_paired, run_probe
 from experiments.flexible_execution.adapters.viewpoints import measured_views
 from experiments.flexible_execution.evidence import Frame
 from experiments.flexible_execution.gpt_vision import VisibleTarget, frozen_prompt, interpret, judge, locate_targets
@@ -190,6 +190,42 @@ class ExistingGPTTests(unittest.TestCase):
             self.assertEqual(admitted[0][0], target)
             self.assertEqual(admitted[0][1], backend.checked[-1])
             self.assertEqual(backend.movements, 0)
+
+    def test_paired_methods_keep_verified_frames_through_full_report(self):
+        for during_pending in (False, True):
+            with self.subTest(during_pending=during_pending):
+                moved = Event()
+
+                def response(index, data, images):
+                    if index == 1:
+                        return DRAFT
+                    if index == 2:
+                        return VISIBLE
+                    if index == 3:
+                        if during_pending:
+                            self.assertTrue(moved.wait(3))
+                        else:
+                            self.assertFalse(moved.is_set())
+                        return {"outcome": "negative"}
+                    self.assertTrue(moved.is_set())
+                    self.assertIn("probe_0002", data["memory"])
+                    self.assertIn(b"frame-2", [item["data"] for item in images])
+                    row = {"object_id": "test-device", "facts": {"cracked": False},
+                           "evidence_image_id": "probe_0002"}
+                    return {"action": {"type": "submit"}, "report": {"outcome": "accepted", "records": [row]}}
+
+                with tempfile.TemporaryDirectory() as tmp:
+                    directory = Path(tmp)
+                    trace = Timeline(directory / "timeline.jsonl")
+                    report, metrics = run_paired(CameraDouble(moved), INSTRUCTION, directory,
+                                                 lambda *_args, **_fields: None, 25,
+                                                 model=ModelDouble(response), trace=trace,
+                                                 during_pending=during_pending)
+                    summary = summarize(trace.path)
+                self.assertEqual(report["outcome"], "accepted")
+                self.assertEqual(metrics["shared_input_frames"], 3)
+                self.assertEqual(metrics["calls"], 4)
+                self.assertEqual(summary["model_action_overlap_seconds"] > 0, during_pending)
 
 
 if __name__ == "__main__":
