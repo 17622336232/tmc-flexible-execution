@@ -16,12 +16,13 @@ from experiments.task_attack_integrity.run import main as run_simulation
 from uav_bridge.chatgpt_auth import CredentialStore
 
 from ..clean_coverage import audit_run
+from ..pilot_schedule import PAIRED_MODES
 from ..timeline import Timeline, summarize
 from .gpt_probe import run_paired, run_probe
 
 
 METHOD_MODES = {"serial": "ACTUAL_GPT_CLEAN_SERIAL", "async-probe": "ACTUAL_GPT_FROZEN_QUERY_INTEGRATION_PROBE",
-                "paired-serial": "ACTUAL_GPT_SHARED_SERIAL", "paired-async": "ACTUAL_GPT_SHARED_ASYNC"}
+                **PAIRED_MODES}
 
 
 def status(store):

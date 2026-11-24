@@ -9,6 +9,7 @@ import yaml
 
 from .audit import capture
 from .clean_coverage import audit_run
+from .pilot_schedule import prepare as prepare_pilot, status as pilot_status
 from .runner import manifest, read_json, reproduce, run
 
 
@@ -88,6 +89,11 @@ def main(argv=None):
     commands = parser.add_subparsers(dest="command", required=True)
     clean = commands.add_parser("audit-clean", help="Recheck complete-object coverage and actual model image bindings")
     clean.add_argument("--episode-dir", required=True, type=Path)
+    plan = commands.add_parser("pilot-prepare", help="Write the frozen 48-case development schedule locally")
+    plan.add_argument("--pilot-dir", required=True, type=Path)
+    plan.add_argument("--episode-timeout", type=float, default=480)
+    pilot = commands.add_parser("pilot-status", help="Audit recorded pairs against their scheduled cases")
+    pilot.add_argument("--pilot-dir", required=True, type=Path)
     for name in ("audit", "run", "status", "reproduce"):
         command = commands.add_parser(name)
         command.add_argument("--profile", choices=("local5060",), default="local5060")
@@ -96,6 +102,16 @@ def main(argv=None):
         if name == "run":
             command.add_argument("--resume", action="store_true")
     args = parser.parse_args(argv)
+    if args.command in ("pilot-prepare", "pilot-status"):
+        defaults = yaml.safe_load(DEFAULTS.read_text(encoding="utf8"))
+        try:
+            if args.command == "pilot-prepare":
+                prepare_pilot(args.pilot_dir, defaults, args.episode_timeout)
+            result = pilot_status(args.pilot_dir)
+        except (ValueError, OSError, KeyError) as error:
+            parser.exit(1, f"{error}\n")
+        print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
+        return
     if args.command == "audit-clean":
         try:
             result = audit_run(args.episode_dir)

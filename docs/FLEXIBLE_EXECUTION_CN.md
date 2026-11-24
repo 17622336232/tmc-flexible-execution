@@ -62,3 +62,12 @@ bash scripts/run_flexible_clean.sh --method async-probe --backend cpu \
 python3 -m experiments.flexible_execution.cli audit-clean \
   --episode-dir outputs/existing-gpt-pilot/cracks-serial-seed1-recheck
 ```
+
+开发实例排程从现有 24 项任务各安排两组种子，并固定每组的串行和异步运行顺序。准备和状态命令只读写本地文件。当前首轮完整配对还需要实际模型验证，排程不当作已经取得的数据。
+
+```bash
+python3 -m experiments.flexible_execution.cli pilot-prepare --pilot-dir outputs/natural-pilot
+python3 -m experiments.flexible_execution.cli pilot-status --pilot-dir outputs/natural-pilot
+```
+
+配对目录用 `pair-001/paired-serial` 和 `pair-001/paired-async` 这样的相对路径。状态核对同一场景种子、任务、设备数量、后端、时限、模型和推理强度，两边都产生运行结果才记为已记录，整项覆盖另外统计。
