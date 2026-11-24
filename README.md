@@ -1,5 +1,7 @@
 # Embodied intelligent behavior：无人机仿真与任务感知攻击实验
 
+[TMC 实验进度](PROGRESS.md) · [现有 GPT 巡检与执行调整实验](docs/FLEXIBLE_EXECUTION_CN.md)
+
 本仓库整理了无人机自主任务及外部观察攻击实验的**源代码**。目标环境是 **Ubuntu 20.04、ROS Noetic、Gazebo Classic 11、Python 3.8**。
 
 机器人通过真实仿真 RGB 和有限距离 LiDAR 观察场景，由视觉语言模型选择观察顺序、机位、朝向、记录与提交；Diff-Planner 负责轨迹规划。攻击进程只获得公开的外部相机观察，选择一次允许的场景修改。评分器在任务结束后检查结果，不向在线决策提供答案。
