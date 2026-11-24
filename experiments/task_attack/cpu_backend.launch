@@ -1,0 +1,14 @@
+<launch>
+  <arg name="world_file"/>
+  <param name="use_sim_time" value="false"/>
+  <node pkg="vla_sim" type="flight_controller.py" name="vla_flight_controller" output="log" required="true">
+    <param name="takeoff_height" value="1.2"/><param name="start_yaw" value="0.74"/>
+  </node>
+  <node pkg="vla_sim" type="vla_cloud_bridge" name="vla_cloud_bridge" output="log" required="true">
+    <param name="sensor_profile" value="indoor"/><param name="sampling_seed" value="360"/>
+    <param name="lidar_z" value="0.155"/><param name="range_max" value="8.0"/>
+    <param name="horizontal_samples" value="300"/><param name="vertical_samples" value="40"/>
+    <param name="max_world_z" value="3.7"/><param name="display_point_stride" value="2"/>
+  </node>
+  <include file="$(find vla_sim)/launch/planner.launch"/>
+</launch>

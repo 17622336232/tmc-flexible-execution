@@ -1,0 +1,33 @@
+<launch>
+  <arg name="photo_mode" default="false"/>
+  <node pkg="vla_sim" type="vla_diff_planner_node" name="vla_planner" output="log" required="true">
+    <rosparam command="load" file="$(find vla_sim)/config/planner.yaml"/>
+    <!-- Photo motions keep the fixed camera and sparse RGB/LiDAR association steady.
+         The planner generates these trajectories; the controller never rewrites them. -->
+    <param if="$(arg photo_mode)" name="manager/max_vel" value="0.4"/>
+    <param if="$(arg photo_mode)" name="manager/max_acc" value="0.35"/>
+    <param if="$(arg photo_mode)" name="optimization/max_vel" value="0.4"/>
+    <param if="$(arg photo_mode)" name="optimization/max_acc" value="0.35"/>
+    <param if="$(arg photo_mode)" name="optimization/max_jer" value="1.0"/>
+    <param if="$(arg photo_mode)" name="manager/short_rest_recovery" value="true"/>
+    <param if="$(arg photo_mode)" name="manager/photo_navigation" value="true"/>
+    <!-- The model supplies a final viewpoint. Continuous MINCO local curves
+         follow A* routes around controller-accepted person zones, using only
+         observed full-body free space. Replan near the sensing horizon or on
+         the original .05s collision callback, without waiting for the VLM. -->
+    <param if="$(arg photo_mode)" name="fsm/thresh_replan_time" value="30.0"/>
+
+    <remap from="~odom_world" to="/odom"/>
+    <remap from="~mandatory_stop" to="/mandatory_stop_to_planner"/>
+    <remap from="~planning/trajectory" to="/planning/trajectory"/>
+    <remap from="~planning/heartbeat" to="/vla_traj_server/heartbeat"/>
+    <remap from="~planning/broadcast_traj_send" to="/broadcast_traj_from_planner"/>
+    <remap from="~planning/broadcast_traj_recv" to="/broadcast_traj_to_planner"/>
+    <remap from="~grid_map/odom" to="/vla/lidar/odom"/>
+    <remap from="~grid_map/cloud" to="/vla/lidar/rays_world"/>
+  </node>
+  <node pkg="vla_sim" type="vla_traj_server" name="vla_traj_server" output="log" required="true">
+    <remap from="~planning/trajectory" to="/planning/trajectory"/>
+    <param name="traj_server/time_forward" value="0.5"/>
+  </node>
+</launch>

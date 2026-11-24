@@ -1,0 +1,1 @@
+from experiments.task_attack_recessed.scene import build_scene

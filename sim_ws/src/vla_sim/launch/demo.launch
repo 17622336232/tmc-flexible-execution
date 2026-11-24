@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="gui" default="true"/><arg name="rviz" default="true"/>
+  <arg name="rviz_config" default="$(find vla_sim)/rviz/mapping.rviz"/>
+  <arg name="paused" default="false"/><arg name="planner" default="true"/>
+  <arg name="sensor_profile" default="indoor"/>
+  <arg name="sampling_seed" default="360"/>
+  <arg name="scene_profile" default="gallery"/>
+  <arg name="start_yaw" default="$(eval 1.5707963267948966 if arg('scene_profile') == 'photo' else 0.0)"/>
+  <arg name="world_file" default="$(eval find('vla_sim') + '/worlds/vla_empty.world')"/>
+  <arg name="landmarks_file" default="$(eval find('vla_sim') + '/config/' + ('photo_landmarks.json' if arg('scene_profile') == 'photo' else 'landmarks.json'))"/>
+  <arg name="model_file" default="$(eval find('vla_sim') + '/models/vla_uav/' + ('model_indoor.sdf' if arg('sensor_profile') == 'indoor' else ('model_dense.sdf' if arg('sensor_profile') == 'dense' else 'model.sdf')))"/>
+  <arg name="takeoff_height" default="1.2"/>
+  <arg name="gazebo_master_uri" default="$(optenv GAZEBO_MASTER_URI http://127.0.0.1:11441)"/>
+  <env name="GAZEBO_MODEL_PATH" value="$(find vla_sim)/models:$(optenv GAZEBO_MODEL_PATH /usr/share/gazebo-11/models)"/>
+  <env name="GAZEBO_MODEL_DATABASE_URI" value=""/>
+  <env name="GAZEBO_MASTER_URI" value="$(arg gazebo_master_uri)"/>
+  <env name="IGN_PARTITION" value="$(eval 'diff_vla_' + arg('gazebo_master_uri').replace(':','_').replace('/','_'))"/>
+  <param name="use_sim_time" value="true"/>
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(arg world_file)"/>
+    <arg name="gui" value="$(arg gui)"/><arg name="paused" value="$(arg paused)"/>
+    <arg name="use_sim_time" value="true"/><arg name="verbose" value="false"/>
+  </include>
+  <node pkg="gazebo_ros" type="spawn_model" name="spawn_vla_uav" args="-sdf -file $(arg model_file) -model vla_uav -x -6 -y -3 -z 0.18 -Y $(arg start_yaw)" output="log"/>
+  <node pkg="vla_sim" type="flight_controller.py" name="vla_flight_controller" output="screen" required="true">
+    <param name="takeoff_height" value="$(arg takeoff_height)"/>
+    <param name="start_yaw" value="$(arg start_yaw)"/>
+  </node>
+  <node pkg="vla_sim" type="vla_cloud_bridge" name="vla_cloud_bridge" output="log" required="true">
+    <param name="sensor_profile" value="$(arg sensor_profile)"/>
+    <param name="sampling_seed" value="$(arg sampling_seed)"/>
+    <param name="lidar_z" value="0.155"/><param name="range_max" value="$(eval 12.0 if arg('sensor_profile') == 'dense' else 8.0)"/>
+    <param name="horizontal_samples" value="$(eval 240 if arg('sensor_profile') == 'fast' else 300)"/>
+    <param name="vertical_samples" value="$(eval 32 if arg('sensor_profile') == 'fast' else 40)"/>
+    <param name="max_world_z" value="3.7"/><param name="display_point_stride" value="2"/>
+  </node>
+  <include if="$(arg planner)" file="$(find vla_sim)/launch/planner.launch">
+    <arg name="photo_mode" value="$(eval arg('scene_profile') == 'photo')"/>
+  </include>
+  <node pkg="vla_sim" type="scene_visualization.py" name="vla_scene_visualization" output="log">
+    <param name="world_file" value="$(arg world_file)"/>
+    <param name="model_file" value="$(arg model_file)"/>
+    <param name="landmarks_file" value="$(arg landmarks_file)"/>
+  </node>
+  <node if="$(arg rviz)" pkg="rviz" type="rviz" name="vla_rviz" args="-d $(arg rviz_config)" output="log"/>
+</launch>

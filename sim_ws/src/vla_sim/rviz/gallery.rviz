@@ -1,0 +1,75 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+  - Class: rviz/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Global Options:
+    Background Color: 20; 28; 41
+    Fixed Frame: world
+    Frame Rate: 30
+  Displays:
+    - Class: rviz/Grid
+      Name: Floor grid
+      Enabled: true
+      Cell Size: 1
+      Plane Cell Count: 22
+      Color: 70; 85; 105
+      Alpha: 0.25
+    - Class: rviz/MarkerArray
+      Name: Gallery (visual only)
+      Enabled: true
+      Marker Topic: /vla/visual/scene
+      Queue Size: 1
+    - Class: rviz/MarkerArray
+      Name: Drone
+      Enabled: true
+      Marker Topic: /vla/visual/drone
+      Queue Size: 1
+    - Class: rviz/PointCloud2
+      Name: Physical LiDAR returns
+      Enabled: true
+      Topic: /vla/lidar/returns_world
+      Queue Size: 1
+      Style: Points
+      Size (Pixels): 2
+      Color Transformer: AxisColor
+      Axis: Z
+      Decay Time: 0.35
+    - Class: rviz/PointCloud2
+      Name: Planner occupancy
+      Enabled: false
+      Topic: /vla_planner/grid_map/occupancy
+      Size (m): 0.12
+      Style: Boxes
+      Color Transformer: FlatColor
+      Color: 230; 140; 50
+    - Class: rviz/Path
+      Name: Flight trail
+      Enabled: true
+      Topic: /vla/visual/trail
+      Line Style: Lines
+      Line Width: 0.035
+      Color: 0; 225; 240
+      Alpha: 1
+      Buffer Length: 1
+    - Class: rviz/Marker
+      Name: Active target
+      Enabled: true
+      Marker Topic: /vla/visual/goal
+  Tools:
+    - Class: rviz/Interact
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Name: Gallery overview
+      Distance: 21
+      Pitch: 0.82
+      Yaw: 4.3
+      Focal Point: {X: 0, Y: 0, Z: 0.4}
+Window Geometry:
+  Width: 1300
+  Height: 850

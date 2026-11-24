@@ -1,0 +1,424 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="vla_uav">
+    <static>false</static>
+    <self_collide>false</self_collide>
+    <link name="base_link">
+      <gravity>false</gravity>
+      <kinematic>true</kinematic>
+      <inertial>
+        <mass>1.2</mass>
+        <inertia>
+          <ixx>0.02</ixx>
+          <iyy>0.02</iyy>
+          <izz>0.04</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <collision name="body_collision">
+        <geometry>
+          <cylinder>
+            <radius>0.30</radius>
+            <length>0.18</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <sensor name="contact" type="contact">
+        <always_on>true</always_on>
+        <update_rate>50</update_rate>
+        <contact>
+          <collision>body_collision</collision>
+        </contact>
+        <plugin name="vla_bumper" filename="libgazebo_ros_bumper.so">
+          <bumperTopicName>/vla/uav_contacts</bumperTopicName>
+          <frameName>world</frameName>
+        </plugin>
+      </sensor>
+      <visual name="body">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.24 0.17 0.09</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.07 0.10 0.14 1</ambient>
+          <diffuse>0.07 0.10 0.14 1</diffuse>
+          <specular>0.5 0.5 0.5 1</specular>
+        </material>
+      </visual>
+      <visual name="top_shell">
+        <pose>0 0 0.054 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.18 0.14 0.025</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.12 0.70 0.81 1</ambient>
+          <diffuse>0.12 0.70 0.81 1</diffuse>
+          <specular>0.5 0.5 0.5 1</specular>
+        </material>
+      </visual>
+      <visual name="arm_a">
+        <pose>0 0 0 0 0 0.785398</pose>
+        <geometry>
+          <box>
+            <size>0.43 0.026 0.023</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.15 0.18 0.22 1</ambient>
+          <diffuse>0.15 0.18 0.22 1</diffuse>
+          <specular>0.5 0.5 0.5 1</specular>
+        </material>
+      </visual>
+      <visual name="arm_b">
+        <pose>0 0 0 0 0 -0.785398</pose>
+        <geometry>
+          <box>
+            <size>0.43 0.026 0.023</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.15 0.18 0.22 1</ambient>
+          <diffuse>0.15 0.18 0.22 1</diffuse>
+          <specular>0.5 0.5 0.5 1</specular>
+        </material>
+      </visual>
+      <visual name="motor0">
+        <pose>0.15000000000000002 0.15000000000000002 0.02 0.0 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.035</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.13 0.15 0.20 1</ambient>
+          <diffuse>0.13 0.15 0.20 1</diffuse>
+        </material>
+      </visual>
+      <visual name="rotor0">
+        <pose>0.15000000000000002 0.15000000000000002 0.05 0.0 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.087</radius>
+            <length>0.008</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.65 0.8 0.42</ambient>
+          <diffuse>0.1 0.65 0.8 0.42</diffuse>
+        </material>
+      </visual>
+      <visual name="blade0">
+        <pose>0.15000000000000002 0.15000000000000002 0.054 0.0 0.0 0.0</pose>
+        <geometry>
+          <box>
+            <size>0.174 0.014 0.004</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.3 0.35 0.4 0.8</ambient>
+          <diffuse>0.3 0.35 0.4 0.8</diffuse>
+          <specular>0.5 0.5 0.5 1</specular>
+        </material>
+      </visual>
+      <visual name="motor1">
+        <pose>0.15000000000000002 -0.15000000000000002 0.02 0.0 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.035</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.13 0.15 0.20 1</ambient>
+          <diffuse>0.13 0.15 0.20 1</diffuse>
+        </material>
+      </visual>
+      <visual name="rotor1">
+        <pose>0.15000000000000002 -0.15000000000000002 0.05 0.0 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.087</radius>
+            <length>0.008</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.65 0.8 0.42</ambient>
+          <diffuse>0.1 0.65 0.8 0.42</diffuse>
+        </material>
+      </visual>
+      <visual name="blade1">
+        <pose>0.15000000000000002 -0.15000000000000002 0.054 0.0 0.0 0.8</pose>
+        <geometry>
+          <box>
+            <size>0.174 0.014 0.004</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.3 0.35 0.4 0.8</ambient>
+          <diffuse>0.3 0.35 0.4 0.8</diffuse>
+          <specular>0.5 0.5 0.5 1</specular>
+        </material>
+      </visual>
+      <visual name="motor2">
+        <pose>-0.15000000000000002 0.15000000000000002 0.02 0.0 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.035</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.13 0.15 0.20 1</ambient>
+          <diffuse>0.13 0.15 0.20 1</diffuse>
+        </material>
+      </visual>
+      <visual name="rotor2">
+        <pose>-0.15000000000000002 0.15000000000000002 0.05 0.0 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.087</radius>
+            <length>0.008</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.4 0.45 0.52 0.42</ambient>
+          <diffuse>0.4 0.45 0.52 0.42</diffuse>
+        </material>
+      </visual>
+      <visual name="blade2">
+        <pose>-0.15000000000000002 0.15000000000000002 0.054 0.0 0.0 1.6</pose>
+        <geometry>
+          <box>
+            <size>0.174 0.014 0.004</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.3 0.35 0.4 0.8</ambient>
+          <diffuse>0.3 0.35 0.4 0.8</diffuse>
+          <specular>0.5 0.5 0.5 1</specular>
+        </material>
+      </visual>
+      <visual name="motor3">
+        <pose>-0.15000000000000002 -0.15000000000000002 0.02 0.0 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.035</radius>
+            <length>0.05</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.13 0.15 0.20 1</ambient>
+          <diffuse>0.13 0.15 0.20 1</diffuse>
+        </material>
+      </visual>
+      <visual name="rotor3">
+        <pose>-0.15000000000000002 -0.15000000000000002 0.05 0.0 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.087</radius>
+            <length>0.008</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.4 0.45 0.52 0.42</ambient>
+          <diffuse>0.4 0.45 0.52 0.42</diffuse>
+        </material>
+      </visual>
+      <visual name="blade3">
+        <pose>-0.15000000000000002 -0.15000000000000002 0.054 0.0 0.0 2.4000000000000004</pose>
+        <geometry>
+          <box>
+            <size>0.174 0.014 0.004</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.3 0.35 0.4 0.8</ambient>
+          <diffuse>0.3 0.35 0.4 0.8</diffuse>
+          <specular>0.5 0.5 0.5 1</specular>
+        </material>
+      </visual>
+      <visual name="leg0">
+        <pose>0 -0.11 -0.16 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.21 0.018 0.025</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.18 0.21 0.25 1</ambient>
+          <diffuse>0.18 0.21 0.25 1</diffuse>
+          <specular>0.5 0.5 0.5 1</specular>
+        </material>
+      </visual>
+      <visual name="leg1">
+        <pose>0 0.11 -0.16 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.21 0.018 0.025</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.18 0.21 0.25 1</ambient>
+          <diffuse>0.18 0.21 0.25 1</diffuse>
+          <specular>0.5 0.5 0.5 1</specular>
+        </material>
+      </visual>
+      <visual name="lidar_base">
+        <pose>0 0 0.13 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.045</radius>
+            <length>0.04</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.02 0.04 0.05 1</ambient>
+          <diffuse>0.02 0.04 0.05 1</diffuse>
+        </material>
+      </visual>
+      <visual name="lidar_window">
+        <pose>0 0 0.155 0 0 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.04</radius>
+            <length>0.03</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.1 0.45 0.50 1</ambient>
+          <diffuse>0.1 0.45 0.50 1</diffuse>
+        </material>
+      </visual>
+      <sensor name="onboard_front_rgb" type="camera">
+        
+
+        <pose>0.17 0 0.02 0 0 0</pose>
+        <always_on>true</always_on>
+        <update_rate>8</update_rate>
+        <visualize>false</visualize>
+        
+
+        <camera>
+          <horizontal_fov>1.3962634016</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>360</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.05</near>
+            <far>30</far>
+          </clip>
+        </camera>
+        
+
+        <plugin name="onboard_rgb_ros" filename="libgazebo_ros_camera.so">
+          
+
+          <robotNamespace>/vla</robotNamespace>
+          <cameraName>camera</cameraName>
+          <imageTopicName>image_raw</imageTopicName>
+          <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+          <frameName>camera_optical</frameName>
+          <updateRate>0.0</updateRate>
+          <hackBaseline>0</hackBaseline>
+          
+
+        </plugin>
+      </sensor>
+      <visual name="front_rgb_camera">
+        <pose>0.14 0 0.015 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.05 0.055 0.035</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.03 0.04 0.05 1</ambient>
+          <diffuse>0.04 0.05 0.06 1</diffuse>
+        </material>
+      </visual>
+      <visual name="front_rgb_lens">
+        <pose>0.169 0 0.02 0 1.57079632679 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.014</radius>
+            <length>0.012</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.02 0.13 0.17 1</ambient>
+          <diffuse>0.03 0.18 0.24 1</diffuse>
+          <specular>0.7 0.8 0.9 1</specular>
+        </material>
+      </visual>
+    </link>
+    <link name="mid360_link">
+      <pose>0 0 0.155 0 0 0</pose>
+      <gravity>false</gravity>
+      <kinematic>true</kinematic>
+      <inertial>
+        <mass>0.2</mass>
+        <inertia>
+          <ixx>0.0006</ixx>
+          <iyy>0.0006</iyy>
+          <izz>0.0006</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      
+
+      <sensor name="mid360_like" type="ray">
+        <always_on>true</always_on>
+        <update_rate>8</update_rate>
+        <visualize>false</visualize>
+        <ray>
+          <scan>
+            <horizontal>
+              <samples>300</samples>
+              <resolution>1</resolution>
+              <min_angle>-3.14159265359</min_angle>
+              <max_angle>3.14159265359</max_angle>
+            </horizontal>
+            <vertical>
+              <samples>40</samples>
+              <resolution>1</resolution>
+              <min_angle>-0.12217304764</min_angle>
+              <max_angle>0.90757121104</max_angle>
+            </vertical>
+          </scan>
+          <range>
+            <min>0.10</min>
+            <max>8.0</max>
+            <resolution>0.01</resolution>
+          </range>
+          <noise>
+            <type>gaussian</type>
+            <mean>0</mean>
+            <stddev>0.005</stddev>
+          </noise>
+        </ray>
+        <plugin name="vla_lidar" filename="libvla_acquisition_lidar.so">
+          <topicName>/vla/lidar/points_raw</topicName>
+          <frameName>mid360_link</frameName>
+          <updateRate>8.0</updateRate>
+          <gaussianNoise>0.005</gaussianNoise>
+          <hokuyoMinIntensity>100</hokuyoMinIntensity>
+        </plugin>
+      </sensor>
+    </link>
+    <joint name="lidar_fixed" type="fixed">
+      <parent>base_link</parent>
+      <child>mid360_link</child>
+    </joint>
+  </model>
+</sdf>

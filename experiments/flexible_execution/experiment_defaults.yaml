@@ -1,0 +1,91 @@
+project: flexible_execution_tmc
+status: planned_not_executed
+execution_profile: local5060
+scope:
+  robots_per_episode: 1
+  primary_platform: uav
+  obstacle_avoidance_research: false
+  clean_main_experiment: true
+  automatic_physical_actuation: false
+hardware:
+  local_gpu_count: 1
+  local_gpu_model_reported: RTX_5060
+  local_vram_gb: null
+  autodetect_local_hardware: true
+  optional_rental_gpu_model: RTX_4090
+  optional_rental_vram_gb: 24
+  onboard_memory_gb_reported: 16
+  training_on_robot: false
+rental:
+  enabled: false
+  paid_job_authorized: false
+  maximum_cost: 0
+  cost_currency: null
+  maximum_hours: 0
+  automatic_renewal: false
+  require_readiness_report: true
+resources:
+  parallel_training_jobs: 1
+  simulator_workers_initial: 1
+  paid_external_api_budget: 0
+  paid_compute_budget: 0
+  new_cache_limit_gb: 150
+  minimum_free_disk_gb: 30
+  estimate_gpu_hours_from_measurements: true
+  checkpoint_minutes: 10
+data:
+  legacy_tasks_role: regression_and_development
+  local_smoke_instances: 12
+  natural_latency_pilot_instances: 48
+  development_instances: 96
+  development_calibration_instances: 48
+  development_selection_instances: 48
+  training_state_counts: [1000, 3000, 10000]
+  minimum_base_groups: [250, 750, 2500]
+  maximum_states_per_base_group: 4
+  final_custom_instances: 600
+  main_evaluation_mode: ACTUAL_LANGUAGE_AND_VISION_CLOSED_LOOP
+  custom_test_strata: {structure: 200, scene: 200, execution_condition: 200}
+  public_procthor_instances: 200
+  public_procthor_test_houses: 50
+  public_alfworld_cap: 200
+  diagnostic_instances: 120
+  auxiliary_training_seed: 17
+  public_methods_cap: 4
+  infeasible_case_instances: 40
+  training_seeds: [17, 29, 43]
+  split_seed: 20261124
+methods:
+  main: [ASYNC, PREFETCH, PLANNER, STREAM, ORDINARY, A, B, C]
+  diagnostic: [SERIAL, FAST_SLOW]
+  candidate_cap: 32
+  preparation_length_cap: 3
+  common_continuation_length_cap: 4
+  viewpoints_per_object_cap: 8
+  initial_online_compute_budget_ms: 1000
+  initial_search_quantum_ms: 25
+training:
+  initial_route: A_then_B1
+  b2_requires_resource_check: true
+  proposer_base_model: Qwen/Qwen3-4B-Instruct-2507
+  compression_comparison: Qwen/Qwen3-1.7B
+  larger_comparison: Qwen/Qwen3-8B
+  visual_fallback_model: Qwen/Qwen3-VL-4B-Instruct
+  default_quantization: nf4
+  lora_rank: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  learning_rate: 0.0001
+  maximum_epochs: 3
+  sequence_length: 2048
+  micro_batch_size: 1
+  gradient_accumulation: 16
+evaluation:
+  primary_time: complete_task_delivery
+  failure_time: frozen_episode_deadline
+  bootstrap_replicates: 2000
+  confidence_level: 0.95
+  success_noninferiority_margin: null
+  test_driven_retraining: false
+  natural_latency_is_primary: true
+  simulated_energy_must_be_labeled: true

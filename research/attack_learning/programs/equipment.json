@@ -1,0 +1,160 @@
+{
+  "programs": [
+    {
+      "family": "cracks",
+      "roles": [
+        "cracked"
+      ],
+      "scope": "all",
+      "filter": {
+        "op": "eq",
+        "left": {
+          "field": "cracked"
+        },
+        "right": {
+          "value": true
+        }
+      },
+      "reduce": null,
+      "literal": false
+    },
+    {
+      "family": "temperature",
+      "roles": [
+        "temperature"
+      ],
+      "scope": "all",
+      "filter": {
+        "op": "gt",
+        "left": {
+          "field": "temperature"
+        },
+        "right": {
+          "prior": "temperature_threshold"
+        }
+      },
+      "reduce": null,
+      "literal": false
+    },
+    {
+      "family": "locate",
+      "roles": [
+        "temperature"
+      ],
+      "scope": "target",
+      "filter": null,
+      "reduce": null,
+      "literal": false
+    },
+    {
+      "family": "crack_and_heat",
+      "roles": [
+        "cracked",
+        "temperature"
+      ],
+      "scope": "all",
+      "filter": {
+        "op": "and",
+        "args": [
+          {
+            "op": "eq",
+            "left": {
+              "field": "cracked"
+            },
+            "right": {
+              "value": true
+            }
+          },
+          {
+            "op": "gt",
+            "left": {
+              "field": "temperature"
+            },
+            "right": {
+              "prior": "temperature_threshold"
+            }
+          }
+        ]
+      },
+      "reduce": null,
+      "literal": false
+    },
+    {
+      "family": "thermal_minimum",
+      "roles": [
+        "temperature"
+      ],
+      "scope": "all",
+      "filter": null,
+      "reduce": {
+        "op": "min",
+        "field": "temperature"
+      },
+      "literal": false
+    },
+    {
+      "family": "safe_equipment",
+      "roles": [
+        "cracked",
+        "temperature"
+      ],
+      "scope": "all",
+      "filter": {
+        "op": "and",
+        "args": [
+          {
+            "op": "eq",
+            "left": {
+              "field": "cracked"
+            },
+            "right": {
+              "value": false
+            }
+          },
+          {
+            "op": "le",
+            "left": {
+              "field": "temperature"
+            },
+            "right": {
+              "prior": "temperature_threshold"
+            }
+          }
+        ]
+      },
+      "reduce": null,
+      "literal": false
+    },
+    {
+      "family": "equipment_labels",
+      "roles": [
+        "display_text"
+      ],
+      "scope": "all",
+      "filter": null,
+      "reduce": null,
+      "literal": true
+    },
+    {
+      "family": "locate_crack",
+      "roles": [
+        "cracked"
+      ],
+      "scope": "target",
+      "filter": null,
+      "reduce": null,
+      "literal": false
+    },
+    {
+      "family": "locate_condition",
+      "roles": [
+        "cracked",
+        "temperature"
+      ],
+      "scope": "target",
+      "filter": null,
+      "reduce": null,
+      "literal": false
+    }
+  ]
+}
