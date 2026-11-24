@@ -8,6 +8,7 @@ from experiments.task_attack import FAMILIES
 from experiments.task_attack.runtime import write_json
 from experiments.task_attack.tasks import SCENES
 
+from .candidate_ranking import RANKED_METHODS
 from .live_planning import CONDITIONAL_MODES, NEW_METHODS, STREAM_METHODS
 from .runner import _hash
 
@@ -120,11 +121,14 @@ def prepare_stream(directory, base, calibration):
     return catalog
 
 
-def prepare_visual(directory, inputs, calibration, split):
+def prepare_visual(directory, inputs, calibration, split, *, rankers=None):
     from .development_inputs import scene_fingerprint
 
     methods = (("conditional-serial", "conditional-async", "conditional-a") if split == "calibration" else
-               ("conditional-async", "conditional-prefetch", "conditional-planner", "conditional-a"))
+               ("conditional-async", "conditional-prefetch", "conditional-planner", "conditional-a", *STREAM_METHODS,
+                *RANKED_METHODS))
+    if split == "selection" and not rankers:
+        raise ValueError("Configuration selection needs the previously registered ranking comparison")
     cases = []
     for row in inputs["cases"]:
         if row["split"] != split:
@@ -140,7 +144,11 @@ def prepare_visual(directory, inputs, calibration, split):
     catalog = {"schema": 1, "role": VISUAL_ROLES[split], "layout_manifest_sha256": _hash(inputs),
                "cost_config_sha256": _hash(calibration), "intended_pairs": len(cases), "cases": cases}
     directory.mkdir(parents=True, exist_ok=True)
-    for filename, value in (("calibrated_costs.json", calibration), ("pilot_manifest.json", catalog)):
+    files = [("calibrated_costs.json", calibration), ("pilot_manifest.json", catalog)]
+    if rankers:
+        catalog["ranker_config_sha256"] = _hash(rankers)
+        files.insert(0, ("calibrated_rankers.json", rankers))
+    for filename, value in files:
         path = directory / filename
         recorded = _read(path)
         if recorded is not None and recorded != value:

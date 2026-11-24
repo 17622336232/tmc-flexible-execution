@@ -1,4 +1,5 @@
 import json
+from os.path import relpath
 import tempfile
 import unittest
 from pathlib import Path
@@ -6,6 +7,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from experiments.flexible_execution import cli, control
+from experiments.flexible_execution.pilot_report import _attempt_costs
 from experiments.flexible_execution.request_budget import RequestBudget
 from experiments.task_attack.runtime import write_json
 
@@ -99,3 +101,36 @@ class SupervisorTest(unittest.TestCase):
             self.assertTrue(result["worker_owned_by_another_batch"])
             self.assertEqual(result["pilot_directory"], str(original))
             self.assertEqual(result["active_jobs"][0]["process"], worker)
+
+    def test_disk_reserve_leaves_the_case_pending_without_starting_a_worker(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            pilot = root / "pilot"
+            control_dir = root / "control"
+            write_json(pilot / "pilot_manifest.json", {"cases": [{"id": "case", "order": ["paired-serial"],
+                                                                  "episode_timeout_seconds": 480}]})
+            runtime = {"version": 2, "stage": "matched-baselines", "model": control.MODEL,
+                       "reasoning_effort": control.EFFORT}
+            with patch.object(control, "_runtime_inputs", side_effect=lambda *_args: dict(runtime)), patch.object(
+                control.subprocess, "check_output", return_value="b" * 40
+            ), patch.object(control, "disk_usage", return_value=SimpleNamespace(free=10)), patch.object(
+                control.subprocess, "Popen"
+            ) as launch:
+                result = control.pilot_run(pilot, control_dir, root, resume=True, max_jobs=1, minimum_free_disk_gb=30)
+                self.assertEqual(control.control_status(control_dir)["execution_status"], "BLOCKED_EXTERNAL")
+            launch.assert_not_called()
+            self.assertEqual(result["job_counts"]["PENDING"], 1)
+            self.assertEqual(result["resource_gate"]["available_bytes"], 10)
+
+    def test_cost_rollup_counts_the_final_attempt_once_for_relative_pilot_paths(self):
+        with tempfile.TemporaryDirectory() as temp:
+            arm = Path(temp).resolve()
+            for attempt, wall in enumerate((5., 7.), 1):
+                episode = arm / f"attempt-{attempt:03d}" / "episode"
+                logs = episode / "private/robot"
+                logs.mkdir(parents=True)
+                call = {"logical_job_attempt": attempt, "wall_seconds": wall, "started_at": attempt}
+                (logs / "model_calls.jsonl").write_text(json.dumps(call) + "\n")
+            costs = _attempt_costs(Path(relpath(arm)), episode, False)
+            self.assertEqual(costs["total_model_transport_wall_seconds"], 12.)
+            self.assertEqual(costs["transport_calls_with_duration"], 2)

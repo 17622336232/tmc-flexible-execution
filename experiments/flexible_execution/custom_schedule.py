@@ -3,12 +3,17 @@
 from collections import Counter
 from hashlib import sha256
 from random import Random
+from shutil import disk_usage
+import subprocess
 
 from experiments.task_attack.runtime import write_json
 from experiments.task_attack.tasks import SCENES
 
 from .requirement_program import parse
 from .runner import _hash, read_json
+
+
+FINAL_ROLE = "CUSTOM_VISUAL_MATCHED_HELDOUT"
 
 
 def _comparison(op, field, value):
@@ -123,3 +128,121 @@ def prepare_development(output, calibration):
         if not path.is_file():
             write_json(path, value)
     return catalog
+
+
+def _save_locked(path, data):
+    if path.is_file():
+        if read_json(path) != data:
+            raise ValueError("Saved evaluation input has changed: " + str(path))
+    else:
+        write_json(path, data)
+
+
+def _heldout_layout(row, output, development_assets, used_seeds, split_seed):
+    from .development_inputs import _reuse_or_build, scene_fingerprint
+
+    case = {key: row[key] for key in ("id", "seed", "layout_seed", "family", "domain", "equipment_count",
+                                    "episode_timeout_seconds", "stratum")}
+    case.update(source_profile="independent" if row["family"] == "cracks" else "single", backend="cpu",
+                collection_clause=None, typed_task_program=True, handoff_at_observation=True)
+    if row["stratum"] == "execution_condition" and row["family"] == "cracks":
+        case["collection_clause"] = ("采集规则：允许在判读结果返回前采集以下材料：identity。" if row["episode_timeout_seconds"] == 600
+                                    else "采集规则：只有判读结果为 positive 才允许采集以下材料：identity。")
+    alternatives = Random(_hash([split_seed, row["id"], "blind-asset-replacement"])).sample(range(7_000_000, 8_000_000), 16)
+    for seed in (row["seed"], *alternatives):
+        if seed in used_seeds:
+            continue
+        case["seed"] = seed
+        directory = output / "reference-scenes" / row["id"] / str(seed)
+        material = _reuse_or_build(case, directory)
+        if material["asset_group_sha256"] not in development_assets:
+            break
+    else:
+        raise ValueError("The sealed assignment could not isolate its visual source: " + row["id"])
+    used_seeds.add(seed)
+    if row["instruction"] is not None:
+        task = {"instruction": row["instruction"], "oracle_requirement_program": row["oracle_requirement_program"]}
+        task_file = output / "study-tasks" / (row["id"] + ".json")
+        _save_locked(task_file, task)
+        case.update(study_task_file=str(task_file), study_task_sha256=_hash(task))
+        given = task["instruction"] + ("\n" + case["collection_clause"] if case["collection_clause"] else "")
+        material["instruction_sha256"] = sha256(given.encode("utf8")).hexdigest()
+    case.update(collection_rule=case.pop("collection_clause"), scene_fingerprint=scene_fingerprint(material),
+                group_id="visual-source-" + material["asset_group_sha256"], original_seed=row["seed"],
+                physical_layout_sha256=material["layout_group_sha256"])
+    return case
+
+
+def prepare_final(blind, development, calibration, selection, diagnostic, output, checkout, defaults, auth_project):
+    """Freeze the custom protocol before generating any held-out scene or starting inference."""
+    from .candidate_ranking import RANKED_METHODS
+    from .control import _runtime_inputs, verified_cohort
+    from .learning_schedule import build_config
+    from .pilot_schedule import VISUAL_ROLES
+
+    data = defaults["data"]
+    chosen, selection_evidence = verified_cohort("configuration_selection", selection, VISUAL_ROLES["selection"],
+                                                 data["development_selection_instances"])
+    calibrated, calibration_evidence = verified_cohort("timing_calibration", calibration, VISUAL_ROLES["calibration"],
+                                                        data["development_calibration_instances"])
+    if any(catalog["layout_manifest_sha256"] != _hash(development) for catalog in (chosen, calibrated)):
+        raise ValueError("The development evidence was generated from different visual groups")
+    prepare(blind, defaults, development)
+    assigned = read_json(blind / "split_manifest.json")
+    output = output.resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    minimum_free = defaults["resources"]["minimum_free_disk_gb"] * 1024**3
+    if disk_usage(output).free < minimum_free:
+        raise OSError("Disk reserve is below the registered minimum")
+    cost = read_json(selection / "calibrated_costs.json")
+    ranking = read_json(selection / "calibrated_rankers.json")
+    if _hash(cost) != chosen["cost_config_sha256"] or _hash(ranking) != chosen["ranker_config_sha256"]:
+        raise ValueError("The selected controller configuration no longer matches development")
+    cap = ranking["policies"][RANKED_METHODS[-1]]["check_cap"]
+    bind = {}
+    for seed in data["training_seeds"]:
+        config = build_config(diagnostic, ranking["training_rows"], seed, cap)
+        config_file = output / "rankers" / f"seed-{seed}.json"
+        _save_locked(config_file, config)
+        for method in RANKED_METHODS:
+            if method == RANKED_METHODS[0] and bind:
+                continue
+            label = method if method == RANKED_METHODS[0] else f"{method}-seed-{seed}"
+            bind[label] = {"method": method, "ranker_file": str(config_file), "sha256": _hash(config),
+                           "seed": seed if label != method else None}
+    methods = ("conditional-async", "conditional-prefetch", "conditional-planner", "conditional-stream", "conditional-a", *bind)
+    template = {"schema": 1, "role": FINAL_ROLE, "intended_pairs": len(assigned["cases"]),
+                "ranker_bindings": bind, "cost_config_sha256": _hash(cost)}
+    signature_cases = [{"layout_seed": row["layout_seed"], "order": methods,
+                        "study_task_sha256": row["instruction"] is not None} for row in assigned["cases"]]
+    inputs = _runtime_inputs(checkout, {**template, "cases": signature_cases}, auth_project.resolve(), (11674, 11675))
+    lock = {key: inputs[key] for key in ("model", "reasoning_effort", "request_limit", "source_sha256", "environment_sha256")}
+    frozen = {**lock, "schema": 1, "role": FINAL_ROLE, "blind_assignment_sha256": _hash(assigned),
+              "selection": selection_evidence, "calibration": calibration_evidence, "methods": list(methods),
+              "ranker_bindings": bind, "cost_config_sha256": _hash(cost), "metrics": defaults["evaluation"],
+              "asset_replacement": "ordered independent seeds; reject exact development texture-group overlap",
+              "mode": data["main_evaluation_mode"]}
+    lock_path = output / "frozen_evaluation.json"
+    if lock_path.is_file():
+        code = read_json(lock_path)["code_git_commit"]
+    else:
+        code = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=checkout, text=True).strip()
+    frozen["code_git_commit"] = code
+    _save_locked(lock_path, frozen)
+    _save_locked(output / "calibrated_costs.json", cost)
+
+    cases = []
+    forbidden = {row["asset_group_sha256"] for row in development["cases"]}
+    used = set()
+    for row in assigned["cases"]:
+        if disk_usage(output).free < minimum_free:
+            raise OSError("Disk reserve reached while preparing the sealed evaluation")
+        case = _heldout_layout(row, output, forbidden, used, data["split_seed"])
+        case["order"] = Random(_hash([row["id"], data["split_seed"], "method-order"])).sample(methods, len(methods))
+        cases.append(case)
+    if len({case["physical_layout_sha256"] for case in cases}) != len(cases):
+        raise ValueError("The custom test shares a physical layout across base cases")
+    catalog = {**template, "cases": cases, "frozen_evaluation": str(lock_path), "frozen_evaluation_sha256": _hash(frozen)}
+    _save_locked(output / "pilot_manifest.json", catalog)
+    return {"cases": len(cases), "jobs": sum(len(row["order"]) for row in cases), "output": str(output),
+            "frozen_evaluation_sha256": catalog["frozen_evaluation_sha256"]}

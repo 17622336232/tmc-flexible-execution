@@ -11,12 +11,15 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from shutil import disk_usage
 
 from experiments.task_attack import EFFORT, MODEL
 from experiments.task_attack.model import EXTERNAL_RESPONSE_CODES
 from experiments.task_attack.runtime import write_json
 
+from .candidate_ranking import RANKED_METHODS
 from .clean_coverage import audit_run
+from .custom_schedule import FINAL_ROLE as CUSTOM_FINAL_ROLE
 from .learning_schedule import ROLE as RANKER_ROLE, registered_config
 from .live_planning import CONDITIONAL_MODES, STREAM_METHODS
 from .pilot_schedule import PAIRED_MODES, STREAM_ROLE, TYPED_ROLE, VISUAL_ROLES, _read, _valid_preflight
@@ -108,7 +111,8 @@ def simulator_running(control):
 def _runtime_inputs(checkout, catalog, auth_project, ports):
     sources = []
     ranked = catalog.get("role") == RANKER_ROLE
-    typed = catalog.get("role") == TYPED_ROLE
+    custom_final = catalog.get("role") == CUSTOM_FINAL_ROLE
+    typed = catalog.get("role") == TYPED_ROLE or custom_final
     visual = catalog.get("role") in VISUAL_ROLES.values()
     public = catalog.get("role") in (PUBLIC_VALIDATION_ROLE, PUBLIC_FINAL_ROLE)
     stream = catalog.get("role") == STREAM_ROLE
@@ -125,6 +129,8 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
                           "experiments/task_attack_value/scene.py", "experiments/flexible_execution/development_inputs.py")
     if public:
         stage_sources += (*PUBLIC_SOURCES, "experiments/flexible_execution/live_planning.py", RANKING_SOURCE)
+    if custom_final:
+        stage_sources += ("experiments/flexible_execution/custom_schedule.py",)
     if any(method in STREAM_METHODS for case in catalog["cases"] for method in case["order"]):
         stage_sources += ("experiments/flexible_execution/stream_baseline.py",)
     for label in RUN_SOURCES + stage_sources:
@@ -155,6 +161,8 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
         version, stage = 6, catalog["role"].lower().replace("_", "-")
     elif stream:
         version, stage = 8, "segmented-generation-development"
+    elif custom_final:
+        version, stage = 10, "custom-visual-final"
     elif typed:
         version, stage = 5, "typed-vision-development"
     elif ranked:
@@ -196,14 +204,19 @@ def plans(directory, protocol, catalog):
     fingerprint = _hash({key: value for key, value in protocol.items() if key != "code_git_commit"})
     for case in catalog["cases"]:
         for method in case["order"]:
-            if method not in PAIRED_MODES and method not in CONDITIONAL_MODES:
+            binding = catalog.get("ranker_bindings", {}).get(method)
+            execution_method = binding["method"] if binding else method
+            if execution_method not in PAIRED_MODES and execution_method not in CONDITIONAL_MODES:
                 raise ValueError("Method is not enabled for active development: " + method)
             identifier = f"v{protocol['version']}-{case['id']}-{method}-{fingerprint[:16]}"
             job = {"id": identifier, "stage": protocol["stage"], "input_sha256": fingerprint,
                    "case": case, "method": method, "model": protocol["model"],
-                   "ranker_config_sha256": catalog.get("ranker_config_sha256"),
+                   "ranker_config_sha256": catalog.get("ranker_config_sha256") if execution_method in RANKED_METHODS else None,
                    "reasoning_effort": protocol["reasoning_effort"], "state": "PENDING", "attempt": 0,
                    "arm": str(directory / case["id"] / method)}
+            if binding:
+                job.update(execution_method=execution_method, ranker_file=binding["ranker_file"],
+                           training_seed=binding["seed"], ranker_config_sha256=binding["sha256"])
             if catalog.get("role") in (PUBLIC_VALIDATION_ROLE, PUBLIC_FINAL_ROLE):
                 job["public_runtime"] = catalog["runtime"]
             if catalog.get("role") == PUBLIC_FINAL_ROLE:
@@ -231,7 +244,7 @@ def _evidence(root, job):
     pre = _read(root / "clean_preflight.json")
     if pre is None:
         return None, None
-    _valid_preflight(pre, job["case"], job["method"], root)
+    _valid_preflight(pre, job["case"], job.get("execution_method", job["method"]), root)
     if (pre.get("model"), pre.get("reasoning_effort")) != (job["model"], job["reasoning_effort"]):
         raise ValueError("Result uses different model settings: " + str(root))
     expected_limit = job.get("request_limit")
@@ -402,6 +415,30 @@ def _verify_terminal(job):
         raise ValueError("Saved result no longer verifies for " + job["id"] + ": " + str(root))
 
 
+def verified_cohort(name, directory, role, count):
+    from .pilot_schedule import status
+
+    checkpoint = status(directory)
+    if checkpoint["role"] != role or checkpoint["planned_pairs"] != count or checkpoint["recorded_pairs"] != count:
+        raise ValueError(f"{name} has {checkpoint['recorded_pairs']}/{count} recorded cases")
+    catalog = _read(directory / "pilot_manifest.json")
+    protocol = _read(directory / "run_protocol.json")
+    if (not protocol or protocol["catalog_sha256"] != _hash(catalog)
+            or (protocol["model"], protocol["reasoning_effort"]) != (MODEL, EFFORT)):
+        raise ValueError(f"{name} used an inconsistent model or source assignment")
+    outcomes = []
+    for case in catalog["cases"]:
+        for method in case["order"]:
+            job = _read(directory / case["id"] / method / "job.json")
+            if not job or job["state"] not in TASK_TERMINAL:
+                raise ValueError(f"{name} contains an unresolved job")
+            _verify_terminal(job)
+            outcomes.append({"id": job["id"], "state": job["state"], "result": job["result"]})
+    evidence = {"catalog_sha256": _hash(catalog), "protocol_sha256": _hash(protocol),
+                "recorded_jobs": len(outcomes), "outcomes_sha256": _hash(outcomes)}
+    return catalog, evidence
+
+
 def _public_command(job, checkout, control, run, episode, auth_project):
     runtime = job["public_runtime"]
     xvfb = Path(runtime["xvfb_run"])
@@ -420,8 +457,9 @@ def _public_command(job, checkout, control, run, episode, auth_project):
 
 def _gazebo_command(job, directory, catalog, auth_project, episode, remaining, ledger, ports):
     case = job["case"]
+    method = job.get("execution_method", job["method"])
     command = ["bash", "scripts/run_flexible_clean.sh", "--chatgpt-project", str(auth_project),
-               "--output", str(episode), "--method", job["method"], "--family", case["family"],
+               "--output", str(episode), "--method", method, "--family", case["family"],
                "--seed", str(case["seed"]), "--equipment-count", str(case["equipment_count"]),
                "--backend", case["backend"], "--source-profile", case["source_profile"],
                "--episode-timeout", str(remaining), "--planned-episode-timeout", str(case["episode_timeout_seconds"]),
@@ -436,7 +474,7 @@ def _gazebo_command(job, directory, catalog, auth_project, episode, remaining, l
         if _hash(_read(study)) != case["study_task_sha256"]:
             raise ValueError("The study instruction does not match its registered input")
         command.extend(("--study-task", str(study)))
-    if job["method"] in CONDITIONAL_MODES:
+    if method in CONDITIONAL_MODES:
         command.extend(("--cost-config", str(directory / "calibrated_costs.json")))
         if case.get("early_fields"):
             command.extend(("--early-fields", ",".join(case["early_fields"])))
@@ -446,14 +484,16 @@ def _gazebo_command(job, directory, catalog, auth_project, episode, remaining, l
             command.append("--handoff-at-observation")
         if case.get("typed_task_program"):
             command.append("--compile-task-program")
-    if catalog.get("role") == RANKER_ROLE:
-        registered_config(directory, catalog)
-        command.extend(("--ranker-config", str(directory / "calibrated_rankers.json")))
+    if method in RANKED_METHODS:
+        ranker_path = Path(job.get("ranker_file", directory / "calibrated_rankers.json"))
+        if _hash(_read(ranker_path)) != job["ranker_config_sha256"]:
+            raise ValueError("The ranking checkpoint assignment changed")
+        command.extend(("--ranker-config", str(ranker_path)))
     return command
 
 
 def pilot_run(directory, control, checkout, *, resume, max_jobs, auth_project=DEFAULT_AUTH_PROJECT,
-              unlock_external=False):
+              unlock_external=False, minimum_free_disk_gb=0):
     directory, control, auth_project = directory.resolve(), control.resolve(), auth_project.resolve()
     if max_jobs < 1:
         raise ValueError("Choose a positive maximum batch size")
@@ -466,10 +506,11 @@ def pilot_run(directory, control, checkout, *, resume, max_jobs, auth_project=DE
         running = control_status(control)
         if running["active_jobs"] and running.get("pilot_directory") != str(directory):
             return {**running, "worker_owned_by_another_batch": True}
-        return _run_locked(directory, control, checkout, resume, max_jobs, auth_project, unlock_external)
+        return _run_locked(directory, control, checkout, resume, max_jobs, auth_project, unlock_external,
+                           minimum_free_disk_gb)
 
 
-def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, unlock_external):
+def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, unlock_external, minimum_free_disk_gb):
     warmup = simulator_running(control)
     if warmup:
         return {"execution_status": "RUNNING", "active_jobs": [warmup]}
@@ -478,7 +519,7 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
         raise ValueError("The existing pilot schedule is required")
     if catalog.get("cost_config_sha256") and _hash(_read(directory / "calibrated_costs.json")) != catalog["cost_config_sha256"]:
         raise ValueError("Conditional cost calibration does not match its frozen catalog")
-    if catalog.get("role") == RANKER_ROLE:
+    if catalog.get("ranker_config_sha256"):
         registered_config(directory, catalog)
     if catalog.get("role") == PUBLIC_FINAL_ROLE:
         freeze = _read(Path(catalog["frozen_evaluation"]))
@@ -487,6 +528,14 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
             raise ValueError("The held-out public evaluation does not match its frozen inputs")
     ports = (11674, 11675)
     protocol = _runtime_inputs(checkout, catalog, auth_project, ports)
+    freeze = None
+    if catalog.get("role") == CUSTOM_FINAL_ROLE:
+        freeze = _read(Path(catalog["frozen_evaluation"]))
+        if (not freeze or _hash(freeze) != catalog["frozen_evaluation_sha256"]
+                or any(freeze[key] != protocol[key] for key in ("model", "reasoning_effort", "request_limit", "environment_sha256"))
+                or freeze["ranker_bindings"] != catalog["ranker_bindings"]
+                or freeze["cost_config_sha256"] != catalog["cost_config_sha256"]):
+            raise ValueError("The custom test inputs or execution code differ from the frozen evaluation")
     lock = directory / "run_protocol.json"
     existing = _read(lock)
     if existing:
@@ -498,7 +547,11 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
     else:
         protocol["code_git_commit"] = subprocess.check_output(["git", "rev-parse", "HEAD"],
                                                              cwd=checkout, text=True).strip()
+        if freeze and freeze["source_sha256"] != protocol["source_sha256"]:
+            raise ValueError("The first custom test launch must use the frozen source")
         write_json(lock, protocol)
+    if freeze and freeze["source_sha256"] != protocol["source_sha256"]:
+        raise ValueError("The custom test launch differs from the frozen source")
     all_jobs = list(plans(directory, protocol, catalog))
     if not all_jobs:
         raise ValueError("Cannot launch an empty pilot schedule")
@@ -542,6 +595,13 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
             return refresh(job)
         if launched >= max_jobs:
             return refresh()
+        free, reserve = disk_usage(directory).free, minimum_free_disk_gb * 1024**3
+        if free < reserve:
+            state = {**refresh(job), "execution_status": "BLOCKED_EXTERNAL", "resource_gate": {
+                "condition": "minimum_free_disk", "path": str(directory), "available_bytes": free,
+                "required_free_bytes": reserve}}
+            write_json(control / "state.json", state)
+            return state
         # Later arms in a long batch must still use the version frozen before
         # the first arm, even when the development checkout is being edited.
         current = _runtime_inputs(checkout, catalog, auth_project, ports)
@@ -609,8 +669,11 @@ def control_status(control):
         active.append(warm)
     current = active[0] if active else state.get("current_job")
     current_state = (current or {}).get("state")
+    reserve = state.get("resource_gate")
     if active:
         execution = "RUNNING"
+    elif reserve and disk_usage(reserve["path"]).free < reserve["required_free_bytes"]:
+        execution = "BLOCKED_EXTERNAL"
     elif current_state == "RUNNING":
         execution = "EXITED_NEEDS_RECOVERY"
     elif current_state in {"BLOCKED_EXTERNAL", "INFRA_ERROR", "CANCELLED_BY_USER"}:

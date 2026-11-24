@@ -10,12 +10,39 @@ from statistics import mean
 from experiments.task_attack.runtime import write_json
 
 from .clean_coverage import audit_run
+from .custom_schedule import FINAL_ROLE as CUSTOM_FINAL_ROLE
 from .pilot_schedule import _read, _valid_preflight
 from .public_schedule import FINAL_ROLE as PUBLIC_FINAL_ROLE
 from .timeline import summarize
 
 
 RECORDED = {"FINISHED_VALID", "FINISHED_TASK_FAILURE", "TIMEOUT"}
+
+
+def _attempt_costs(arm, final, public):
+    roots = {path.resolve() for path in arm.glob("attempt-*/episode")} | {final.resolve()}
+    costs = {"total_model_transport_wall_seconds": 0., "total_action_seconds": 0.,
+             "total_observation_seconds": 0., "total_search_seconds": 0., "unclosed_timing_intervals": 0,
+             "attempts_with_raw_timing": 0, "transport_calls_with_duration": 0}
+    dispatch_times = []
+    for root in sorted(roots):
+        logs = root if public else root / "private/robot"
+        calls, timeline = logs / "model_calls.jsonl", logs / "timeline.jsonl"
+        if calls.is_file():
+            for line in calls.read_text(encoding="utf8").splitlines():
+                call = json.loads(line)
+                if "logical_job_attempt" in call:
+                    costs["transport_calls_with_duration"] += 1
+                    costs["total_model_transport_wall_seconds"] += call["wall_seconds"]
+                    dispatch_times.append(call["started_at"])
+        if timeline.is_file():
+            clock = summarize(timeline)
+            costs["attempts_with_raw_timing"] += 1
+            costs["unclosed_timing_intervals"] += len(clock["unfinished_intervals"])
+            for kind in ("action", "observation", "search"):
+                costs[f"total_{kind}_seconds"] += sum(item["seconds"] for item in clock["intervals"].get(kind, []))
+    return {**costs, "first_request_wall_time": min(dispatch_times, default=None),
+            "last_request_wall_time": max(dispatch_times, default=None)}
 
 
 def _arm_row(directory, case, method):
@@ -28,7 +55,7 @@ def _arm_row(directory, case, method):
         return row
     row.update(state=job["state"], logical_id=job["id"], infrastructure_attempts=job["attempt"],
                actual_dispatches=job.get("request_budget", {}).get("reserved"),
-               cumulative_task_seconds=job.get("charged_seconds"))
+               cumulative_task_seconds=job.get("charged_seconds"), training_seed=job.get("training_seed"))
     if job["state"] not in RECORDED:
         return row
     output = job.get("artifact_dir")
@@ -36,11 +63,12 @@ def _arm_row(directory, case, method):
     if not output:
         return row
     root = Path(output)
+    row.update(_attempt_costs(arm, root, bool(job.get("public_runtime"))))
     if job.get("public_runtime"):
         return _public_arm(row, root, job)
     preflight, result = _read(root / "clean_preflight.json"), _read(root / "result.json")
     if preflight:
-        _valid_preflight(preflight, case, method, root)
+        _valid_preflight(preflight, case, job.get("execution_method", method), root)
     for earned, name in (("probe_completed", "base_frontend_completed"),
                          ("conditional_query_bound", "conditional_query_bound"),
                          ("conditional_materials", "active_conditional_materials"),
@@ -175,9 +203,14 @@ def rebuild(directory, output):
                            "statuses": {state: sum(row["state"] == state for row in cases)
                                         for state in sorted({row["state"] for row in cases})},
                            "mean_restricted_seconds": mean(row["restricted_seconds"] for row in valid) if valid else None}
+        for field in ("actual_dispatches", "total_model_transport_wall_seconds", "total_action_seconds",
+                      "total_observation_seconds", "total_search_seconds"):
+            measures = [row[field] for row in valid if row.get(field) is not None]
+            methods[method]["mean_" + field] = mean(measures) if measures else None
     reference = next((name for name in ("conditional-async", "paired-async", "conditional-rank-heuristic")
                       if name in methods), None)
-    mode = "ACTUAL_LANGUAGE_AND_VISION_CLOSED_LOOP" if catalog["role"] == PUBLIC_FINAL_ROLE else "NATURAL_LATENCY_DEVELOPMENT"
+    formal = catalog["role"] in (PUBLIC_FINAL_ROLE, CUSTOM_FINAL_ROLE)
+    mode = "ACTUAL_LANGUAGE_AND_VISION_CLOSED_LOOP" if formal else "NATURAL_LATENCY_DEVELOPMENT"
     result = {"mode": mode, "role": catalog["role"], "reference": reference,
               "planned_episodes": len(rows), "recorded_episodes": sum(r["state"] in RECORDED for r in rows),
               "methods": methods, "matched_differences": _pair_rows(rows, reference),

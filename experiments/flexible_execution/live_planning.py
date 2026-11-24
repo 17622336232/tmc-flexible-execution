@@ -10,7 +10,7 @@ from time import monotonic
 from .candidate_ranking import RANKED_METHODS, select_ranked
 from .executor import forecast_async, permitted_observation, project, ready_times, report_time
 from .gpt_vision import OUTCOMES
-from .search import Search, witness
+from .search import Candidate, Search, witness
 from .task_ir import Condition
 
 
@@ -105,6 +105,31 @@ def checked(task, state, prefix):
     return proof, branches
 
 
+def check_branchwise(task, state, prefix):
+    """Require feasible continuations with the same terminal and permissions in every branch."""
+    projected = state
+    for action in prefix:
+        if action.skill is None or permitted_observation(task, projected, action.skill) != action:
+            return None, []
+        projected = project(task, projected, action)
+    expected = ready_times(task, state)
+    worst = ready_times(task, state, worst_case=True)
+    branches = []
+    for world in task.worlds(state.results):
+        finish = forecast_async(task, projected, world, worst)
+        if finish >= task.deadline:
+            return None, []
+        branches.append({"outcomes": world, "required_materials": [r.id for r in task.requirements if r.applies(world)],
+                         "terminal": task.terminal, "latest_finish": finish,
+                         "expected_finish": forecast_async(task, projected, world, expected)})
+    finish = sum(branch["expected_finish"] for branch in branches) / len(branches)
+    return Candidate(tuple(prefix), None, (), finish), branches
+
+
+def continuation_check(method):
+    return check_branchwise if method in ("conditional-planner", "conditional-prefetch") else checked
+
+
 def _planner(task, state, *, budget_ms, max_candidates, max_prepare, log):
     """Best-first search of allowed action sequences for the general planner arm."""
     start = monotonic()
@@ -120,8 +145,8 @@ def _planner(task, state, *, budget_ms, max_candidates, max_prepare, log):
         _, _, prefix, current = heappop(frontier)
         if prefix:
             examined += 1
-            proof, branches = checked(task, state, prefix)
-            log("candidate_checked", candidate=_prefix_id(prefix), branches=branches, common=bool(proof))
+            proof, branches = check_branchwise(task, state, prefix)
+            log("candidate_checked", candidate=_prefix_id(prefix), branches=branches, feasible=bool(proof))
             if proof and proof.expected_finish < (best.expected_finish if best else baseline):
                 best = proof
         if len(prefix) < max_prepare:
@@ -169,12 +194,14 @@ def select(task, state, method, log, *, budget_ms=1000, max_candidates=32, max_p
     if not choice:
         log("candidate_rejected", reason="no witnessed cost improvement")
         return None
-    proof, branches = checked(task, state, choice.prepare)
+    proof, branches = continuation_check(method)(task, state, choice.prepare)
     key = _prefix_id(choice.prepare)
-    log("candidate_checked", candidate=key, branches=branches, common=bool(proof))
+    log("candidate_checked", candidate=key, branches=branches, feasible=bool(proof),
+        common=bool(proof and proof.continuation))
     if not proof:
-        log("candidate_rejected", candidate=key, reason="common handoff, branch materials or time unproved")
+        log("candidate_rejected", candidate=key, reason="permitted continuation, branch materials or time unproved")
         return None
     log("candidate_selected", candidate=key, expected_finish=proof.expected_finish,
-        continuation=proof.continuation.site, required_materials=list(proof.required_evidence))
+        continuation=proof.continuation.site if proof.continuation else None,
+        terminal=task.terminal, required_materials=list(proof.required_evidence))
     return proof

@@ -25,6 +25,7 @@ from .runner import manifest, read_json, reproduce, run
 CHECKOUT = Path(__file__).resolve().parents[2]
 DEFAULTS = Path(__file__).with_name("experiment_defaults.yaml")
 CUSTOM_CONNECTION = "custom-vision-connection-v2"
+CUSTOM_FINAL_PILOT = "custom-visual/test-pilot-v2"
 VISUAL_INPUTS = "development-visual-v2"
 VISUAL_PILOTS = {role: f"visual-{role}-v2" for role in ("calibration", "selection")}
 PUBLIC_VALIDATION_PILOT = "public-visual/validation-pilot-v1"
@@ -148,6 +149,7 @@ def status(directory, defaults):
     ranker_pilot = pilot_manifest.parent / "learned-order-v1"
     typed_pilot = pilot_manifest.parent / "typed-vision-v1"
     custom_pilot = pilot_manifest.parent / CUSTOM_CONNECTION
+    custom_final = directory.parent / CUSTOM_FINAL_PILOT
     stream_pilot = pilot_manifest.parent / STREAM_PILOT
     visual_root = directory.parent / VISUAL_INPUTS / "split_manifest_v2.json"
     visual_inputs = read_json(visual_root) if visual_root.is_file() else None
@@ -166,6 +168,8 @@ def status(directory, defaults):
         "ranker_live_development": pilot_status(ranker_pilot) if (ranker_pilot / "pilot_manifest.json").is_file() else None,
         "typed_vision_development": pilot_status(typed_pilot) if (typed_pilot / "pilot_manifest.json").is_file() else None,
         "custom_vision_connection": pilot_status(custom_pilot) if (custom_pilot / "pilot_manifest.json").is_file() else None,
+        "custom_visual_heldout": (pilot_status(custom_final)
+            if (custom_final / "pilot_manifest.json").is_file() else None),
         "segmented_generation": pilot_status(stream_pilot) if (stream_pilot / "pilot_manifest.json").is_file() else None,
         "visual_layouts": None if visual_inputs is None else {key: visual_inputs[key] for key in (
             "state", "layout_count", "distinct_asset_groups", "split_roles_share_exact_assets")},
@@ -199,7 +203,8 @@ def _continue_stage(output_root, directory, defaults, args, launch_limit):
 
     def run_batch(path):
         result = pilot_run(path, control, CHECKOUT, resume=args.resume, max_jobs=launch_limit,
-                           auth_project=args.chatgpt_project, unlock_external=args.retry_external)
+                           auth_project=args.chatgpt_project, unlock_external=args.retry_external,
+                           minimum_free_disk_gb=defaults.get("resources", {}).get("minimum_free_disk_gb", 0))
         used = 0 if result.get("worker_owned_by_another_batch") else result.get("last_batch", {}).get("launched", 0)
         return result, used
 
@@ -312,7 +317,8 @@ def _continue_stage(output_root, directory, defaults, args, launch_limit):
         return run_batch(calibration)
     selection = pilots / VISUAL_PILOTS["selection"]
     if not (selection / "pilot_manifest.json").is_file():
-        prepare_visual(selection, read_json(layout_manifest), calibrate_visual(calibration, prior), "selection")
+        prepare_visual(selection, read_json(layout_manifest), calibrate_visual(calibration, prior), "selection",
+                       rankers=read_json(ranked / "calibrated_rankers.json"))
     selected_status = pilot_status(selection)
     if selected_status["recorded_pairs"] < selected_status["planned_pairs"]:
         return run_batch(selection)
@@ -333,12 +339,22 @@ def _continue_stage(output_root, directory, defaults, args, launch_limit):
         public_status_final = pilot_status(public_final)
         if public_status_final["recorded_pairs"] < public_status_final["planned_pairs"]:
             return run_batch(public_final)
+    custom_final = output_root / CUSTOM_FINAL_PILOT
+    if not (custom_final / "pilot_manifest.json").is_file():
+        _prepare_scenes(("custom-test-prepare", "--blind-plan", output_root / "custom-visual/test-plan-v2",
+                         "--development-manifest", layout_manifest, "--calibration-pilot", calibration,
+                         "--selection-pilot", selection, "--ranker-data", diagnostic, "--output", custom_final,
+                         "--chatgpt-project", args.chatgpt_project.resolve()))
+    custom_status_final = pilot_status(custom_final)
+    if custom_status_final["recorded_pairs"] < custom_status_final["planned_pairs"]:
+        return run_batch(custom_final)
     return {"execution_status": "READY", "stage": "evaluation-development",
             "scientific_conclusion": "INCONCLUSIVE", "run_directory": str(directory), "development": development,
             "ranker_development": ranked_status, "typed_vision_development": typed_status,
             "public_visual_validation": _public_visual(output_root),
             "public_visual_matched_development": public_status,
             "public_visual_heldout": public_status_final,
+            "custom_visual_heldout": custom_status_final,
             "visual_calibration": calibrated_status, "visual_selection": selected_status,
             "next_action": "Finish baseline and protocol checks before the held-out test"}, 0
 
@@ -383,6 +399,10 @@ def main(argv=None):
     custom_plan = commands.add_parser("custom-plan", help="Assign the three blind custom evaluation strata")
     custom_plan.add_argument("--development-manifest", required=True, type=Path)
     custom_plan.add_argument("--output", required=True, type=Path)
+    custom_test = commands.add_parser("custom-test-prepare", help="Freeze the custom holdout before rendering it")
+    for name in ("blind-plan", "development-manifest", "calibration-pilot", "selection-pilot", "ranker-data", "output"):
+        custom_test.add_argument("--" + name, required=True, type=Path)
+    custom_test.add_argument("--chatgpt-project", type=Path, default=DEFAULT_AUTH_PROJECT)
     custom_dev = commands.add_parser("custom-development-prepare", help="Register a custom-task connection check")
     custom_dev.add_argument("--cost-config", required=True, type=Path)
     custom_dev.add_argument("--output", required=True, type=Path)
@@ -457,6 +477,21 @@ def main(argv=None):
         defaults = yaml.safe_load(DEFAULTS.read_text(encoding="utf8"))
         print(json.dumps(prepare(args.output, defaults, read_json(args.development_manifest)), ensure_ascii=False, indent=2))
         return
+    if args.command == "custom-test-prepare":
+        if Path(sys.executable).parent != _scene_python().parent:
+            command = [args.command]
+            for name in ("blind_plan", "development_manifest", "calibration_pilot", "selection_pilot", "ranker_data",
+                         "output", "chatgpt_project"):
+                command.extend(("--" + name.replace("_", "-"), getattr(args, name).resolve()))
+            _prepare_scenes(command)
+            return
+        from .custom_schedule import prepare_final
+
+        defaults = yaml.safe_load(DEFAULTS.read_text(encoding="utf8"))
+        print(json.dumps(prepare_final(args.blind_plan, read_json(args.development_manifest), args.calibration_pilot,
+                                       args.selection_pilot, args.ranker_data, args.output, CHECKOUT, defaults,
+                                       args.chatgpt_project), ensure_ascii=False))
+        return
     if args.command == "custom-development-prepare":
         if Path(sys.executable).parent != _scene_python().parent:
             _prepare_scenes((args.command, "--output", args.output.resolve(), "--cost-config", args.cost_config.resolve()))
@@ -519,7 +554,8 @@ def main(argv=None):
             if args.command == "pilot-run":
                 result = pilot_run(args.pilot_dir, args.control_dir, CHECKOUT, resume=args.resume,
                                    max_jobs=args.max_jobs, auth_project=args.chatgpt_project,
-                                   unlock_external=args.retry_external)
+                                   unlock_external=args.retry_external,
+                                   minimum_free_disk_gb=defaults["resources"]["minimum_free_disk_gb"])
             else:
                 result = pilot_status(args.pilot_dir)
         except (ValueError, OSError, KeyError) as error:

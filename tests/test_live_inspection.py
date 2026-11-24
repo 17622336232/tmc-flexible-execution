@@ -13,9 +13,9 @@ from PIL import Image
 from experiments.flexible_execution.adapters import live_inspection
 from experiments.flexible_execution.adapters.live_inspection import _verify
 from experiments.flexible_execution.evidence import Frame
-from experiments.flexible_execution.executor import Snapshot
+from experiments.flexible_execution.executor import Snapshot, permitted_observation
 from experiments.flexible_execution.gpt_vision import JUDGE, LOCATE, Material, OUTCOMES, VisibleTarget
-from experiments.flexible_execution.live_planning import Costs, permission_for, select
+from experiments.flexible_execution.live_planning import Costs, check_branchwise, checked, permission_for, select
 from experiments.flexible_execution.task_ir import Condition, QuerySpec, Requirement, Skill, TaskContract
 from experiments.flexible_execution.timeline import Timeline, summarize
 
@@ -99,9 +99,26 @@ class LiveInspectionTests(unittest.TestCase):
             if method == "conditional-async":
                 self.assertIsNone(choice)
                 continue
-            self.assertEqual(choice.continuation.site, "handoff")
-            checked = [row["branches"] for event, row in events if event == "candidate_checked" and row.get("common")]
-            self.assertEqual({row["outcomes"]["check"] for row in checked[-1]}, set(OUTCOMES))
+            self.assertEqual(choice.continuation.site if choice.continuation else None,
+                             "handoff" if method == "conditional-a" else None)
+            branches = [row["branches"] for event, row in events if event == "candidate_checked" and row.get("feasible")]
+            self.assertEqual({row["outcomes"]["check"] for row in branches[-1]}, set(OUTCOMES))
+
+    def test_branchwise_baselines_can_finish_a_later_condition_at_a_different_view(self):
+        task = _task(permission_for(GRANT, MATERIAL))
+        later = Requirement("device:other", "device", "other", Condition("check", ("negative",)))
+        late_skill = Skill("late-view", "other-side", (later.id,), 1, Condition("check", ("negative",)))
+        task = replace(task, requirements=task.requirements + (later,), skills=task.skills + (late_skill,),
+                       travel=task.travel + (("start", "other-side", 3), ("side", "other-side", 2),
+                                             ("other-side", "handoff", 2)))
+        state = Snapshot(0., "start", {}, {}, {})
+        self.assertIsNone(permitted_observation(task, state, late_skill))
+        early = permitted_observation(task, state, task.skills[0])
+        self.assertIsNone(checked(task, state, (early,))[0])
+        proof, branches = check_branchwise(task, state, (early,))
+        self.assertIsNotNone(proof)
+        self.assertEqual({b["outcomes"]["check"] for b in branches}, set(OUTCOMES))
+        self.assertTrue(all(b["terminal"] == "handoff" and b["latest_finish"] < task.deadline for b in branches))
 
     def test_candidate_forecast_does_not_treat_projected_time_as_a_late_reply(self):
         task = _task(permission_for(GRANT, MATERIAL))

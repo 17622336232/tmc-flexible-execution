@@ -18,9 +18,9 @@ from experiments.task_attack.records import facts, object_id
 from experiments.task_attack.runtime import write_json
 
 from ..evidence import Frame, Observation, accept
-from ..executor import Action, Snapshot, permitted_observation
+from ..executor import Snapshot, permitted_observation
 from ..gpt_vision import INTERPRET, OUTCOMES, _bbox, frozen_prompt, interpret, judge, locate_targets
-from ..live_planning import STREAM_METHODS, checked, needs_body_identity, permission_for, select
+from ..live_planning import STREAM_METHODS, continuation_check, needs_body_identity, permission_for, select
 from ..queries import AsyncQueryWorker, QueryBook
 from ..task_ir import QuerySpec, Skill, TaskContract
 from .gpt_probe import _take_photo
@@ -214,6 +214,7 @@ async def _inspect(backend, directory, trace, client, started, task, spec, poses
 
     steps = 3
     photos = []
+    attempts = {}
     book = QueryBook()
     worker = AsyncQueryWorker(infer)
     future = worker.submit(spec, first, frozen_prompt(first, first_target, question, use_initial_region=reused),
@@ -253,11 +254,13 @@ async def _inspect(backend, directory, trace, client, started, task, spec, poses
             state = Snapshot(elapsed(), location, {}, {}, {})
             with trace.measure("search", 3, policy=method):
                 choice = select(task, state, method, log, ranked_policy=ranked_policy)
-            if choice and not future.done() and checked(task, replace(state, at=elapsed()), choice.prepare)[0]:
+            if (choice and not future.done()
+                    and continuation_check(method)(task, replace(state, at=elapsed()), choice.prepare)[0]):
                 for action in choice.prepare:
                     if future.done() or elapsed() + action.seconds + task.report_seconds >= task.deadline:
                         log("candidate_rejected", candidate=action.skill.id, reason="reply or resource state changed")
                         break
+                    attempts[action.skill.id] = attempts.get(action.skill.id, 0) + 1
                     observed = await capture(action.site, action.skill.id, poses[action.site], first_target.id)
                     if observed:
                         photos.append((action, observed))
@@ -293,21 +296,12 @@ async def _inspect(backend, directory, trace, client, started, task, spec, poses
 
     known = {} if spec.id not in book.results else {spec.id: outcome}
     evidence = {}
-    if not photos and known and location == task.start:
-        state = Snapshot(elapsed(), location, known, {}, {})
-        needed = {requirement.id for requirement, _, _ in materials.values() if requirement.applies(known)}
-        for skill in task.skills:
-            if needed.intersection(skill.covers) and permitted_observation(task, state, skill):
-                try:
-                    observed = await capture(skill.site, skill.id, poses[skill.site], first_target.id)
-                    if observed:
-                        photos.append((Action(skill.site, skill.seconds, skill), observed))
-                except (RuntimeError, ValueError) as error:
-                    log("candidate_rejected", candidate=skill.id, reason=str(error)[:280])
-                break
-    for action, photo in photos:
+    needed = {r.id for r in task.requirements if known and r.applies(known)}
+
+    def verify_photo(action, photo):
+        nonlocal steps
         for requirement, material, _ in materials.values():
-            if requirement.id not in action.skill.covers:
+            if requirement.id not in needed or requirement.id not in action.skill.covers or requirement.id in evidence:
                 continue
             try:
                 steps += 1
@@ -325,10 +319,33 @@ async def _inspect(backend, directory, trace, client, started, task, spec, poses
             log(event, requirement=requirement.id, frame_id=photo[0].id, details=details)
             if checked_material:
                 evidence[requirement.id] = checked_material
+
+    for action, photo in photos:
+        verify_photo(action, photo)
+    while needed - evidence.keys() and location in poses:
+        budget = getattr(client, "request_budget", None)
+        if budget is not None and not budget.summary()["remaining"]:
+            break
+        state = Snapshot(elapsed(), location, known, evidence, attempts)
+        options = [permitted_observation(task, state, skill) for skill in task.skills
+                   if (needed - evidence.keys()).intersection(skill.covers)]
+        action = min((option for option in options if option), key=lambda option: option.seconds, default=None)
+        if action is None:
+            break
+        attempts[action.skill.id] = attempts.get(action.skill.id, 0) + 1
+        log("revealed_branch_collection", candidate=action.skill.id, branch=outcome, missing=sorted(needed - evidence.keys()))
+        try:
+            observed = await capture(action.site, action.skill.id, poses[action.site], first_target.id)
+        except (RuntimeError, ValueError) as error:
+            log("candidate_rejected", candidate=action.skill.id, reason=str(error)[:280])
+            continue
+        if observed:
+            photos.append((action, observed))
+            verify_photo(action, observed)
     common = False
     if location != task.start and photos:
         terminal = poses[task.terminal]
-        verified = choice is None or set(choice.required_evidence) <= evidence.keys()
+        verified = bool(known) and needed <= evidence.keys()
         can_handoff = verified and elapsed() + task.report_seconds <= task.deadline
         if hold_at_view and can_handoff and location in poses and _safe_pose(backend, poses[location]):
             common = True

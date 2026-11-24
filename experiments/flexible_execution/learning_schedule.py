@@ -20,10 +20,9 @@ def registered_config(directory, catalog):
     return config
 
 
-def prepare_ranker_pilot(directory, base, calibration, diagnostic):
+def build_config(diagnostic, size, training_seed, cap):
     diagnostic = diagnostic.resolve()
     summary = read_json(diagnostic / "latest_summary.json")
-    size, training_seed, cap = 3000, 17, 4
     selected = next(row for row in summary["run_rows"] if row["objective"] == "cost"
                     and row["seed"] == training_seed and row["training_states"] == size)
     policies = {}
@@ -34,9 +33,13 @@ def prepare_ranker_pilot(directory, base, calibration, diagnostic):
         policies[method] = {"checkpoint": str(checkpoint) if checkpoint else None,
                             "checkpoint_sha256": ranker.digest if ranker else None,
                             "check_cap": cap, "minimum_net_gain": threshold}
-    config = {"policies": policies, "role": "RANKER_ENGINEERING_CHECK", "training_rows": size,
-              "training_seed": training_seed, "training_label_mode": summary["mode"],
-              "threshold_origin": "symbolic calibration; fixed before live validation"}
+    return {"policies": policies, "role": "RANKER_ENGINEERING_CHECK", "training_rows": size,
+            "training_seed": training_seed, "training_label_mode": summary["mode"],
+            "threshold_origin": "symbolic calibration; fixed before live validation"}
+
+
+def prepare_ranker_pilot(directory, base, calibration, diagnostic):
+    config = build_config(diagnostic, 3000, 17, 4)
     seed = base["split_seed"] + 2
     order = Random(seed).sample(RANKED_METHODS, len(RANKED_METHODS))
     catalog = {"schema": 3, "role": ROLE, "parent_schedule_sha256": _hash(base), "split_seed": seed,

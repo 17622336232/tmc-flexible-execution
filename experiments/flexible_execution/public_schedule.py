@@ -103,8 +103,8 @@ def prepare_validation(archive, output, defaults, *, build_dir, packages, xvfb_r
 
 def prepare_final(archive, blind_plan, validation, selection, output, defaults):
     """Bind the test schedule after validation and configuration selection, without unsealing houses."""
-    from .control import REQUEST_LIMIT, TASK_TERMINAL, _verify_terminal
-    from .pilot_schedule import VISUAL_ROLES, status
+    from .control import REQUEST_LIMIT, verified_cohort
+    from .pilot_schedule import VISUAL_ROLES
     from experiments.task_attack import EFFORT, MODEL
 
     evidence = {}
@@ -113,23 +113,7 @@ def prepare_final(archive, blind_plan, validation, selection, output, defaults):
         ("configuration_selection", selection, VISUAL_ROLES["selection"],
          defaults["data"]["development_selection_instances"]),
     ):
-        checkpoint = status(directory)
-        if checkpoint["role"] != role or checkpoint["planned_pairs"] != count or checkpoint["recorded_pairs"] != count:
-            raise ValueError(f"{name} has {checkpoint['recorded_pairs']}/{count} recorded cases")
-        catalog = read_json(directory / "pilot_manifest.json")
-        protocol = read_json(directory / "run_protocol.json")
-        if protocol["catalog_sha256"] != _hash(catalog) or (protocol["model"], protocol["reasoning_effort"]) != (MODEL, EFFORT):
-            raise ValueError(f"{name} used an inconsistent model or source assignment")
-        outcomes = []
-        for case in catalog["cases"]:
-            for method in case["order"]:
-                job = read_json(directory / case["id"] / method / "job.json")
-                if job["state"] not in TASK_TERMINAL:
-                    raise ValueError(f"{name} contains an unresolved job")
-                _verify_terminal(job)
-                outcomes.append({"id": job["id"], "state": job["state"], "result": job["result"]})
-        evidence[name] = {"catalog_sha256": _hash(catalog), "protocol_sha256": _hash(protocol),
-                          "recorded_jobs": len(outcomes), "outcomes_sha256": _hash(outcomes)}
+        _, evidence[name] = verified_cohort(name, directory, role, count)
 
     prepare(archive, blind_plan, defaults)
     assigned = read_json(blind_plan / "split_manifest.json")
