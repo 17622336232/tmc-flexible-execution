@@ -7,7 +7,8 @@ from pathlib import Path
 from experiments.task_attack.model import EXTERNAL_RESPONSE_CODES
 from experiments.task_attack.runtime import write_json
 
-from .runner import read_json
+from .runner import _hash, read_json
+from .timeline import read_trace_rows
 
 
 def save_segmentation(root, name, event, category, minimum_pixels):
@@ -41,6 +42,44 @@ def _grade_segmentation(scoring, name):
 
 def _rows(path):
     return [json.loads(line) for line in path.read_text(encoding="utf8").splitlines()]
+
+
+def audit_camera_permissions(root, direction, *, allow_truncated=False):
+    from .gpt_vision import Material
+    from .live_planning import permission_for
+    from .public_task import TURNS
+
+    trace, source = root / "timeline.jsonl", root / "source.json"
+    if not trace.is_file() or not source.is_file():
+        return None
+    events, _ = read_trace_rows(trace, allow_truncated=allow_truncated)
+    actions = [index for index, row in enumerate(events) if row["event"] == "action_started"]
+    if not actions:
+        return {"audited": 0, "violations": 0}
+
+    turn, restore, _ = TURNS[direction]
+    prefix = events[:actions[0]]
+    binding = next((row["binding"] for row in prefix if row["event"] == "query_submitted"), None)
+    applied = next((row for row in prefix if row["event"] == "query_applied"), None)
+    if applied is None:
+        grant = permission_for(read_json(source)["instruction"], Material("side_photo", ("positive",), "", None))
+        allowed = bool(binding and grant.early and any(row["event"] == "approved_preparation" and
+                       row["permission"] == grant.source for row in prefix))
+    else:
+        front, raw = root / "front.jpg", root / "model_calls.jsonl"
+        allowed = False
+        if binding and binding == applied["binding"] and applied["outcome"] == "positive" and front.is_file() and raw.is_file():
+            photo_hash = sha256(front.read_bytes()).hexdigest()
+            calls, _ = read_trace_rows(raw, allow_truncated=allow_truncated)
+            matched = [call for call in calls if call["input"].get("frame") == "front" and
+                       call["input"].get("sha256") == photo_hash and call.get("image_sha256") == [photo_hash] and
+                       call.get("output") == {"outcome": "positive"} and binding["input_hash"] ==
+                       sha256((photo_hash + "\n" + json.dumps(call["input"], sort_keys=True)).encode("utf8")).hexdigest()]
+            allowed = len(matched) == 1
+    permitted = [allowed and events[actions[0]]["step"] == turn]
+    if len(actions) > 1:
+        permitted.append(events[actions[1]]["step"] == restore)
+    return {"audited": len(actions), "violations": len(actions) - sum(permitted)}
 
 
 def audit(root):
@@ -131,6 +170,10 @@ def registered_outcome(root, job, charged, returncode, stop):
                     "method": job["method"], "model": job["model"], "reasoning_effort": job["reasoning_effort"],
                     "house_index": case["official_house_index"], "request_limit": job["request_limit"],
                     "ground_truth_input_to_model": False}
+        calibration = job["public_runtime"].get("cost_calibration")
+        if calibration:
+            expected.update(cost_calibration_sha256=_hash(calibration), motion_estimates=calibration["motion"],
+                            inference_estimates=calibration["inference"])
         if any(source.get(name) != value for name, value in expected.items()):
             raise ValueError("The room result does not match its frozen case and model")
         if result["requests"]["ledger"] != job["request_ledger"]:

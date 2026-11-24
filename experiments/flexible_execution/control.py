@@ -173,6 +173,8 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
                           "experiments/task_attack_value/scene.py", "experiments/flexible_execution/development_inputs.py")
     if public:
         stage_sources += (*PUBLIC_SOURCES, "experiments/flexible_execution/live_planning.py", RANKING_SOURCE)
+        if catalog.get("role") == PUBLIC_FINAL_ROLE:
+            stage_sources += ("experiments/flexible_execution/live_calibration.py",)
     if custom_final:
         stage_sources += ("experiments/flexible_execution/custom_schedule.py",)
     if any(method in STREAM_METHODS for case in catalog["cases"] for method in case["order"]):

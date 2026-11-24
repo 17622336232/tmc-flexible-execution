@@ -103,6 +103,8 @@ python3 -m experiments.flexible_execution.cli pilot-run \
 
 公开验证入口在 `experiments.flexible_execution.public_task`。AI2-THOR 固定在 5.0.0，从官方 ProcTHOR 验证集加载房屋。相机通过软件 OpenGL 取得初始和侧向图像。模型收到任务文字和执行过程中拍到的 RGB。独立评分用姿态和实例分割核对完整报告。公开房间是本研究的派生任务，正式测试取官方测试房屋，验证房用于调试。 [ProcTHOR 官方数据](https://github.com/allenai/procthor-10k/tree/439193522244720b86d8c81cde2e51e3a4d150cf)
 
+正式公开比较在登记前读取四间验证房的实际动作、取景和模型请求用时。先在每间房内计算中位数，再跨房计算初始判读中位数和后续开销的上四分位数。正式登记锁定这些估计、样本来源和四种方法的共同预算。逐臂报表用已写完的动作记录复核原指令许可，基础设施重试中的转向也计入。
+
 ```bash
 python3 -m experiments.flexible_execution.cli audit-public \
   --episode-dir outputs/public-visual/closed-loop-attempt-002

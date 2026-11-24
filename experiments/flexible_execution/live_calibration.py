@@ -6,10 +6,11 @@ import json
 from itertools import combinations
 from math import ceil, dist, isfinite
 from pathlib import Path
-from statistics import median
+from statistics import median, quantiles
 
 from .live_planning import Costs
 from .runner import _hash, read_json
+from .timeline import summarize
 
 
 def calibrate(warmup, completed):
@@ -165,3 +166,59 @@ def calibrate_visual(directory, previous):
     costs["calibration_id"] = _hash(samples)
     Costs(**costs)
     return {"costs": costs, "samples": samples, "purpose": "VISUAL_CALIBRATION_ONLY"}
+
+
+def calibrate_public_visual(directory, catalog):
+    """Fit the public comparison's planning estimates from its registered validation houses."""
+    from .public_schedule import VALIDATION_ROLE
+    from .public_task import MODEL_TIMES, PLATFORM_TIMES
+
+    if catalog.get("role") != VALIDATION_ROLE:
+        raise ValueError("Public timing calibration requires the registered validation cohort")
+    by_house = {}
+    skipped_arms = []
+    for case in catalog["cases"]:
+        sample = by_house.setdefault(case["group_id"], {key: [] for key in ("front", "side", "report", "turn", "photo")})
+        for method in case["order"]:
+            job = read_json(directory / case["id"] / method / "job.json")
+            if job["state"] not in ("FINISHED_VALID", "FINISHED_TASK_FAILURE", "TIMEOUT"):
+                raise ValueError("An incomplete public validation job cannot calibrate the final comparison")
+            trace = Path(job["artifact_dir"]) / "timeline.jsonl" if job.get("artifact_dir") else None
+            if trace is None or not trace.is_file():
+                skipped_arms.append(job["id"])
+                continue
+            intervals = summarize(trace, allow_truncated=job["state"] == "TIMEOUT")["intervals"]
+            for kind, key in (("model_request", None), ("action", "turn"), ("observation", "photo")):
+                for interval in intervals.get(kind, []):
+                    field = key or interval["step"]
+                    seconds = interval["seconds"]
+                    if field in sample and interval["ok"] and isfinite(seconds) and seconds > 0:
+                        sample[field].append(seconds)
+
+    def by_source(field):
+        return [median(samples[field]) for samples in by_house.values() if samples[field]]
+
+    def upper(values):
+        return quantiles(values, n=4, method="inclusive")[2] if len(values) > 1 else values[0]
+
+    front, side, report = (by_source(field) for field in ("front", "side", "report"))
+    inference = dict(MODEL_TIMES)
+    inherited = []
+    if front:
+        inference["initial_prediction"] = min(median(front), inference["initial_ceiling"])
+    else:
+        inherited.append("initial_prediction")
+    if (front or side) and report:
+        inference["remaining_judgments"] = max(upper(values) for values in (front, side) if values) + upper(report)
+    else:
+        inherited.append("remaining_judgments")
+    motion = dict(PLATFORM_TIMES)
+    for field in motion:
+        values = by_source(field)
+        if values:
+            motion[field] = upper(values)
+        else:
+            inherited.append(field)
+    return {"schema": 1, "motion": motion, "inference": inference, "samples_by_house": by_house,
+            "arms_without_trace": skipped_arms, "inherited_estimates": inherited,
+            "method": "equal_house_medians_and_upper_quartiles_of_completed_development_intervals"}

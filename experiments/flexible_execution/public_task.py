@@ -159,7 +159,7 @@ def _judge(client, trace, key, payload, prompt):
     return value["outcome"]
 
 
-async def _inspect(case, room, client, method, deadline):
+async def _inspect(case, room, client, method, deadline, model_times, platform_times):
     trace = room.trace
     front = room.take("front", room.controller.last_event)
     intent = parse_intent(_request(client, trace, "parse", PARSE, {"task": case.instruction, "classes": CLASSES}))
@@ -167,13 +167,13 @@ async def _inspect(case, room, client, method, deadline):
     grant = permission_for(case.instruction, material)
     trace.event("material_permission", "side", **asdict(grant))
     start = room.now()
-    latest = min(start + MODEL_TIMES["initial_ceiling"], deadline)
-    query = QuerySpec("front_presence", "room", OUTCOMES, min(start + MODEL_TIMES["initial_prediction"], latest), latest)
+    latest = min(start + model_times["initial_ceiling"], deadline)
+    query = QuerySpec("front_presence", "room", OUTCOMES, min(start + model_times["initial_prediction"], latest), latest)
     required = Requirement("side_photo", "room", material.field, Condition(query.id, ("positive",)), report=True)
-    skill = Skill("photograph_side", "side", (required.id,), PLATFORM_TIMES["photo"], grant.for_query(query.id))
-    contract = TaskContract(case.instruction, "front", "terminal", deadline, MODEL_TIMES["remaining_judgments"],
+    skill = Skill("photograph_side", "side", (required.id,), platform_times["photo"], grant.for_query(query.id))
+    contract = TaskContract(case.instruction, "front", "terminal", deadline, model_times["remaining_judgments"],
                             (required,), (query,), (skill,), (("front", "terminal", 0),
-                            ("front", "side", PLATFORM_TIMES["turn"]), ("side", "terminal", PLATFORM_TIMES["turn"])))
+                            ("front", "side", platform_times["turn"]), ("side", "terminal", platform_times["turn"])))
     turn, restore, angle = TURNS[intent.direction]
     side = None
     early_dispatched = False
@@ -243,7 +243,7 @@ async def _inspect(case, room, client, method, deadline):
 
 
 def run(archive, output, build_dir, display, method, auth_project, *, deadline=260, request_limit=8,
-        case=VALIDATION, source=VALIDATION_SOURCE, case_id=None, request_ledger=None):
+        case=VALIDATION, source=VALIDATION_SOURCE, case_id=None, request_ledger=None, cost_calibration=None):
     from uav_bridge.chatgpt_auth import CredentialStore
 
     from .control import _proc
@@ -252,8 +252,12 @@ def run(archive, output, build_dir, display, method, auth_project, *, deadline=2
     output.mkdir(parents=True, exist_ok=False)
     role = "ENGINEERING_VALIDATION" if case_id is None else "PUBLIC_DERIVED_MATCHED_TASK"
     provenance = source_record(case.house_index, digest, "opengl", role, source=source)
+    model_times = cost_calibration["inference"] if cost_calibration else MODEL_TIMES
+    platform_times = cost_calibration["motion"] if cost_calibration else PLATFORM_TIMES
+    if cost_calibration:
+        provenance["cost_calibration_sha256"] = _hash(cost_calibration)
     write_json(output / "source.json", {**provenance, "instruction": case.instruction, "method": method,
-        "motion_estimates": PLATFORM_TIMES, "inference_estimates": MODEL_TIMES, "episode_timeout": deadline,
+        "motion_estimates": platform_times, "inference_estimates": model_times, "episode_timeout": deadline,
         "request_limit": request_limit, "role": role, "ground_truth_input_to_model": False,
         "model": MODEL, "reasoning_effort": EFFORT, "case_id": case_id, "case_version": "public-room-presence-v2"})
     write_json(output / "process.json", {"process": _proc(os.getpid()), "method": method, "episode_timeout": deadline})
@@ -269,7 +273,8 @@ def run(archive, output, build_dir, display, method, auth_project, *, deadline=2
     client.deadline_monotonic = started + deadline
     try:
         controller = open_controller(house, build_dir, "opengl", display, segmentation=True, timeout=min(90, deadline))
-        result = asyncio.run(_inspect(case, Room(controller, output, trace, started), client, method, deadline))
+        result = asyncio.run(_inspect(case, Room(controller, output, trace, started), client, method, deadline,
+                                      model_times, platform_times))
     except Exception as error:
         category = {RoomTaskFailure: "task_contract", ModelDeadlineExceeded: "episode_deadline",
                     ModelAttemptLimitExceeded: "request_budget_exhausted"}.get(type(error), "infrastructure")
@@ -318,6 +323,7 @@ def _run_registered(job, output, display, auth_project):
         cohort = Path(job["arm"]).parents[1]
         protocol = read_json(cohort / "run_protocol.json")
         if (runtime["source"] != TEST_SOURCE or freeze["role"] != FINAL_ROLE or freeze["runtime"] != runtime
+                or not runtime.get("cost_calibration")
                 or _hash(freeze) != job["frozen_evaluation_sha256"] or job["request_limit"] != freeze["request_limit"]
                 or row["episode_timeout_seconds"] != freeze["episode_timeout_seconds"]
                 or protocol["catalog_sha256"] != _hash(read_json(cohort / "pilot_manifest.json"))
@@ -333,7 +339,8 @@ def _run_registered(job, output, display, auth_project):
         raise ValueError("The room job has used its allowed experiment time")
     return run(Path(runtime["archive"]), output, Path(runtime["build_dir"]), display, job["method"], auth_project,
                deadline=allowance, request_limit=job["request_limit"], case=case, source=runtime["source"],
-               case_id=row["id"], request_ledger=Path(job["request_ledger"]))
+               case_id=row["id"], request_ledger=Path(job["request_ledger"]),
+               cost_calibration=runtime.get("cost_calibration"))
 
 
 def main():

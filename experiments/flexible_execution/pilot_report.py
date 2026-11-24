@@ -25,6 +25,14 @@ def _attempt_roots(arm, final):
     return sorted({path.resolve() for path in arm.glob("attempt-*/episode")} | {final.resolve()})
 
 
+def _add_permission_counts(row, audits):
+    audited = [audit for audit in audits if audit is not None]
+    if audited:
+        row.update(attempts_with_permission_audit=len(audited),
+                   audited_conditional_actions=sum(audit["audited"] for audit in audited),
+                   conditional_permission_violations=sum(audit["violations"] for audit in audited))
+
+
 def _attempt_costs(arm, final, public, *, allow_final_truncated=False):
     final = final.resolve()
     costs = {"total_model_transport_wall_seconds": 0., "total_action_seconds": 0.,
@@ -79,14 +87,9 @@ def _arm_row(directory, case, method, binding=None):
     allow_truncated = job["state"] == "TIMEOUT"
     row.update(_attempt_costs(arm, root, bool(job.get("public_runtime")), allow_final_truncated=allow_truncated))
     if job.get("public_runtime"):
-        return _public_arm(row, root, job)
-    audits = [audit_capture_permissions(attempt, allow_truncated=attempt != root or allow_truncated)
-              for attempt in _attempt_roots(arm, root)]
-    audited = [audit for audit in audits if audit is not None]
-    if audited:
-        row.update(attempts_with_permission_audit=len(audited),
-                   audited_conditional_actions=sum(audit["audited"] for audit in audited),
-                   conditional_permission_violations=sum(audit["violations"] for audit in audited))
+        return _public_arm(row, arm, root, job)
+    _add_permission_counts(row, (audit_capture_permissions(attempt, allow_truncated=attempt != root or allow_truncated)
+                                 for attempt in _attempt_roots(arm, root)))
     preflight, result = _read(root / "clean_preflight.json"), _read(root / "result.json")
     if preflight:
         _valid_preflight(preflight, case, job.get("execution_method", method), root)
@@ -169,17 +172,21 @@ def _arm_row(directory, case, method, binding=None):
     return row
 
 
-def _public_arm(row, root, job):
-    from .public_audit import registered_outcome
+def _public_arm(row, arm, root, job):
+    from .public_audit import audit_camera_permissions, registered_outcome
 
     detail = job.get("result") or {}
     row["failure_reason"] = detail.get("reason")
+    direction = job["case"]["expected_language_contract"]["direction"]
+    allow_truncated = job["state"] == "TIMEOUT"
+    _add_permission_counts(row, (audit_camera_permissions(attempt, direction, allow_truncated=attempt != root or allow_truncated)
+                                 for attempt in _attempt_roots(arm, root)))
     if job["state"] == "FINISHED_VALID":
         state, _ = registered_outcome(root, job, detail["charged_seconds"], job["returncode"], None)
         seconds = row["cumulative_task_seconds"]
         if state != job["state"] or not 0 < seconds <= row["deadline_seconds"]:
             raise ValueError("Saved public success could not be independently verified: " + job["id"])
-        row.update(success=True, restricted_seconds=seconds, complete_coverage=True, conditional_permission_violations=0)
+        row.update(success=True, restricted_seconds=seconds, complete_coverage=True)
     if (root / "timeline.jsonl").is_file():
         clock = summarize(root / "timeline.jsonl", allow_truncated=job["state"] == "TIMEOUT")
         row.update(model_request_seconds=clock["model_request_seconds"],

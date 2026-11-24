@@ -104,21 +104,24 @@ def prepare_validation(archive, output, defaults, *, build_dir, packages, xvfb_r
 def prepare_final(archive, blind_plan, validation, selection, output, defaults):
     """Bind the test schedule after validation and configuration selection, without unsealing houses."""
     from .control import REQUEST_LIMIT, verified_cohort
+    from .live_calibration import calibrate_public_visual
     from .pilot_schedule import VISUAL_ROLES
     from experiments.task_attack import EFFORT, MODEL
 
     evidence = {}
+    catalogs = {}
     for name, directory, role, count in (
         ("public_validation", validation, VALIDATION_ROLE, len(TARGETS)),
         ("configuration_selection", selection, VISUAL_ROLES["selection"],
          defaults["data"]["development_selection_instances"]),
     ):
-        _, evidence[name] = verified_cohort(name, directory, role, count)
+        catalogs[name], evidence[name] = verified_cohort(name, directory, role, count)
 
+    public_calibration = calibrate_public_visual(validation, catalogs["public_validation"])
     prepare(archive, blind_plan, defaults)
     assigned = read_json(blind_plan / "split_manifest.json")
-    runtime = {**read_json(validation / "pilot_manifest.json")["runtime"], "archive": str(archive.resolve()),
-               "source": TEST_SOURCE}
+    runtime = {**catalogs["public_validation"]["runtime"], "archive": str(archive.resolve()),
+               "source": TEST_SOURCE, "cost_calibration": public_calibration}
     output = Path(output).resolve()
     freeze = {"schema": 1, "role": FINAL_ROLE, "blind_assignment_sha256": _hash(assigned), "evidence": evidence,
               "model": MODEL, "reasoning_effort": EFFORT, "request_limit": REQUEST_LIMIT,
