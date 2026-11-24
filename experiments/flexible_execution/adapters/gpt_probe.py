@@ -13,43 +13,19 @@ from ..executor import Snapshot, async_action
 from ..gpt_vision import OUTCOMES, frozen_prompt, interpret, judge, locate_targets
 from ..queries import AsyncQueryWorker, QueryBook
 from ..task_ir import QuerySpec, Requirement, Skill, TaskContract
+from .viewpoints import measured_views, xyz
 
 
 def _take_photo(backend, directory, trace, started, step, target_id):
     with trace.measure("observation", step, target_id=target_id):
-        observation, _ = backend.observe()
+        observation, geometry = backend.observe()
     frame = Frame(observation["observation_id"], target_id, step, monotonic() - started,
                   observation["data"], "simulated_onboard_rgb")
     (directory / ("probe_%04d.jpg" % step)).write_bytes(frame.payload)
+    write_json(directory / ("probe_%04d_geometry.json" % step), geometry)
     trace.event("frozen_photo", step, target_id=target_id, frame_id=frame.id,
                 image_sha256=frame.digest, pose=observation["position"], ros_stamp=observation["ros_stamp"])
-    return frame, observation
-
-
-def _xyz(goal):
-    return tuple(goal[key] for key in ("x", "y", "z"))
-
-
-def _measured_views(backend, observation, targets, trace):
-    views = []
-    for target in targets:
-        for standoff in (3.0, 2.0, 1.5):
-            try:
-                measured = backend.adapter.resolve_visual_target(observation, target.bbox, standoff)
-            except (RuntimeError, ValueError) as error:
-                trace.event("viewpoint_rejected", 1, target_id=target.id, standoff=standoff,
-                            detail=str(error)[:300])
-                continue
-            goal = measured["goal"]
-            if any(dist(_xyz(goal), _xyz(known)) < 0.35 for _, known in views):
-                trace.event("viewpoint_rejected", 1, target_id=target.id, standoff=standoff,
-                            detail="Not a distinct measured view")
-                continue
-            views.append((target, goal))
-            trace.event("viewpoint_measured", 1, target_id=target.id, goal=goal,
-                        source_frame=observation["observation_id"])
-            break
-    return sorted(views, key=lambda pair: dist(_xyz(observation["position"]), _xyz(pair[1])))
+    return frame, observation, geometry
 
 
 async def _parallel(backend, directory, trace, client, started, task, snapshot, spec,
@@ -80,7 +56,7 @@ async def _parallel(backend, directory, trace, client, started, task, snapshot, 
             try:
                 with trace.measure("action", 2, action="inspect_other_required_target", target_id=target.id):
                     await loop.run_in_executor(None, backend.move, goal)
-                after, _ = _take_photo(backend, directory, trace, started, 3, target.id)
+                after, _, _ = _take_photo(backend, directory, trace, started, 3, target.id)
                 if after.id == first_frame.id or after.digest == first_frame.digest:
                     raise RuntimeError("Independent work did not capture a distinct onboard photo")
                 next_frame = after
@@ -119,15 +95,15 @@ def run_probe(backend, instruction, directory, event, timeout, *, model, trace):
         with trace.measure("model_request", 1, purpose="compile_task_requirements"):
             intent = interpret(model, instruction)
         write_json(directory / "task_requirements.json", asdict(intent))
-        initial, observation = _take_photo(backend, directory, trace, started, 1, "scene")
+        initial, observation, geometry = _take_photo(backend, directory, trace, started, 1, "scene")
         with trace.measure("model_request", 2, purpose="locate_visible_targets",
                            frame_id=initial.id, image_sha256=initial.digest):
             targets = locate_targets(model, intent, initial)
         write_json(directory / "observed_task.json", {**asdict(intent),
                    "targets": [asdict(target) for target in targets]})
         reusable = [target for target in targets if target.view_sufficient]
-        views = _measured_views(backend, observation,
-                                (target for target in targets if not target.view_sufficient), trace)
+        views = measured_views(backend, observation, geometry,
+                               (target for target in targets if not target.view_sufficient), trace)
         reused = bool(reusable)
         if reused:
             first = reusable[0]
@@ -141,7 +117,7 @@ def run_probe(backend, instruction, directory, event, timeout, *, model, trace):
             first, first_goal = views.pop(0)
             with trace.measure("action", 1, action="inspect_first_required_target", target_id=first.id):
                 backend.move(first_goal)
-            first_frame, _ = _take_photo(backend, directory, trace, started, 2, first.id)
+            first_frame, _, _ = _take_photo(backend, directory, trace, started, 2, first.id)
         spec = QuerySpec("first-visual-answer", first.id, OUTCOMES,
                          min(first_frame.captured_at + 15, timeout), timeout)
         requirements = list(intent.requirements_for(first.id, spec.id))
@@ -152,7 +128,7 @@ def run_probe(backend, instruction, directory, event, timeout, *, model, trace):
             requirements.append(requirement)
             skills.append(Skill("view:" + target.id, target.id, (requirement.id,), 1.0))
             # A conservative local estimate only for this integration probe.
-            travel.append((first.id, target.id, 2.0 + 2.0 * dist(_xyz(first_goal), _xyz(goal))))
+            travel.append((first.id, target.id, 2.0 + 2.0 * dist(xyz(first_goal), xyz(goal))))
         task = TaskContract(instruction, first.id, "probe-end", timeout, 0,
                             tuple(requirements), (spec,), tuple(skills), tuple(travel))
         snapshot = Snapshot(first_frame.captured_at, first.id, {}, {}, {})

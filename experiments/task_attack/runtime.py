@@ -264,14 +264,17 @@ class GazeboBackend:
         s=self.adapter.snapshot();self.adapter.takeoff(self.config['takeoff_height'])
         return self.wait_motion(dict(s['position'],z=self.config['takeoff_height'],yaw=s['yaw']))
 
-    def move(self, goal):
+    def check_goal(self, goal):
         if set(goal)!={'x','y','z','yaw'} or any(isinstance(v,bool) or not isinstance(v,(int,float)) or not math.isfinite(v) for v in goal.values()):
             raise ValueError('move requires finite x/y/z and yaw in radians')
+        return self.adapter._goal_query.ensure(goal)
+
+    def move(self, goal):
         # Reuse the original mapper's existing goal-admission query. Otherwise
         # the original FSM rejects an outside-local-map final point and returns
         # to WAIT_TARGET, leaving a direct adapter caller waiting for 120s.
         # This is native map feedback, not a new radius / step-size restriction.
-        self.adapter._goal_query.ensure(goal)
+        self.check_goal(goal)
         requested=(time.monotonic(),self.ros.Time.now().to_sec())
         self.adapter.goto(**goal)
         try:return self.wait_motion(goal,native_request_started=requested)

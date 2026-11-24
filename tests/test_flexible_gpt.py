@@ -6,8 +6,9 @@ from pathlib import Path
 from threading import Event
 
 from experiments.flexible_execution.adapters.gpt_probe import run_probe
+from experiments.flexible_execution.adapters.viewpoints import measured_views
 from experiments.flexible_execution.evidence import Frame
-from experiments.flexible_execution.gpt_vision import frozen_prompt, interpret, judge, locate_targets
+from experiments.flexible_execution.gpt_vision import VisibleTarget, frozen_prompt, interpret, judge, locate_targets
 from experiments.flexible_execution.timeline import Timeline, summarize
 from experiments.task_attack.agent import run_agent
 
@@ -161,6 +162,34 @@ class ExistingGPTTests(unittest.TestCase):
         self.assertTrue(probe["probe_completed"])
         self.assertTrue(probe["original_photo_reused_from_initial_view"])
         self.assertIsNone(probe["independent_photo_id"])
+
+    def test_ambiguous_target_uses_only_map_admitted_surface_views(self):
+        class SurfaceCamera(CameraDouble):
+            def resolve_visual_target(self, observation, bbox, standoff):
+                raise RuntimeError("Cannot establish object depth")
+
+            def check_goal(self, goal):
+                self.checked.append(goal)
+                if not self.admit:
+                    raise RuntimeError("Map does not admit this goal")
+
+        backend = SurfaceCamera()
+        backend.checked = []
+        backend.admit = False
+        observation, _ = backend.observe()
+        geometry = {"measured_surface_grid": {"columns": 8, "rows": 4, "cells": [
+            {"pixel_cell": [1, 1], "world_xyz": [4.0, 0.0, 1.2], "measured_points": 12},
+        ]}}
+        target = VisibleTarget("visible-1", "left cabinet", (0.1, 0.2, 0.3, 0.7), False)
+        with tempfile.TemporaryDirectory() as tmp:
+            timeline = Timeline(Path(tmp) / "timeline.jsonl")
+            self.assertEqual(measured_views(backend, observation, geometry, (target,), timeline), [])
+            self.assertTrue(backend.checked)
+            backend.admit = True
+            admitted = measured_views(backend, observation, geometry, (target,), timeline)
+            self.assertEqual(admitted[0][0], target)
+            self.assertEqual(admitted[0][1], backend.checked[-1])
+            self.assertEqual(backend.movements, 0)
 
 
 if __name__ == "__main__":
