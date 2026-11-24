@@ -23,8 +23,8 @@ def screen(value):
     return image
 
 
-def build_scene(directory,seed=1,family='cracks',count=6,source_profile='independent'):
-    result=decal_scene(directory,seed,family,count,source_profile)
+def build_scene(directory,seed=1,family='cracks',count=6,source_profile='independent',*,layout_seed=None):
+    result=decal_scene(directory,seed,family,count,source_profile,layout_seed=layout_seed)
     root=Path(directory).resolve();assets=root/'assets';tree=ET.parse(result['world']);world=tree.getroot().find('world')
     if result['truth']['scene_name']=='equipment':
         for i,device in enumerate(result['truth']['devices']):

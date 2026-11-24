@@ -14,6 +14,7 @@ from .runner import _hash
 
 PAIRED_MODES = {"paired-serial": "ACTUAL_GPT_SHARED_SERIAL", "paired-async": "ACTUAL_GPT_SHARED_ASYNC"}
 TYPED_ROLE = "TYPED_VISION_DEVELOPMENT"
+VISUAL_ROLES = {"calibration": "VISUAL_METHOD_CALIBRATION", "selection": "VISUAL_METHOD_SELECTION"}
 
 
 def prepare(directory, defaults, episode_timeout):
@@ -97,6 +98,36 @@ def prepare_typed(directory, base, calibration):
     return catalog
 
 
+def prepare_visual(directory, inputs, calibration, split):
+    from .development_inputs import scene_fingerprint
+
+    methods = (("conditional-serial", "conditional-async", "conditional-a") if split == "calibration" else
+               ("conditional-async", "conditional-prefetch", "conditional-planner", "conditional-a"))
+    cases = []
+    for row in inputs["cases"]:
+        if row["split"] != split:
+            continue
+        case = {key: row[key] for key in ("id", "family", "domain", "seed", "layout_seed", "source_profile",
+                                         "equipment_count", "backend", "mechanism_requested")}
+        case.update(group_id=row["base_group_id"], scene_fingerprint=scene_fingerprint(row),
+                    episode_timeout_seconds=480, collection_rule=row["collection_clause"],
+                    handoff_at_observation=True, order=Random(_hash([row["id"], split])).sample(methods, len(methods)))
+        cases.append(case)
+    if len(cases) != 48 or inputs["split_roles_share_exact_assets"]:
+        raise ValueError("The development cohort needs the 48 isolated layouts for its role")
+    catalog = {"schema": 1, "role": VISUAL_ROLES[split], "layout_manifest_sha256": _hash(inputs),
+               "cost_config_sha256": _hash(calibration), "intended_pairs": len(cases), "cases": cases}
+    directory.mkdir(parents=True, exist_ok=True)
+    for filename, value in (("calibrated_costs.json", calibration), ("pilot_manifest.json", catalog)):
+        path = directory / filename
+        recorded = _read(path)
+        if recorded is not None and recorded != value:
+            raise ValueError("The visual development schedule is already frozen")
+        if recorded is None:
+            write_json(path, value)
+    return catalog
+
+
 def _arm(directory, case, method):
     base = directory / case["id"] / method
     job = _read(base / "job.json")
@@ -129,6 +160,9 @@ def _valid_preflight(preflight, case, method, directory):
             or preflight.get("early_fields", []) != case.get("early_fields", [])
             or preflight.get("handoff_at_observation", False) != case.get("handoff_at_observation", False)
             or preflight.get("typed_task_program", False) != case.get("typed_task_program", False)
+            or preflight.get("layout_seed") != case.get("layout_seed")
+            or preflight.get("collection_rule") != case.get("collection_rule")
+            or preflight.get("scene_fingerprint") != case.get("scene_fingerprint")
             or planned != case["episode_timeout_seconds"] or not isinstance(budget, (int, float))
             or not 0 < budget <= planned):
         raise ValueError("Run does not match the frozen case and method: " + str(directory))

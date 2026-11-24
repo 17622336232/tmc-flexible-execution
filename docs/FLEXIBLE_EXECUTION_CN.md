@@ -99,6 +99,15 @@ python3 -m experiments.flexible_execution.cli public-plan \
 
 `public-plan` 校验压缩包并按固定哈希抽取正式房号。每房四项任务，准备时无需读取房屋内容。最多四种方法，共 800 个待冻结协议的作业位。
 
+校准和选参布局可由同一仿真场景生成器实物化。布局种子控制站位，场景种子控制摆在站位里的材料。两组各 48 个布局，覆盖六种预定条件。正式运行前核对几何、材质和原始任务文字的哈希。选参使用校准阶段量得的时延和报告成本估计。
+
+```bash
+python3 -m experiments.flexible_execution.cli visual-development-prepare \
+  --output outputs/development-visual-v1 \
+  --pilot-dir outputs/natural-pilot/visual-calibration-v1 \
+  --cost-config outputs/natural-pilot/conditional-comparison-v4/calibrated_costs.json
+```
+
 TimelyLLM 的作者代码在 CPU 上复算了随附无人机样本中 532 个任务的 1313 段执行时长，逐项与作者总时长一致。原服务调度还需 CUDA 与其固定运行时，默认触发轨迹未随这个公开快照提供。该复算只用于核对分段和计时口径。 [作者代码](https://github.com/Neawhen/TimelyLLM/tree/669f2490a112a7415fe06e902e1ea82da02a3342)
 
 ## 参考工作的数据和训练方式

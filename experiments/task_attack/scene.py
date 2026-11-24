@@ -84,7 +84,7 @@ PLANE = '''<?xml version="1.0"?>
 <library_visual_scenes><visual_scene id="s"><node id="panel"><instance_geometry url="#plane"/></node></visual_scene></library_visual_scenes><scene><instance_visual_scene url="#s"/></scene></COLLADA>'''
 
 
-def build_scene(directory, seed=1, family='cracks', count=6, source_profile='independent'):
+def build_scene(directory, seed=1, family='cracks', count=6, source_profile='independent', *, layout_seed=None):
     if family not in FAMILIES:
         raise ValueError('Unknown task family')
     if source_profile not in SOURCE_PROFILES or not 2 <= count <= 6:
@@ -148,14 +148,22 @@ def build_scene(directory, seed=1, family='cracks', count=6, source_profile='ind
     for y in [.95,-4.1]:
         _box(stripes,'line_'+str(y),[0,y,0],[16,.07,.004],'.95 .72 .13 1')
     devices, menu, material_names, action_states, source_graph = [], [], [], {}, []
+    spacing = 2.4 if scene_name == 'campus' else 2.0
+    center_x = 0.
+    depth_offsets = [0.] * count
+    if layout_seed is not None:
+        layout_rng = random.Random(layout_seed)
+        spacing *= layout_rng.uniform(.92, 1.10)
+        center_x = layout_rng.uniform(-.24, .24)
+        depth_offsets = [layout_rng.uniform(-.08, .08) for _ in range(count)]
 
     def save_texture(name, image):
         image.save(str(assets/'materials/textures'/(name+'.png')))
         material_names.append(name)
 
     for i in range(count):
-        x = (i-(count-1)/2)*(2.0 if scene_name != 'campus' else 2.4)
-        y = 2.5
+        x = (i-(count-1)/2)*spacing + center_x
+        y = 2.5 + depth_offsets[i]
         identity = identities[i]
         carrier = 'panel_%02d' % (i+1)
         back_id = identities[(i+1) % count]
@@ -320,6 +328,8 @@ def build_scene(directory, seed=1, family='cracks', count=6, source_profile='ind
     task, score_spec, target = make_task(family, devices, rng)
     truth=dict(seed=seed,family=family,devices=devices,target=target,task=task,score_spec=score_spec,
                scene_name=scene_name,source_profile=source_profile)
+    if layout_seed is not None:
+        truth['layout_seed'] = layout_seed
     (private/'truth.json').write_text(json.dumps(truth,ensure_ascii=False,indent=2))
     catalog=dict(version=2,task_prior=public_prior(scene_name),
                  scene_conditions=dict(scene=scene_name,source_profile=source_profile,
@@ -334,4 +344,4 @@ def build_scene(directory, seed=1, family='cracks', count=6, source_profile='ind
                  note='Action acknowledgement does not imply robot consumption or attack success.')
     (public/'catalog.json').write_text(json.dumps(catalog,ensure_ascii=False,indent=2))
     return dict(world=str(world_file),truth=truth,catalog=catalog,action_states=action_states,
-                panel_poses={d['carrier']:[d['position'][0],2.06,1.91 if scene_name=='equipment' else 2.1] for d in devices})
+                panel_poses={d['carrier']:[d['position'][0],d['position'][1]-.44,1.91 if scene_name=='equipment' else 2.1] for d in devices})

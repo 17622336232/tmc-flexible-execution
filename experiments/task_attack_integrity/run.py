@@ -32,11 +32,12 @@ def _stop(process):
         except subprocess.TimeoutExpired:pass
 
 
-def main(argv=None, *, sensor_exercise=None, agent_runner=run_agent):
+def main(argv=None, *, sensor_exercise=None, agent_runner=run_agent, clean_study_task=None):
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--policy',choices=('clean','belief','belief_blind','belief_known_task','direct_effect','redvla_external','randomized','uao_spsa','iccv_uada_spsa','iccv_upa_spsa'),default='clean')
     p.add_argument('--family',choices=FAMILIES,default='cracks')
     p.add_argument('--seed',type=int,default=1)
+    p.add_argument('--layout-seed',type=int)
     p.add_argument('--equipment-count',type=int,default=6,help='Visible fixture count; all paired policies share it')
     p.add_argument('--output',type=Path)
     p.add_argument('--headless',action='store_true')
@@ -68,7 +69,13 @@ def main(argv=None, *, sensor_exercise=None, agent_runner=run_agent):
     if not 2<=a.equipment_count<=6:p.error('This pilot fixture supports 2..6 devices')
     root=(a.output or ROOT/'artifacts/task_attack'/('%s_%s_%s_s%d'%(time.strftime('%Y%m%d_%H%M%S'),a.family,a.policy,a.seed))).resolve()
     if (root/'result.json').exists():p.error('Output already contains an episode result; choose a fresh directory')
-    scene=build_scene(root,a.seed,a.family,count=a.equipment_count,source_profile=a.source_profile)
+    scene=build_scene(root,a.seed,a.family,count=a.equipment_count,source_profile=a.source_profile,layout_seed=a.layout_seed)
+    if clean_study_task is not None:
+        if a.policy != 'clean':
+            raise ValueError('Registered study tasks require the clean simulator')
+        scene['truth']['task'] = clean_study_task['instruction']
+        scene['truth']['oracle_requirement_program'] = clean_study_task['oracle_requirement_program']
+        write_json(root/'private/truth.json',scene['truth'])
     if a.baseline_bundle:
         from experiments.task_attack.visual_assets import load_bundle,add_visual_assets
         bundle,textures,bundle_hash=load_bundle(a.baseline_bundle)
@@ -271,7 +278,13 @@ def main(argv=None, *, sensor_exercise=None, agent_runner=run_agent):
             return 0
         report,metrics=agent_runner(backend,scene['truth']['task'],root/'private/robot',event,a.episode_timeout)
         with backend.lock:backend.finished=True
-        result.update(report=report,robot_metrics=metrics,score=evaluate(scene['truth'],report,backend.attack),
+        if clean_study_task is None:
+            score = evaluate(scene['truth'], report, backend.attack)
+        else:
+            from experiments.flexible_execution.custom_evaluation import score_program
+
+            score = score_program(scene['truth'], report)
+        result.update(report=report,robot_metrics=metrics,score=score,
                       actual_edit=backend.attack,execution_completed=True)
         if backend.attack:
             edit=backend.attack

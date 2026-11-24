@@ -34,6 +34,30 @@ def _task(rule):
 
 
 class LiveInspectionTests(unittest.TestCase):
+    def test_final_verifier_sees_scope_even_when_a_subject_has_no_claim(self):
+        requests = []
+
+        class Model:
+            def request(self, _prompt, payload, photos):
+                requests.append((payload, photos))
+                return {"issues": ["The second visible device has no recorded finding"]}
+
+        with TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            for image_id in ("onboard_0007", "probe_0001"):
+                data = image_id.encode("ascii")
+                (directory / (image_id + ".jpg")).write_bytes(data)
+                (directory / (image_id + ".json")).write_text(json.dumps({"image_id": image_id,
+                    "sha256": sha256(data).hexdigest()}))
+            scope = {"initial_scene_image": "probe_0001", "visible_targets": [{"id": "visible-1"}, {"id": "visible-2"}]}
+            report = {"outcome": "accepted", "records": [{"object_id": "EQ-02", "evidence_image_id": "onboard_0007"}]}
+            guard = live_inspection.submission_guard("Inspect all visible devices", directory, Model(),
+                                                     Timeline(directory / "time.jsonl"), scope)
+            self.assertIn("second visible device", guard(report, report["records"], 7))
+        payload, photos = requests[0]
+        self.assertEqual(payload["initial_scope"]["visible_targets"], scope["visible_targets"])
+        self.assertEqual([photo["data"] for photo in photos], [b"onboard_0007", b"probe_0001"])
+
     def test_complete_report_checks_all_five_photos_within_transport_limit(self):
         requested = []
 

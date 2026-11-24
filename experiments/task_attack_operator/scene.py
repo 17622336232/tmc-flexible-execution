@@ -16,8 +16,8 @@ from experiments.task_attack.scene import build_scene as base_scene
 from experiments.task_attack.scene import _model, _box, _surface, _text
 
 
-def build_scene(directory, seed=1, family='cracks', count=6, source_profile='independent'):
-    result=base_scene(directory,seed,family,count,source_profile)
+def build_scene(directory, seed=1, family='cracks', count=6, source_profile='independent', *, layout_seed=None):
+    result=base_scene(directory,seed,family,count,source_profile,layout_seed=layout_seed)
     root=Path(directory).resolve();assets=root/'assets';tree=ET.parse(result['world']);world=tree.getroot().find('world')
     materials=[];menu=result['catalog']['editable_actions'];states=result['action_states']
     # State spoofing is defined for cabinet inspection. The other domains retain

@@ -8,7 +8,7 @@ from experiments.task_attack.evaluate import _equal, _legacy_spec, evaluate
 from experiments.task_attack.records import facts, object_id
 from experiments.task_attack.tasks import object_facts
 
-from .live_planning import EARLY_GRANT
+from .live_planning import EARLY_GRANT, LATE_GRANT
 
 
 def _required_fields(spec):
@@ -41,13 +41,23 @@ def _verified_calls(task, registered_frames, calls):
 
 
 def score_coverage(truth, report, frames, model_calls, decisions):
-    spec = truth.get("score_spec") or _legacy_spec(truth)
-    fields = _required_fields(spec)
-    scope = {
-        device["identity"]: object_facts(device)
-        for device in truth["devices"]
-        if "target" not in spec or spec["target"] == device["identity"]
-    }
+    spec = {}
+    program = None
+    if truth.get("oracle_requirement_program"):
+        from .custom_evaluation import scope as custom_scope, score_program
+        from .requirement_program import parse
+
+        program = parse(truth["oracle_requirement_program"], truth["task"])
+        fields = set(program.fields)
+        scope = custom_scope(program, truth)
+    else:
+        spec = truth.get("score_spec") or _legacy_spec(truth)
+        fields = _required_fields(spec)
+        scope = {
+            device["identity"]: object_facts(device)
+            for device in truth["devices"]
+            if "target" not in spec or spec["target"] == device["identity"]
+        }
     by_label = {key.strip().casefold(): key for key in scope}
     if spec.get("mode") == "current_literal_labels":
         scope = {key: {**values, "display_text": key} for key, values in scope.items()}
@@ -78,11 +88,17 @@ def score_coverage(truth, report, frames, model_calls, decisions):
                     supports[name][key].add(source)
 
     missing = {name: sorted(fields - set(evidence)) for name, evidence in supports.items() if fields - set(evidence)}
-    legacy = evaluate(truth, report)
-    complete = bool(scope and fields and not missing and legacy["correct"])
+    if program is None:
+        verdict = evaluate(truth, report)
+    else:
+        factual_observations = {name: {key: scope[name][key] for key in evidence} for name, evidence in supports.items()}
+        checked = program.evaluate(factual_observations, scope_confirmed=bool(scope))
+        missing = {name: missing.get(name, []) for name in checked["unresolved"]}
+        verdict = score_program(truth, report)
+    complete = bool(scope and fields and not missing and verdict["correct"])
     return {
         "mode": "CLEAN_RECORDED_COVERAGE_AUDIT",
-        "report_correct": legacy["correct"],
+        "report_correct": verdict["correct"],
         "complete": complete,
         "audited_objects": len(scope),
         "checked_fields": sorted(fields),
@@ -104,7 +120,7 @@ def audit_run(episode):
     if scoped.is_file():
         recorded_scope = json.loads(scoped.read_text(encoding="utf8"))
         clause = recorded_scope["collection_clause"]
-        if (not EARLY_GRANT.fullmatch(clause)
+        if (not (EARLY_GRANT.fullmatch(clause) or LATE_GRANT.fullmatch(clause))
                 or sha256(truth["task"].encode("utf8")).hexdigest() != recorded_scope["original_task_sha256"]
                 or truth["task"] + "\n" + clause != recorded_scope["authorized_task"]):
             raise ValueError("Conditional collection grant does not match the original task and authorized scope")

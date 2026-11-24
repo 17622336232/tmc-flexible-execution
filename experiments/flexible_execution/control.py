@@ -18,7 +18,7 @@ from experiments.task_attack.runtime import write_json
 from .clean_coverage import audit_run
 from .learning_schedule import ROLE as RANKER_ROLE, registered_config
 from .live_planning import CONDITIONAL_MODES
-from .pilot_schedule import PAIRED_MODES, TYPED_ROLE, _read, _valid_preflight
+from .pilot_schedule import PAIRED_MODES, TYPED_ROLE, VISUAL_ROLES, _read, _valid_preflight
 from .request_budget import RequestBudget
 from .runner import _hash
 
@@ -101,12 +101,16 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
     sources = []
     ranked = catalog.get("role") == RANKER_ROLE
     typed = catalog.get("role") == TYPED_ROLE
-    conditional = ranked or typed or catalog.get("role") == "CONDITIONAL_CONNECTION_DEVELOPMENT"
+    visual = catalog.get("role") in VISUAL_ROLES.values()
+    conditional = ranked or typed or visual or catalog.get("role") == "CONDITIONAL_CONNECTION_DEVELOPMENT"
     stage_sources = CONDITIONAL_SOURCES if conditional else ()
     if ranked or (conditional and (checkout / RANKING_SOURCE).is_file()):
         stage_sources += (RANKING_SOURCE,)
     if typed:
         stage_sources += ("experiments/flexible_execution/requirement_program.py",)
+    if any(case.get("layout_seed") is not None for case in catalog.get("cases", ())):
+        stage_sources += ("experiments/task_attack_operator/scene.py", "experiments/task_attack_recessed/scene.py",
+                          "experiments/task_attack_value/scene.py", "experiments/flexible_execution/development_inputs.py")
     for label in RUN_SOURCES + stage_sources:
         source = checkout / label
         if source.is_dir():
@@ -120,7 +124,9 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
     system_paths = [Path("/etc/os-release"), Path("/opt/ros/noetic/setup.bash"),
                     legacy / "sim_ws/devel/setup.bash", legacy / "sim_ws/devel/lib/vla_sim/vla_traj_server",
                     legacy / "sim_ws/devel/lib/vla_sim/vla_cloud_bridge", legacy / ".venv/pyvenv.cfg"]
-    if typed:
+    if visual:
+        version, stage = 6, catalog["role"].lower().replace("_", "-")
+    elif typed:
         version, stage = 5, "typed-vision-development"
     elif ranked:
         version, stage = 4, "ranked-development"
@@ -197,7 +203,15 @@ def _evidence(root, job):
         raise ValueError("Result uses a different request budget: " + str(root))
     if pre.get("ranker_config_sha256") != job.get("ranker_config_sha256"):
         raise ValueError("Result uses a different ranking profile: " + str(root))
-    return pre, _read(root / "result.json")
+    result = _read(root / "result.json")
+    expected_scene = job["case"].get("scene_fingerprint")
+    if expected_scene and result and result.get("execution_completed"):
+        from .development_inputs import scene_fingerprint
+
+        observed = _read(root / "clean_verified_scene.json")
+        if observed is None or scene_fingerprint(observed) != expected_scene:
+            raise ValueError("The finished episode does not match its registered visual scene: " + str(root))
+    return pre, result
 
 
 def _logs(root):
@@ -355,7 +369,7 @@ def pilot_run(directory, control, checkout, *, resume, max_jobs, auth_project=DE
         try:
             fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            return control_status(control)
+            return {**control_status(control), "worker_owned_by_another_batch": True}
         return _run_locked(directory, control, checkout, resume, max_jobs, auth_project, unlock_external)
 
 
@@ -453,10 +467,16 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
                    "--episode-timeout", str(remaining), "--planned-episode-timeout",
                    str(next_case["episode_timeout_seconds"]), "--max-request-attempts", str(REQUEST_LIMIT),
                    "--request-ledger", str(ledger), "--ros-port", str(ports[0]), "--gazebo-port", str(ports[1])]
+        if next_case.get("layout_seed") is not None:
+            command.extend(("--layout-seed", str(next_case["layout_seed"])))
+        if next_case.get("scene_fingerprint"):
+            command.extend(("--scene-fingerprint", next_case["scene_fingerprint"]))
         if job["method"] in CONDITIONAL_MODES:
             command.extend(("--cost-config", str(directory / "calibrated_costs.json")))
             if next_case.get("early_fields"):
                 command.extend(("--early-fields", ",".join(next_case["early_fields"])))
+            if next_case.get("collection_rule"):
+                command.extend(("--collection-rule", next_case["collection_rule"]))
             if next_case.get("handoff_at_observation"):
                 command.append("--handoff-at-observation")
             if next_case.get("typed_task_program"):

@@ -2,14 +2,34 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
-from experiments.flexible_execution import control
+from experiments.flexible_execution import cli, control
 from experiments.flexible_execution.request_budget import RequestBudget
 from experiments.task_attack.runtime import write_json
 
 
 class SupervisorTest(unittest.TestCase):
+    def test_project_spends_remaining_launches_on_the_next_stage(self):
+        stages = [({"stage": "first", "last_batch": {"launched": 1}, "active_jobs": []}, 1),
+                  ({"stage": "next", "last_batch": {"launched": 2}, "active_jobs": []}, 2)]
+        with patch.object(cli, "_continue_stage", side_effect=stages) as run_stage:
+            result = cli._continue(Path("out"), Path("run"), {}, SimpleNamespace(max_jobs=3))
+        self.assertEqual([call.args[-1] for call in run_stage.call_args_list], [3, 2])
+        self.assertEqual([row["stage"] for row in result["project_batches"]], ["first", "next"])
+        self.assertEqual(result["remaining_launch_allowance"], 0)
+
+    def test_resume_requests_the_existing_owned_schedule(self):
+        state = {"execution_status": "RUNNING", "pilot_directory": "existing", "active_jobs": [{"arm": "owned"}]}
+        args = SimpleNamespace(resume=True, max_jobs=2, retry_external=False, chatgpt_project=Path("account"))
+        with patch.object(cli, "control_status", return_value=state), patch.object(cli, "pilot_run",
+                return_value={**state, "worker_owned_by_another_batch": True}) as run:
+            result = cli._continue(Path("out"), Path("run"), {}, args)
+        self.assertEqual(run.call_args.args[0], Path("existing"))
+        self.assertEqual(result["project_batches"], [])
+        self.assertEqual(result["remaining_launch_allowance"], 2)
+
     def test_new_attempt_after_exit_retains_old_result_and_cumulative_budgets(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

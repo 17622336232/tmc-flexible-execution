@@ -12,8 +12,8 @@ from .clean_coverage import audit_run
 from .control import DEFAULT_AUTH_PROJECT, control_status, is_live, pilot_run
 from .learning_schedule import prepare_ranker_pilot
 from .live_audit import audit_live_connection
-from .live_calibration import calibrate
-from .pilot_schedule import prepare as prepare_pilot, prepare_conditional, prepare_typed, status as pilot_status
+from .live_calibration import calibrate, calibrate_visual
+from .pilot_schedule import prepare as prepare_pilot, prepare_conditional, prepare_typed, prepare_visual, status as pilot_status
 from .runner import manifest, read_json, reproduce, run
 
 
@@ -121,6 +121,8 @@ def status(directory, defaults):
     pilot_manifest = directory.parent / "natural-pilot" / "pilot_manifest.json"
     ranker_pilot = pilot_manifest.parent / "learned-order-v1"
     typed_pilot = pilot_manifest.parent / "typed-vision-v1"
+    visual_root = directory.parent / "development-visual-v1/split_manifest_v2.json"
+    visual_inputs = read_json(visual_root) if visual_root.is_file() else None
     public = _public_visual(directory.parent)
     online_public = [job for job in public if job["state"] == "RUNNING"]
     return {
@@ -133,6 +135,8 @@ def status(directory, defaults):
         "ranker_diagnostic": _ranker_diagnostic(directory.parent),
         "ranker_live_development": pilot_status(ranker_pilot) if (ranker_pilot / "pilot_manifest.json").is_file() else None,
         "typed_vision_development": pilot_status(typed_pilot) if (typed_pilot / "pilot_manifest.json").is_file() else None,
+        "visual_layouts": None if visual_inputs is None else {key: visual_inputs[key] for key in (
+            "state", "layout_count", "distinct_asset_groups", "split_roles_share_exact_assets")},
         "public_visual_validation": public,
         "run_directory": str(directory),
         "local_diagnostics": {"completed": completed, "planned": planned, "summary": stats},
@@ -153,14 +157,26 @@ def _online_args(parser):
                         help="Retry a blocked job only after its external condition has changed")
 
 
-def _continue(output_root, directory, defaults, args):
+def _continue_stage(output_root, directory, defaults, args, launch_limit):
     control = output_root / "control"
     state = control_status(control)
-    if state["active_jobs"] or (state["execution_status"] == "BLOCKED_EXTERNAL" and not args.retry_external):
-        return state
+
+    def run_batch(path):
+        result = pilot_run(path, control, CHECKOUT, resume=args.resume, max_jobs=launch_limit,
+                           auth_project=args.chatgpt_project, unlock_external=args.retry_external)
+        used = 0 if result.get("worker_owned_by_another_batch") else result.get("last_batch", {}).get("launched", 0)
+        return result, used
+
+    active = state["active_jobs"]
+    if active:
+        if args.resume and state.get("pilot_directory") and any(job.get("arm") for job in active):
+            return run_batch(Path(state["pilot_directory"]))
+        return state, 0
+    if state["execution_status"] == "BLOCKED_EXTERNAL" and not args.retry_external:
+        return state, 0
     active_public = [row for row in _public_visual(output_root) if row["state"] == "RUNNING"]
     if active_public:
-        return {"execution_status": "RUNNING", "stage": "public-visual-validation", "active_jobs": active_public}
+        return {"execution_status": "RUNNING", "stage": "public-visual-validation", "active_jobs": active_public}, 0
     pilots = output_root / "natural-pilot"
     if not (pilots / "pilot_manifest.json").is_file():
         prepare_pilot(pilots, defaults, 480)
@@ -171,11 +187,7 @@ def _continue(output_root, directory, defaults, args):
                     "observed_safe_action_entirely_while_pending", "controller_request_attempt_using_new_frame",
                     "all_attempts_match_ledger"))):
         return {"execution_status": "READY", "stage": "warmup",
-                "next_action": "Record and verify the bounded live temperature integration job first"}
-
-    def run_batch(path):
-        return pilot_run(path, control, CHECKOUT, resume=args.resume, max_jobs=args.max_jobs,
-                         auth_project=args.chatgpt_project, unlock_external=args.retry_external)
+                "next_action": "Record and verify the bounded live temperature integration job first"}, 0
 
     development = pilot_status(pilots)
     if development["recorded_pairs"] < 2:
@@ -211,7 +223,7 @@ def _continue(output_root, directory, defaults, args):
         return {"execution_status": "NEEDS_DIAGNOSIS", "stage": "conditional-development",
                 "scientific_conclusion": "INCONCLUSIVE", "development": development,
                 "connection_job": arm["id"], "verified_connection": verified,
-                "next_action": "Inspect the recorded permission, viewpoint, timing and material acceptance"}
+                "next_action": "Inspect the recorded permission, viewpoint, timing and material acceptance"}, 0
     comparison = pilots / f"conditional-comparison-v{comparison_version}"
     if not (comparison / "pilot_manifest.json").is_file():
         calibration = read_json(connection / "calibrated_costs.json")
@@ -240,11 +252,48 @@ def _continue(output_root, directory, defaults, args):
     typed_status = pilot_status(typed)
     if typed_status["recorded_pairs"] < typed_status["planned_pairs"]:
         return run_batch(typed)
+    layouts = output_root / "development-visual-v1"
+    layout_manifest = layouts / "split_manifest_v2.json"
+    if not layout_manifest.is_file():
+        from .development_inputs import prepare
+
+        prepare(layouts, defaults)
+    calibration = pilots / "visual-calibration-v1"
+    prior = read_json(comparison / "calibrated_costs.json")
+    if not (calibration / "pilot_manifest.json").is_file():
+        prepare_visual(calibration, read_json(layout_manifest), prior, "calibration")
+    calibrated_status = pilot_status(calibration)
+    if calibrated_status["recorded_pairs"] < calibrated_status["planned_pairs"]:
+        return run_batch(calibration)
+    selection = pilots / "visual-selection-v1"
+    if not (selection / "pilot_manifest.json").is_file():
+        prepare_visual(selection, read_json(layout_manifest), calibrate_visual(calibration, prior), "selection")
+    selected_status = pilot_status(selection)
+    if selected_status["recorded_pairs"] < selected_status["planned_pairs"]:
+        return run_batch(selection)
     return {"execution_status": "READY", "stage": "evaluation-development",
             "scientific_conclusion": "INCONCLUSIVE", "run_directory": str(directory), "development": development,
             "ranker_development": ranked_status, "typed_vision_development": typed_status,
             "public_visual_validation": _public_visual(output_root),
-            "next_action": "Finish visual development data and protocol checks before the held-out test"}
+            "visual_calibration": calibrated_status, "visual_selection": selected_status,
+            "next_action": "Finish baseline and protocol checks before the held-out test"}, 0
+
+
+def _continue(output_root, directory, defaults, args):
+    if args.max_jobs < 1:
+        raise ValueError("Choose a positive maximum batch size")
+    remaining = args.max_jobs
+    batches = []
+    while remaining:
+        result, launched = _continue_stage(output_root, directory, defaults, args, remaining)
+        if launched:
+            batches.append({"stage": result["stage"], **result["last_batch"]})
+            remaining -= launched
+        current = result.get("current_job") or {}
+        if (not launched or result.get("active_jobs") or current.get("state") in
+                {"INFRA_ERROR", "BLOCKED_EXTERNAL", "CANCELLED_BY_USER"}):
+            break
+    return {**result, "project_batches": batches, "remaining_launch_allowance": remaining}
 
 
 def main(argv=None):
@@ -259,6 +308,13 @@ def main(argv=None):
     public_plan = commands.add_parser("public-plan", help="Assign blinded ProcTHOR test houses and episode slots")
     public_plan.add_argument("--test-archive", required=True, type=Path)
     public_plan.add_argument("--output", required=True, type=Path)
+    custom_plan = commands.add_parser("custom-plan", help="Assign the three blind custom evaluation strata")
+    custom_plan.add_argument("--development-manifest", required=True, type=Path)
+    custom_plan.add_argument("--output", required=True, type=Path)
+    visual_inputs = commands.add_parser("visual-development-prepare", help="Materialize the 96 development layouts")
+    visual_inputs.add_argument("--output", required=True, type=Path)
+    visual_inputs.add_argument("--pilot-dir", type=Path, help="Register the initial calibration run")
+    visual_inputs.add_argument("--cost-config", type=Path, help="Measured timing priors for the calibration run")
     learn = commands.add_parser("ranker-diagnostic", help="Run the grouped symbolic CPU ranking diagnostic")
     learn.add_argument("--data-dir", required=True, type=Path)
     learn.add_argument("--sizes", type=int, nargs="+", choices=(1000, 3000, 10000), default=[1000, 3000, 10000])
@@ -297,6 +353,25 @@ def main(argv=None):
 
         defaults = yaml.safe_load(DEFAULTS.read_text(encoding="utf8"))
         print(json.dumps(prepare(args.test_archive, args.output, defaults), ensure_ascii=False, indent=2))
+        return
+    if args.command == "custom-plan":
+        from .custom_schedule import prepare
+
+        defaults = yaml.safe_load(DEFAULTS.read_text(encoding="utf8"))
+        print(json.dumps(prepare(args.output, defaults, read_json(args.development_manifest)), ensure_ascii=False, indent=2))
+        return
+    if args.command == "visual-development-prepare":
+        from .development_inputs import prepare
+
+        defaults = yaml.safe_load(DEFAULTS.read_text(encoding="utf8"))
+        if bool(args.pilot_dir) != bool(args.cost_config):
+            parser.error("Supply both --pilot-dir and --cost-config to register calibration")
+        result = prepare(args.output, defaults)
+        if args.pilot_dir:
+            catalog = prepare_visual(args.pilot_dir, read_json(args.output / "split_manifest_v2.json"),
+                                     read_json(args.cost_config), "calibration")
+            result["calibration_job_count"] = sum(len(case["order"]) for case in catalog["cases"])
+        print(json.dumps(result, ensure_ascii=False, indent=2))
         return
     if args.command == "ranker-diagnostic":
         from .ranker_train import experiments
