@@ -8,9 +8,10 @@ import json
 import os
 from math import dist
 from pathlib import Path
-from time import monotonic
+from time import monotonic, time
 
-from experiments.task_attack.model import ModelClient
+from experiments.task_attack import EFFORT, MODEL
+from experiments.task_attack.model import ModelAttemptLimitExceeded, ModelClient, ModelDeadlineExceeded
 from experiments.task_attack.runtime import write_json
 
 from .evidence import Frame, Observation, accept
@@ -18,9 +19,10 @@ from .executor import Snapshot, permitted_observation
 from .gpt_vision import OUTCOMES, Material
 from .live_planning import NEW_METHODS, permission_for, select
 from .public_audit import save_segmentation
-from .public_visual import _house, camera_jpeg, open_controller, source_record
+from .public_visual import VALIDATION_SOURCE, _house, camera_jpeg, open_controller, source_record
 from .queries import AsyncQueryWorker, QueryBook
 from .request_budget import RequestBudget
+from .runner import _hash, read_json
 from .task_ir import Condition, QuerySpec, Requirement, Skill, TaskContract
 from .timeline import Timeline, summarize
 
@@ -63,6 +65,10 @@ class ValidationCase:
     expected: RoomIntent
 
 
+class RoomTaskFailure(ValueError):
+    """A model response or inspection step failed the task contract."""
+
+
 VALIDATION = ValidationCase(
     0, "先用初始照片判断是否能看到椅子。若看到了椅子，向右转90度，用一张新照片判断是否能看到床，"
     "恢复原来的朝向后报告两项结论。若没看到椅子，只报告初始照片的结论。看不清时报告无法判定。"
@@ -78,7 +84,7 @@ def parse_intent(value):
             or value["primary"] not in CLASSES or value["secondary"] not in CLASSES
             or value["direction"] not in tuple(TURNS) or value["side_when"] != ["positive"]
             or value["restore_heading"] is not True or value["unresolved_allowed"] is not True):
-        raise ValueError("The shared room inspector did not return a supported instruction")
+        raise RoomTaskFailure("The shared room inspector did not return a supported instruction")
     return RoomIntent(value["primary"], value["direction"], value["secondary"])
 
 
@@ -149,7 +155,7 @@ def _judge(client, trace, key, payload, prompt):
     with trace.measure("model_request", key, image_sha256=prompt["sha256"]):
         value = client.request(JUDGE, prompt, [{"label": key + " camera RGB", "data": payload}])
     if not isinstance(value, dict) or set(value) != {"outcome"} or value["outcome"] not in OUTCOMES:
-        raise ValueError("Room image judgment did not contain a declared outcome")
+        raise RoomTaskFailure("Room judgment did not return a declared outcome")
     return value["outcome"]
 
 
@@ -196,12 +202,12 @@ async def _inspect(case, room, client, method, deadline):
                     side = room.take("side", room.turn(turn, angle))
         reply = await pending
         if not book.accept(reply, room.now()):
-            raise RuntimeError("Reply did not match the immutable starting image")
+            raise RoomTaskFailure("Reply did not match the immutable starting image")
         trace.event("query_applied", "front", binding=asdict(reply.binding), outcome=reply.outcome)
         if reply.outcome == "positive" and side is None:
             state = Snapshot(room.now(), "front", book.results, {}, {})
             if not permitted_observation(contract, state, skill):
-                raise RuntimeError("The required camera turn was not permitted in the remaining budget")
+                raise RoomTaskFailure("The required camera turn was not permitted in the remaining budget")
             side = room.take("side", room.turn(turn, angle))
         if side is not None:
             room.turn(restore, 0)
@@ -216,7 +222,7 @@ async def _inspect(case, room, client, method, deadline):
                               {"target_class": intent.secondary, "frame": side.id, "sha256": side.digest})
         evidence = accept(required, Observation(side, material.field, side_outcome, side.digest != front.digest), room.now())
         if evidence is None:
-            raise RuntimeError("The side judgment lacks newly acquired camera evidence")
+            raise RoomTaskFailure("The side judgment lacks newly acquired camera evidence")
         trace.event("verified_material", "side", evidence=asdict(evidence))
         supplied.append(side)
     report = _request(client, trace, "report", REPORT, {
@@ -228,47 +234,58 @@ async def _inspect(case, room, client, method, deadline):
     save_segmentation(room.output, front.id, room.events[front.id], case.expected.primary, MIN_OBJECT_PIXELS)
     if side is not None:
         save_segmentation(room.output, side.id, room.events[side.id], case.expected.secondary, MIN_OBJECT_PIXELS)
-    result = verify(case, intent, report, front, side, front_truth, side_truth,
-                    _same_pose(room.initial_pose, room.controller.last_event.metadata["agent"]))
+    terminal = room.controller.last_event.metadata["agent"]
+    trace.event("terminal_pose", "room", pose=terminal)
+    result = verify(case, intent, report, front, side, front_truth, side_truth, _same_pose(room.initial_pose, terminal))
     result.update(early_preparation_selected=early_dispatched, parsed=asdict(intent))
     trace.event("report_written", "report", outcome="complete" if result["complete"] else "failure")
     return result
 
 
-def run(archive, output, build_dir, display, method, auth_project, *, deadline=260, request_limit=8):
+def run(archive, output, build_dir, display, method, auth_project, *, deadline=260, request_limit=8,
+        case=VALIDATION, source=VALIDATION_SOURCE, case_id=None, request_ledger=None):
     from uav_bridge.chatgpt_auth import CredentialStore
 
     from .control import _proc
 
-    case = VALIDATION
-    house, digest = _house(archive, case.house_index)
+    house, digest = _house(archive, case.house_index, source=source)
     output.mkdir(parents=True, exist_ok=False)
-    source = source_record(case.house_index, digest, "opengl", "PUBLIC_VISUAL_VALIDATION_CLOSED_LOOP")
-    write_json(output / "source.json", {**source, "instruction": case.instruction, "method": method,
+    role = "ENGINEERING_VALIDATION" if case_id is None else "PUBLIC_DERIVED_MATCHED_TASK"
+    provenance = source_record(case.house_index, digest, "opengl", role, source=source)
+    write_json(output / "source.json", {**provenance, "instruction": case.instruction, "method": method,
         "motion_estimates": PLATFORM_TIMES, "inference_estimates": MODEL_TIMES, "episode_timeout": deadline,
-        "request_limit": request_limit, "role": "ENGINEERING_VALIDATION", "ground_truth_input_to_model": False,
-        "case_version": "public-room-presence-v2", "previous_validation": "closed-loop-attempt-001",
-        "version_reason": "clarify the positive report and separate permit text from the parsing format"})
+        "request_limit": request_limit, "role": role, "ground_truth_input_to_model": False,
+        "model": MODEL, "reasoning_effort": EFFORT, "case_id": case_id, "case_version": "public-room-presence-v2"})
     write_json(output / "process.json", {"process": _proc(os.getpid()), "method": method, "episode_timeout": deadline})
     trace = Timeline(output / "timeline.jsonl")
-    budget = RequestBudget(output / "requests.jsonl", request_limit)
+    budget = RequestBudget(request_ledger or output / "requests.jsonl", request_limit)
+    already_reserved = budget.summary()["reserved"]
     client = ModelClient(output / "model_calls.jsonl", credential_store=CredentialStore(
         directory=auth_project / ".runtime" / "chatgpt"), request_budget=budget)
     controller = None
     started = monotonic()
+    clock = {"started_wall": time(), "allowance_seconds": deadline}
+    write_json(output / "job_clock.json", clock)
     client.deadline_monotonic = started + deadline
     try:
         controller = open_controller(house, build_dir, "opengl", display, segmentation=True, timeout=min(90, deadline))
         result = asyncio.run(_inspect(case, Room(controller, output, trace, started), client, method, deadline))
     except Exception as error:
-        result = {"complete": False, "error": {"type": type(error).__name__, "code": getattr(error, "code", None),
-                                               "status": getattr(error, "status", None)}}
-    finished = monotonic()
-    if controller is not None:
-        try:
-            controller.stop()
-        except Exception as error:
-            result["cleanup_error"] = type(error).__name__
+        category = {RoomTaskFailure: "task_contract", ModelDeadlineExceeded: "episode_deadline",
+                    ModelAttemptLimitExceeded: "request_budget_exhausted"}.get(type(error), "infrastructure")
+        result = {"complete": False, "error": {"type": type(error).__name__, "category": category,
+                                               "code": getattr(error, "code", None), "status": getattr(error, "status", None)}}
+    finally:
+        finished = monotonic()
+        write_json(output / "job_clock.json", {**clock, "elapsed_seconds": finished - started})
+        cleanup_error = None
+        if controller is not None:
+            try:
+                controller.stop()
+            except Exception as error:
+                cleanup_error = type(error).__name__
+    if cleanup_error:
+        result["cleanup_error"] = cleanup_error
     timing = summarize(trace.path)
     replies = timing["intervals"].get("model_request", [])
     actions = timing["intervals"].get("action", [])
@@ -286,26 +303,61 @@ def run(archive, output, build_dir, display, method, auth_project, *, deadline=2
         req["start"] < action["start"] < req["finish"] for req in front_intervals for action in actions)
     write_json(output / "timing.json", timing)
     result.update(episode_seconds=finished - started, cleanup_seconds=monotonic() - finished,
-                  requests=budget.summary(), model_action_overlap_seconds=timing["model_action_overlap_seconds"])
+                  requests={**budget.summary(), "reserved_before_attempt": already_reserved},
+                  model_action_overlap_seconds=timing["model_action_overlap_seconds"])
     write_json(output / "result.json", result)
     return result
 
 
+def _run_registered(job, output, display, auth_project):
+    from .public_schedule import FINAL_ROLE, METHODS, TEST_SOURCE
+
+    runtime, row = job["public_runtime"], job["case"]
+    if job["stage"] == "public-visual-final":
+        freeze = read_json(Path(job["frozen_evaluation"]))
+        cohort = Path(job["arm"]).parents[1]
+        protocol = read_json(cohort / "run_protocol.json")
+        if (runtime["source"] != TEST_SOURCE or freeze["role"] != FINAL_ROLE or freeze["runtime"] != runtime
+                or _hash(freeze) != job["frozen_evaluation_sha256"] or job["request_limit"] != freeze["request_limit"]
+                or row["episode_timeout_seconds"] != freeze["episode_timeout_seconds"]
+                or protocol["catalog_sha256"] != _hash(read_json(cohort / "pilot_manifest.json"))
+                or protocol["code_git_commit"] != job["code_git_commit"]):
+            raise ValueError("The official test archive requires the exact frozen public evaluation protocol")
+    elif runtime["source"] != VALIDATION_SOURCE or job["stage"] != "public-visual-development":
+        raise ValueError("Only validation jobs can run before the final test protocol is locked")
+    if job["method"] not in METHODS or job["method"] not in row["order"]:
+        raise ValueError("The requested method is missing from the public comparison")
+    case = ValidationCase(row["official_house_index"], row["instruction"], RoomIntent(**row["expected_language_contract"]))
+    allowance = row["episode_timeout_seconds"] - job.get("charged_seconds", 0.)
+    if allowance <= 0:
+        raise ValueError("The room job has used its allowed experiment time")
+    return run(Path(runtime["archive"]), output, Path(runtime["build_dir"]), display, job["method"], auth_project,
+               deadline=allowance, request_limit=job["request_limit"], case=case, source=runtime["source"],
+               case_id=row["id"], request_ledger=Path(job["request_ledger"]))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for path in ("validation", "output", "build-dir", "auth-project", "simulator-lock"):
+    for path in ("output", "auth-project"):
         parser.add_argument("--" + path, type=Path, required=True)
+    for path in ("validation", "build-dir", "simulator-lock", "registered-job"):
+        parser.add_argument("--" + path, type=Path)
     parser.add_argument("--display", default=os.environ.get("DISPLAY"))
     parser.add_argument("--method", choices=NEW_METHODS, default="conditional-a")
     args = parser.parse_args()
     if not args.display:
         parser.error("Provide the existing isolated X display")
-    with args.simulator_lock.open("a+") as lock:
-        try:
-            fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            parser.error("Another simulator job holds the shared lock")
-        result = run(args.validation, args.output, args.build_dir, args.display, args.method, args.auth_project)
+    if args.registered_job:
+        result = _run_registered(read_json(args.registered_job), args.output, args.display, args.auth_project)
+    else:
+        if not all((args.validation, args.build_dir, args.simulator_lock)):
+            parser.error("Provide the validation archive, AI2-THOR build and shared simulator lock")
+        with args.simulator_lock.open("a+") as lock:
+            try:
+                fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                parser.error("Another simulator job holds the shared lock")
+            result = run(args.validation, args.output, args.build_dir, args.display, args.method, args.auth_project)
     print(json.dumps(result, ensure_ascii=False))
     return 0 if result["complete"] else 1
 

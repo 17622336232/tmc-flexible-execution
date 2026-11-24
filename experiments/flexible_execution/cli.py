@@ -16,7 +16,9 @@ from .control import DEFAULT_AUTH_PROJECT, control_status, is_live, pilot_run
 from .learning_schedule import prepare_ranker_pilot
 from .live_audit import audit_live_connection
 from .live_calibration import calibrate, calibrate_visual
-from .pilot_schedule import prepare as prepare_pilot, prepare_conditional, prepare_typed, prepare_visual, status as pilot_status
+from .pilot_schedule import (
+    prepare as prepare_pilot, prepare_conditional, prepare_stream, prepare_typed, prepare_visual, status as pilot_status,
+)
 from .runner import manifest, read_json, reproduce, run
 
 
@@ -25,6 +27,9 @@ DEFAULTS = Path(__file__).with_name("experiment_defaults.yaml")
 CUSTOM_CONNECTION = "custom-vision-connection-v2"
 VISUAL_INPUTS = "development-visual-v2"
 VISUAL_PILOTS = {role: f"visual-{role}-v2" for role in ("calibration", "selection")}
+PUBLIC_VALIDATION_PILOT = "public-visual/validation-pilot-v1"
+PUBLIC_FINAL_PILOT = "public-visual/test-pilot-v1"
+STREAM_PILOT = "segmented-generation-v1"
 
 
 def _scene_python():
@@ -143,9 +148,12 @@ def status(directory, defaults):
     ranker_pilot = pilot_manifest.parent / "learned-order-v1"
     typed_pilot = pilot_manifest.parent / "typed-vision-v1"
     custom_pilot = pilot_manifest.parent / CUSTOM_CONNECTION
+    stream_pilot = pilot_manifest.parent / STREAM_PILOT
     visual_root = directory.parent / VISUAL_INPUTS / "split_manifest_v2.json"
     visual_inputs = read_json(visual_root) if visual_root.is_file() else None
     public = _public_visual(directory.parent)
+    public_matched = directory.parent / PUBLIC_VALIDATION_PILOT
+    public_final = directory.parent / PUBLIC_FINAL_PILOT
     online_public = [job for job in public if job["state"] == "RUNNING"]
     return {
         "profile": defaults["execution_profile"],
@@ -158,9 +166,14 @@ def status(directory, defaults):
         "ranker_live_development": pilot_status(ranker_pilot) if (ranker_pilot / "pilot_manifest.json").is_file() else None,
         "typed_vision_development": pilot_status(typed_pilot) if (typed_pilot / "pilot_manifest.json").is_file() else None,
         "custom_vision_connection": pilot_status(custom_pilot) if (custom_pilot / "pilot_manifest.json").is_file() else None,
+        "segmented_generation": pilot_status(stream_pilot) if (stream_pilot / "pilot_manifest.json").is_file() else None,
         "visual_layouts": None if visual_inputs is None else {key: visual_inputs[key] for key in (
             "state", "layout_count", "distinct_asset_groups", "split_roles_share_exact_assets")},
         "public_visual_validation": public,
+        "public_visual_matched_development": (pilot_status(public_matched)
+            if (public_matched / "pilot_manifest.json").is_file() else None),
+        "public_visual_heldout": (pilot_status(public_final)
+            if (public_final / "pilot_manifest.json").is_file() else None),
         "run_directory": str(directory),
         "local_diagnostics": {"completed": completed, "planned": planned, "summary": stats},
         "legacy_cpu_sensor": _sensor_result(directory / "legacy_cpu_sensor"),
@@ -282,6 +295,11 @@ def _continue_stage(output_root, directory, defaults, args, launch_limit):
                          comparison / "calibrated_costs.json"))
     if not pilot_status(custom)["recorded_pairs"]:
         return run_batch(custom)
+    stream = pilots / STREAM_PILOT
+    if not (stream / "pilot_manifest.json").is_file():
+        prepare_stream(stream, read_json(pilots / "pilot_manifest.json"), prior)
+    if not pilot_status(stream)["recorded_pairs"]:
+        return run_batch(stream)
     layouts = output_root / VISUAL_INPUTS
     layout_manifest = layouts / "split_manifest_v2.json"
     if not layout_manifest.is_file():
@@ -298,10 +316,29 @@ def _continue_stage(output_root, directory, defaults, args, launch_limit):
     selected_status = pilot_status(selection)
     if selected_status["recorded_pairs"] < selected_status["planned_pairs"]:
         return run_batch(selection)
+    public = output_root / PUBLIC_VALIDATION_PILOT
+    public_status = None
+    if (public / "pilot_manifest.json").is_file():
+        public_status = pilot_status(public)
+        if public_status["recorded_pairs"] < public_status["planned_pairs"]:
+            return run_batch(public)
+    public_final = output_root / PUBLIC_FINAL_PILOT
+    test_archive = output_root / "public-visual/procthor/test.jsonl.gz"
+    public_status_final = None
+    if public_status and test_archive.is_file():
+        if not (public_final / "pilot_manifest.json").is_file():
+            from .public_schedule import prepare_final
+
+            prepare_final(test_archive, output_root / "public-visual/test-plan", public, selection, public_final, defaults)
+        public_status_final = pilot_status(public_final)
+        if public_status_final["recorded_pairs"] < public_status_final["planned_pairs"]:
+            return run_batch(public_final)
     return {"execution_status": "READY", "stage": "evaluation-development",
             "scientific_conclusion": "INCONCLUSIVE", "run_directory": str(directory), "development": development,
             "ranker_development": ranked_status, "typed_vision_development": typed_status,
             "public_visual_validation": _public_visual(output_root),
+            "public_visual_matched_development": public_status,
+            "public_visual_heldout": public_status_final,
             "visual_calibration": calibrated_status, "visual_selection": selected_status,
             "next_action": "Finish baseline and protocol checks before the held-out test"}, 0
 
@@ -332,15 +369,26 @@ def main(argv=None):
     live.add_argument("--episode-dir", required=True, type=Path)
     public = commands.add_parser("audit-public", help="Recheck public-camera evidence and actual model requests")
     public.add_argument("--episode-dir", required=True, type=Path)
+    stream_audit = commands.add_parser("audit-stream", help="Recheck native movement during real model plan continuation")
+    stream_audit.add_argument("--episode-dir", required=True, type=Path)
     public_plan = commands.add_parser("public-plan", help="Assign blinded ProcTHOR test houses and episode slots")
     public_plan.add_argument("--test-archive", required=True, type=Path)
     public_plan.add_argument("--output", required=True, type=Path)
+    public_dev = commands.add_parser("public-development-prepare", help="Register a matched ProcTHOR validation batch")
+    for name in ("validation", "output", "build-dir", "packages", "xvfb-run"):
+        public_dev.add_argument("--" + name, required=True, type=Path)
+    public_test = commands.add_parser("public-test-prepare", help="Lock the public holdout after development")
+    for name in ("test-archive", "blind-plan", "validation-pilot", "selection-pilot", "output"):
+        public_test.add_argument("--" + name, required=True, type=Path)
     custom_plan = commands.add_parser("custom-plan", help="Assign the three blind custom evaluation strata")
     custom_plan.add_argument("--development-manifest", required=True, type=Path)
     custom_plan.add_argument("--output", required=True, type=Path)
     custom_dev = commands.add_parser("custom-development-prepare", help="Register a custom-task connection check")
     custom_dev.add_argument("--cost-config", required=True, type=Path)
     custom_dev.add_argument("--output", required=True, type=Path)
+    stream_dev = commands.add_parser("stream-development-prepare", help="Register matched segmented generation runs")
+    for name in ("base-pilot", "cost-config", "output"):
+        stream_dev.add_argument("--" + name, required=True, type=Path)
     visual_inputs = commands.add_parser("visual-development-prepare", help="Materialize the 96 development layouts")
     visual_inputs.add_argument("--output", required=True, type=Path)
     visual_inputs.add_argument("--pilot-dir", type=Path, help="Register the initial calibration run")
@@ -373,6 +421,11 @@ def main(argv=None):
         if name == "continue":
             _online_args(command)
     args = parser.parse_args(argv)
+    if args.command == "audit-stream":
+        from .stream_baseline import audit
+
+        print(json.dumps(audit(args.episode_dir), ensure_ascii=False, indent=2))
+        return
     if args.command == "audit-public":
         from .public_audit import audit
 
@@ -383,6 +436,20 @@ def main(argv=None):
 
         defaults = yaml.safe_load(DEFAULTS.read_text(encoding="utf8"))
         print(json.dumps(prepare(args.test_archive, args.output, defaults), ensure_ascii=False, indent=2))
+        return
+    if args.command == "public-development-prepare":
+        from .public_schedule import prepare_validation
+
+        defaults = yaml.safe_load(DEFAULTS.read_text(encoding="utf8"))
+        print(json.dumps(prepare_validation(args.validation, args.output, defaults, build_dir=args.build_dir,
+                                            packages=args.packages, xvfb_run=args.xvfb_run), ensure_ascii=False))
+        return
+    if args.command == "public-test-prepare":
+        from .public_schedule import prepare_final
+
+        defaults = yaml.safe_load(DEFAULTS.read_text(encoding="utf8"))
+        print(json.dumps(prepare_final(args.test_archive, args.blind_plan, args.validation_pilot, args.selection_pilot,
+                                       args.output, defaults), ensure_ascii=False))
         return
     if args.command == "custom-plan":
         from .custom_schedule import prepare
@@ -398,6 +465,12 @@ def main(argv=None):
 
         catalog = prepare_development(args.output, read_json(args.cost_config))
         print(json.dumps({"case": catalog["cases"][0]["id"], "output": str(args.output)}, ensure_ascii=False))
+        return
+    if args.command == "stream-development-prepare":
+        catalog = prepare_stream(args.output, read_json(args.base_pilot / "pilot_manifest.json"),
+                                 read_json(args.cost_config))
+        print(json.dumps({"cases": len(catalog["cases"]), "methods": catalog["cases"][0]["order"],
+                          "output": str(args.output)}, ensure_ascii=False))
         return
     if args.command == "visual-development-prepare":
         if bool(args.pilot_dir) != bool(args.cost_config):

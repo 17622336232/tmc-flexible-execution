@@ -4,6 +4,7 @@ import asyncio
 import json
 import re
 from dataclasses import asdict, replace
+from functools import partial
 from hashlib import sha256
 from io import BytesIO
 from math import dist, isfinite
@@ -19,7 +20,7 @@ from experiments.task_attack.runtime import write_json
 from ..evidence import Frame, Observation, accept
 from ..executor import Action, Snapshot, permitted_observation
 from ..gpt_vision import INTERPRET, OUTCOMES, _bbox, frozen_prompt, interpret, judge, locate_targets
-from ..live_planning import checked, needs_body_identity, permission_for, select
+from ..live_planning import STREAM_METHODS, checked, needs_body_identity, permission_for, select
 from ..queries import AsyncQueryWorker, QueryBook
 from ..task_ir import QuerySpec, Skill, TaskContract
 from .gpt_probe import _take_photo
@@ -562,10 +563,15 @@ def run_live(backend, instruction, directory, event, timeout, *, model, trace, m
             trace.event("typed_task_acceptance", step, accepted=issue is None, issue=issue)
             return issue
 
+    pipeline = None
+    if method in STREAM_METHODS:
+        from ..stream_baseline import decide
+
+        pipeline = partial(decide, stream=method == "conditional-stream")
     report, metrics = run_agent(backend, instruction, directory, event, timeout, model=model, trace=trace,
                                 prior_views=archive, prior_memory=json.dumps(memory, ensure_ascii=False),
                                 episode_started=started, step_offset=max(3, step),
-                                submit_guard=guard)
+                                submit_guard=guard, decision_pipeline=pipeline)
     metrics.update(conditional_query_bound=summary.get("query_bound", False),
                    conditional_materials=len(summary.get("accepted_materials", {})))
     if use_program:

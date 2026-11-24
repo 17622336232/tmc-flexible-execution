@@ -8,12 +8,13 @@ from experiments.task_attack import FAMILIES
 from experiments.task_attack.runtime import write_json
 from experiments.task_attack.tasks import SCENES
 
-from .live_planning import CONDITIONAL_MODES, NEW_METHODS
+from .live_planning import CONDITIONAL_MODES, NEW_METHODS, STREAM_METHODS
 from .runner import _hash
 
 
 PAIRED_MODES = {"paired-serial": "ACTUAL_GPT_SHARED_SERIAL", "paired-async": "ACTUAL_GPT_SHARED_ASYNC"}
 TYPED_ROLE = "TYPED_VISION_DEVELOPMENT"
+STREAM_ROLE = "SEGMENTED_GENERATION_DEVELOPMENT"
 VISUAL_ROLES = {"calibration": "VISUAL_METHOD_CALIBRATION", "selection": "VISUAL_METHOD_SELECTION"}
 
 
@@ -93,6 +94,27 @@ def prepare_typed(directory, base, calibration):
         stored = _read(path)
         if stored is not None and stored != value:
             raise ValueError("The typed inspection schedule is already frozen at another configuration")
+        if stored is None:
+            write_json(path, value)
+    return catalog
+
+
+def prepare_stream(directory, base, calibration):
+    seed = 2_000_209
+    case = {"id": "stream-001", "family": "cracks", "domain": "equipment", "seed": seed,
+            "equipment_count": 2, "source_profile": "independent", "backend": "cpu",
+            "episode_timeout_seconds": 480, "order": Random(seed).sample(STREAM_METHODS, len(STREAM_METHODS))}
+    catalog = {"schema": 1, "role": STREAM_ROLE, "intended_pairs": 1,
+               "author_engine_revision": "669f2490a112a7415fe06e902e1ea82da02a3342",
+               "generation": "two_complete_client_packets_for_each_navigation_step",
+               "server_scheduling_reproduction": False, "parent_schedule_sha256": _hash(base),
+               "cost_config_sha256": _hash(calibration), "cases": [case]}
+    directory.mkdir(parents=True, exist_ok=True)
+    for filename, value in (("calibrated_costs.json", calibration), ("pilot_manifest.json", catalog)):
+        path = directory / filename
+        stored = _read(path)
+        if stored is not None and stored != value:
+            raise ValueError("The segmented generation comparison is already frozen")
         if stored is None:
             write_json(path, value)
     return catalog

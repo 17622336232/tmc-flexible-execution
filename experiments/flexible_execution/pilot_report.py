@@ -11,6 +11,7 @@ from experiments.task_attack.runtime import write_json
 
 from .clean_coverage import audit_run
 from .pilot_schedule import _read, _valid_preflight
+from .public_schedule import FINAL_ROLE as PUBLIC_FINAL_ROLE
 from .timeline import summarize
 
 
@@ -35,6 +36,8 @@ def _arm_row(directory, case, method):
     if not output:
         return row
     root = Path(output)
+    if job.get("public_runtime"):
+        return _public_arm(row, root, job)
     preflight, result = _read(root / "clean_preflight.json"), _read(root / "result.json")
     if preflight:
         _valid_preflight(preflight, case, method, root)
@@ -84,6 +87,36 @@ def _arm_row(directory, case, method):
         row.update(success=True, restricted_seconds=seconds)
     if row.get("reported_outcome") is not None:
         row["wrong_completion_claim"] = row["reported_outcome"] == "accepted" and not row["success"]
+    if method in ("conditional-stream", "conditional-stream-buffered"):
+        from .stream_baseline import audit
+
+        packets = audit(root)
+        row.update(segmented_navigation_packets=packets["navigation_packets"],
+                   verified_segmented_moves=packets["moves_during_model_continuation"],
+                   verified_segmented_overlap_seconds=packets["overlap_seconds"])
+    return row
+
+
+def _public_arm(row, root, job):
+    from .public_audit import registered_outcome
+
+    detail = job.get("result") or {}
+    row["failure_reason"] = detail.get("reason")
+    if job["state"] == "FINISHED_VALID":
+        state, _ = registered_outcome(root, job, detail["charged_seconds"], job["returncode"], None)
+        seconds = row["cumulative_task_seconds"]
+        if state != job["state"] or not 0 < seconds <= row["deadline_seconds"]:
+            raise ValueError("Saved public success could not be independently verified: " + job["id"])
+        row.update(success=True, restricted_seconds=seconds, complete_coverage=True)
+    if (root / "timeline.jsonl").is_file():
+        clock = summarize(root / "timeline.jsonl")
+        row.update(model_request_seconds=clock["model_request_seconds"],
+                   model_action_overlap_seconds=clock["model_action_overlap_seconds"],
+                   action_seconds=sum(interval["seconds"] for interval in clock["intervals"].get("action", [])),
+                   observation_seconds=sum(interval["seconds"] for interval in clock["intervals"].get("observation", [])),
+                   search_seconds=sum(interval["seconds"] for interval in clock["intervals"].get("search", [])))
+    if (root / "report.json").is_file():
+        row["wrong_completion_claim"] = not row["success"]
     return row
 
 
@@ -144,7 +177,8 @@ def rebuild(directory, output):
                            "mean_restricted_seconds": mean(row["restricted_seconds"] for row in valid) if valid else None}
     reference = next((name for name in ("conditional-async", "paired-async", "conditional-rank-heuristic")
                       if name in methods), None)
-    result = {"mode": "NATURAL_LATENCY_DEVELOPMENT", "role": catalog["role"], "reference": reference,
+    mode = "ACTUAL_LANGUAGE_AND_VISION_CLOSED_LOOP" if catalog["role"] == PUBLIC_FINAL_ROLE else "NATURAL_LATENCY_DEVELOPMENT"
+    result = {"mode": mode, "role": catalog["role"], "reference": reference,
               "planned_episodes": len(rows), "recorded_episodes": sum(r["state"] in RECORDED for r in rows),
               "methods": methods, "matched_differences": _pair_rows(rows, reference),
               "energy_measurement": None, "independently_scored_constraint_violations": None,

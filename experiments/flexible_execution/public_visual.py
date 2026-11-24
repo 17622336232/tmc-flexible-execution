@@ -16,17 +16,19 @@ PROCTHOR_REVISION = "439193522244720b86d8c81cde2e51e3a4d150cf"
 VALIDATION_SHA256 = "d808540514e26b6726cd2790490e669b572eeb94febb5188a2f403591dd21721"
 VALIDATION_BYTES = 5094681
 THOR_COMMIT = "f0825767cd50d69f666c7f282e54abfe58f1e917"
+VALIDATION_SOURCE = {"official_split": "val", "archive_bytes": VALIDATION_BYTES,
+                     "archive_sha256": VALIDATION_SHA256}
 
 
-def _house(archive, index):
+def _house(archive, index, *, source=VALIDATION_SOURCE):
     data = archive.read_bytes()
-    if len(data) != VALIDATION_BYTES or hashlib.sha256(data).hexdigest() != VALIDATION_SHA256:
-        raise ValueError("The archive is not the pinned official ProcTHOR validation split")
+    if len(data) != source["archive_bytes"] or hashlib.sha256(data).hexdigest() != source["archive_sha256"]:
+        raise ValueError("The archive does not match the pinned official ProcTHOR split")
     with gzip.open(archive, "rt", encoding="utf8") as handle:
         for position, content in enumerate(handle):
             if position == index:
                 return json.loads(content), hashlib.sha256(content.encode("utf8")).hexdigest()
-    raise ValueError("Validation house index is outside the official split")
+    raise ValueError("House index is outside the official split")
 
 
 def _platform(renderer):
@@ -77,9 +79,8 @@ def camera_jpeg(event):
     return payload.getvalue()
 
 
-def source_record(index, digest, renderer, mode):
-    return {"dataset": "ProcTHOR-10K", "official_split": "val", "revision": PROCTHOR_REVISION,
-            "archive_sha256": VALIDATION_SHA256, "archive_bytes": VALIDATION_BYTES, "house_index": index,
+def source_record(index, digest, renderer, mode, *, source=VALIDATION_SOURCE):
+    return {"dataset": "ProcTHOR-10K", "revision": PROCTHOR_REVISION, **source, "house_index": index,
             "house_sha256": digest, "mode": mode, "ai2thor": "5.0.0",
             "platform": _platform(renderer).__name__, "renderer": renderer, "build_commit": THOR_COMMIT}
 

@@ -7,6 +7,7 @@ import os
 import shlex
 import signal
 import subprocess
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,8 +18,9 @@ from experiments.task_attack.runtime import write_json
 
 from .clean_coverage import audit_run
 from .learning_schedule import ROLE as RANKER_ROLE, registered_config
-from .live_planning import CONDITIONAL_MODES
-from .pilot_schedule import PAIRED_MODES, TYPED_ROLE, VISUAL_ROLES, _read, _valid_preflight
+from .live_planning import CONDITIONAL_MODES, STREAM_METHODS
+from .pilot_schedule import PAIRED_MODES, STREAM_ROLE, TYPED_ROLE, VISUAL_ROLES, _read, _valid_preflight
+from .public_schedule import FINAL_ROLE as PUBLIC_FINAL_ROLE, VALIDATION_ROLE as PUBLIC_VALIDATION_ROLE
 from .request_budget import RequestBudget
 from .runner import _hash
 
@@ -42,6 +44,8 @@ RUN_SOURCES = (
 CONDITIONAL_SOURCES = ("experiments/flexible_execution/adapters/live_inspection.py",
                        "experiments/flexible_execution/live_planning.py")
 RANKING_SOURCE = "experiments/flexible_execution/candidate_ranking.py"
+PUBLIC_SOURCES = ("experiments/flexible_execution/public_task.py", "experiments/flexible_execution/public_schedule.py",
+                  "experiments/flexible_execution/public_visual.py", "experiments/flexible_execution/public_audit.py")
 
 
 def _now():
@@ -79,10 +83,14 @@ def _find_worker(episode):
             args = (folder / "cmdline").read_bytes().split(b"\0")
         except OSError:
             continue
-        if (expected in args and b"--output" in args and
-                (b"scripts/run_flexible_clean.sh" in args or
-                 b"experiments.flexible_execution.adapters.clean_run" in args)):
+        if expected not in args or b"--output" not in args:
+            continue
+        if b"scripts/run_flexible_clean.sh" in args or b"experiments.flexible_execution.adapters.clean_run" in args:
             return _proc(int(folder.name))
+        if b"experiments.flexible_execution.public_task" in args and b"--registered-job" in args:
+            identity = _proc(int(folder.name))
+            if identity and identity["pgid"] == identity["pid"]:
+                return identity
     return None
 
 
@@ -102,7 +110,9 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
     ranked = catalog.get("role") == RANKER_ROLE
     typed = catalog.get("role") == TYPED_ROLE
     visual = catalog.get("role") in VISUAL_ROLES.values()
-    conditional = ranked or typed or visual or catalog.get("role") == "CONDITIONAL_CONNECTION_DEVELOPMENT"
+    public = catalog.get("role") in (PUBLIC_VALIDATION_ROLE, PUBLIC_FINAL_ROLE)
+    stream = catalog.get("role") == STREAM_ROLE
+    conditional = ranked or typed or visual or stream or catalog.get("role") == "CONDITIONAL_CONNECTION_DEVELOPMENT"
     stage_sources = CONDITIONAL_SOURCES if conditional else ()
     if ranked or (conditional and (checkout / RANKING_SOURCE).is_file()):
         stage_sources += (RANKING_SOURCE,)
@@ -113,6 +123,10 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
     if any(case.get("layout_seed") is not None for case in catalog.get("cases", ())):
         stage_sources += ("experiments/task_attack_operator/scene.py", "experiments/task_attack_recessed/scene.py",
                           "experiments/task_attack_value/scene.py", "experiments/flexible_execution/development_inputs.py")
+    if public:
+        stage_sources += (*PUBLIC_SOURCES, "experiments/flexible_execution/live_planning.py", RANKING_SOURCE)
+    if any(method in STREAM_METHODS for case in catalog["cases"] for method in case["order"]):
+        stage_sources += ("experiments/flexible_execution/stream_baseline.py",)
     for label in RUN_SOURCES + stage_sources:
         source = checkout / label
         if source.is_dir():
@@ -126,8 +140,21 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
     system_paths = [Path("/etc/os-release"), Path("/opt/ros/noetic/setup.bash"),
                     legacy / "sim_ws/devel/setup.bash", legacy / "sim_ws/devel/lib/vla_sim/vla_traj_server",
                     legacy / "sim_ws/devel/lib/vla_sim/vla_cloud_bridge", legacy / ".venv/pyvenv.cfg"]
-    if visual:
+    if public:
+        runtime = catalog["runtime"]
+        packages = Path(runtime["packages"])
+        system_paths = [Path("/etc/os-release"), Path(sys.executable), Path(runtime["archive"]),
+                        Path(runtime["unity_executable"]), Path(runtime["xvfb_run"]),
+                        Path(runtime["xvfb_run"]).with_name("Xvfb"), packages / "ai2thor/controller.py",
+                        packages / "ai2thor/server.py"]
+        if any(not path.is_file() for path in system_paths):
+            raise ValueError("A registered public simulator input is missing")
+        version, stage = ((9, "public-visual-final") if catalog["role"] == PUBLIC_FINAL_ROLE
+                          else (7, "public-visual-development"))
+    elif visual:
         version, stage = 6, catalog["role"].lower().replace("_", "-")
+    elif stream:
+        version, stage = 8, "segmented-generation-development"
     elif typed:
         version, stage = 5, "typed-vision-development"
     elif ranked:
@@ -172,11 +199,17 @@ def plans(directory, protocol, catalog):
             if method not in PAIRED_MODES and method not in CONDITIONAL_MODES:
                 raise ValueError("Method is not enabled for active development: " + method)
             identifier = f"v{protocol['version']}-{case['id']}-{method}-{fingerprint[:16]}"
-            yield {"id": identifier, "stage": protocol["stage"], "input_sha256": fingerprint,
+            job = {"id": identifier, "stage": protocol["stage"], "input_sha256": fingerprint,
                    "case": case, "method": method, "model": protocol["model"],
                    "ranker_config_sha256": catalog.get("ranker_config_sha256"),
                    "reasoning_effort": protocol["reasoning_effort"], "state": "PENDING", "attempt": 0,
                    "arm": str(directory / case["id"] / method)}
+            if catalog.get("role") in (PUBLIC_VALIDATION_ROLE, PUBLIC_FINAL_ROLE):
+                job["public_runtime"] = catalog["runtime"]
+            if catalog.get("role") == PUBLIC_FINAL_ROLE:
+                job.update(frozen_evaluation=catalog["frozen_evaluation"],
+                           frozen_evaluation_sha256=catalog["frozen_evaluation_sha256"])
+            yield job
 
 
 def _attempt_path(job, attempt):
@@ -186,6 +219,7 @@ def _attempt_path(job, attempt):
 def _save(control, job, **patch):
     job = {**job, **patch, "updated_at": _now()}
     write_json(Path(job["arm"]) / "job.json", job)
+    write_json(control / "last_transition.json", job)
     with (control / "jobs.jsonl").open("a", encoding="utf8") as handle:
         handle.write(json.dumps(job, ensure_ascii=False, allow_nan=False) + "\n")
         handle.flush()
@@ -230,6 +264,10 @@ def _charge(root):
 
 
 def _outcome(root, job, returncode, stop=None):
+    if job.get("public_runtime"):
+        from .public_audit import registered_outcome
+
+        return registered_outcome(root, job, _charge(root), returncode, stop)
     charge = 0.
     try:
         pre, result = _evidence(root, job)
@@ -304,19 +342,22 @@ def _wait_running(job, refresh):
     while is_live(job.get("process")):
         remaining = job["hard_deadline_wall"] - time.time()
         if remaining <= 0:
-            _stop(job["process"])
+            _stop(job["process"], owned_group=bool(job.get("public_runtime")))
             return "TIMEOUT"
         refresh(job)
         time.sleep(min(HEARTBEAT_SECONDS, remaining))
     return None
 
 
-def _stop(identity):
+def _stop(identity, *, owned_group=False):
     for signum, grace in ((signal.SIGTERM, 12), (signal.SIGKILL, 3)):
         if not is_live(identity):
             break
         try:
-            os.kill(identity["pid"], signum)
+            if owned_group and identity["pid"] == identity["pgid"]:
+                os.killpg(identity["pgid"], signum)
+            else:
+                os.kill(identity["pid"], signum)
         except ProcessLookupError:
             break
         deadline = time.monotonic() + grace
@@ -328,7 +369,7 @@ def _wait_child(child, job, refresh):
     while child.poll() is None:
         remaining = job["hard_deadline_wall"] - time.time()
         if remaining <= 0:
-            _stop(job["process"])
+            _stop(job["process"], owned_group=bool(job.get("public_runtime")))
             return child.wait(), "TIMEOUT"
         refresh(job)
         try:
@@ -361,6 +402,56 @@ def _verify_terminal(job):
         raise ValueError("Saved result no longer verifies for " + job["id"] + ": " + str(root))
 
 
+def _public_command(job, checkout, control, run, episode, auth_project):
+    runtime = job["public_runtime"]
+    xvfb = Path(runtime["xvfb_run"])
+    display_environment = control / "public-display"
+    paths = {f"XDG_{key.upper()}_HOME": display_environment / key for key in ("cache", "config")}
+    paths["XDG_RUNTIME_DIR"] = display_environment / "runtime"
+    for path in paths.values():
+        path.mkdir(mode=0o700, parents=True, exist_ok=True)
+    python_path = os.pathsep.join((runtime["packages"], str(checkout / "bridge"), str(checkout)))
+    return ["env", f"PATH={xvfb.parent}{os.pathsep}{os.environ.get('PATH', os.defpath)}", f"PYTHONPATH={python_path}",
+            "LIBGL_ALWAYS_SOFTWARE=1", "GALLIUM_DRIVER=llvmpipe", "LP_NUM_THREADS=2",
+            *(f"{key}={path}" for key, path in paths.items()), str(xvfb), "-a", "-n", "95", "-s",
+            "-screen 0 640x480x24 -nolisten tcp -noreset", sys.executable, "-m", "experiments.flexible_execution.public_task",
+            "--registered-job", str(run / "launch.json"), "--output", str(episode), "--auth-project", str(auth_project)]
+
+
+def _gazebo_command(job, directory, catalog, auth_project, episode, remaining, ledger, ports):
+    case = job["case"]
+    command = ["bash", "scripts/run_flexible_clean.sh", "--chatgpt-project", str(auth_project),
+               "--output", str(episode), "--method", job["method"], "--family", case["family"],
+               "--seed", str(case["seed"]), "--equipment-count", str(case["equipment_count"]),
+               "--backend", case["backend"], "--source-profile", case["source_profile"],
+               "--episode-timeout", str(remaining), "--planned-episode-timeout", str(case["episode_timeout_seconds"]),
+               "--max-request-attempts", str(REQUEST_LIMIT), "--request-ledger", str(ledger), "--ros-port", str(ports[0]),
+               "--gazebo-port", str(ports[1])]
+    if case.get("layout_seed") is not None:
+        command.extend(("--layout-seed", str(case["layout_seed"])))
+    if case.get("scene_fingerprint"):
+        command.extend(("--scene-fingerprint", case["scene_fingerprint"]))
+    if case.get("study_task_sha256"):
+        study = Path(case["study_task_file"])
+        if _hash(_read(study)) != case["study_task_sha256"]:
+            raise ValueError("The study instruction does not match its registered input")
+        command.extend(("--study-task", str(study)))
+    if job["method"] in CONDITIONAL_MODES:
+        command.extend(("--cost-config", str(directory / "calibrated_costs.json")))
+        if case.get("early_fields"):
+            command.extend(("--early-fields", ",".join(case["early_fields"])))
+        if case.get("collection_rule"):
+            command.extend(("--collection-rule", case["collection_rule"]))
+        if case.get("handoff_at_observation"):
+            command.append("--handoff-at-observation")
+        if case.get("typed_task_program"):
+            command.append("--compile-task-program")
+    if catalog.get("role") == RANKER_ROLE:
+        registered_config(directory, catalog)
+        command.extend(("--ranker-config", str(directory / "calibrated_rankers.json")))
+    return command
+
+
 def pilot_run(directory, control, checkout, *, resume, max_jobs, auth_project=DEFAULT_AUTH_PROJECT,
               unlock_external=False):
     directory, control, auth_project = directory.resolve(), control.resolve(), auth_project.resolve()
@@ -372,6 +463,9 @@ def pilot_run(directory, control, checkout, *, resume, max_jobs, auth_project=DE
             fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             return {**control_status(control), "worker_owned_by_another_batch": True}
+        running = control_status(control)
+        if running["active_jobs"] and running.get("pilot_directory") != str(directory):
+            return {**running, "worker_owned_by_another_batch": True}
         return _run_locked(directory, control, checkout, resume, max_jobs, auth_project, unlock_external)
 
 
@@ -386,6 +480,11 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
         raise ValueError("Conditional cost calibration does not match its frozen catalog")
     if catalog.get("role") == RANKER_ROLE:
         registered_config(directory, catalog)
+    if catalog.get("role") == PUBLIC_FINAL_ROLE:
+        freeze = _read(Path(catalog["frozen_evaluation"]))
+        if (not freeze or _hash(freeze) != catalog["frozen_evaluation_sha256"]
+                or freeze["runtime"] != catalog["runtime"] or freeze["role"] != PUBLIC_FINAL_ROLE):
+            raise ValueError("The held-out public evaluation does not match its frozen inputs")
     ports = (11674, 11675)
     protocol = _runtime_inputs(checkout, catalog, auth_project, ports)
     lock = directory / "run_protocol.json"
@@ -462,35 +561,10 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
         run = _attempt_path(job, attempt)
         run.mkdir(parents=True)
         episode = run / "episode"
-        command = ["bash", "scripts/run_flexible_clean.sh", "--chatgpt-project", str(auth_project),
-                   "--output", str(episode), "--method", job["method"], "--family", next_case["family"],
-                   "--seed", str(next_case["seed"]), "--equipment-count", str(next_case["equipment_count"]),
-                   "--backend", next_case["backend"], "--source-profile", next_case["source_profile"],
-                   "--episode-timeout", str(remaining), "--planned-episode-timeout",
-                   str(next_case["episode_timeout_seconds"]), "--max-request-attempts", str(REQUEST_LIMIT),
-                   "--request-ledger", str(ledger), "--ros-port", str(ports[0]), "--gazebo-port", str(ports[1])]
-        if next_case.get("layout_seed") is not None:
-            command.extend(("--layout-seed", str(next_case["layout_seed"])))
-        if next_case.get("scene_fingerprint"):
-            command.extend(("--scene-fingerprint", next_case["scene_fingerprint"]))
-        if next_case.get("study_task_sha256"):
-            study = Path(next_case["study_task_file"])
-            if _hash(_read(study)) != next_case["study_task_sha256"]:
-                raise ValueError("The study instruction does not match its registered input")
-            command.extend(("--study-task", str(study)))
-        if job["method"] in CONDITIONAL_MODES:
-            command.extend(("--cost-config", str(directory / "calibrated_costs.json")))
-            if next_case.get("early_fields"):
-                command.extend(("--early-fields", ",".join(next_case["early_fields"])))
-            if next_case.get("collection_rule"):
-                command.extend(("--collection-rule", next_case["collection_rule"]))
-            if next_case.get("handoff_at_observation"):
-                command.append("--handoff-at-observation")
-            if next_case.get("typed_task_program"):
-                command.append("--compile-task-program")
-        if catalog.get("role") == RANKER_ROLE:
-            registered_config(directory, catalog)
-            command.extend(("--ranker-config", str(directory / "calibrated_rankers.json")))
+        if job.get("public_runtime"):
+            command = _public_command(job, checkout, control, run, episode, auth_project)
+        else:
+            command = _gazebo_command(job, directory, catalog, auth_project, episode, remaining, ledger, ports)
         config = {"state": "RUNNING", "process": None, "attempt": attempt, "command": command,
                   "workdir": str(checkout), "started_at": _now(), "finished_at": None, "result": None,
                   "request_ledger": str(ledger), "request_limit": REQUEST_LIMIT, "request_budget": budget,
@@ -510,7 +584,7 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
             try:
                 returncode, stop = _wait_child(child, job, refresh)
             except KeyboardInterrupt:
-                _stop(job["process"])
+                _stop(job["process"], owned_group=bool(job.get("public_runtime")))
                 refresh(_finish(control, job, "CANCELLED_BY_USER", child.wait()))
                 raise
         job = _finish(control, job, stop, returncode)
@@ -522,10 +596,18 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
 def control_status(control):
     state = _read(control / "state.json") or {}
     active = [job for job in state.get("active_jobs", []) if is_live(job.get("process"))]
+    last = _read(control / "last_transition.json") or {}
+    if not active and last.get("state") == "RUNNING":
+        episode = _attempt_path(last, last["attempt"]) / "episode"
+        process = last.get("process") if is_live(last.get("process")) else _find_worker(episode)
+        if process:
+            active = [{**last, "process": process,
+                       "request_budget": RequestBudget(last["request_ledger"], last["request_limit"]).summary()}]
+        state = {**state, "current_job": last, "pilot_directory": str(Path(last["arm"]).parents[1])}
     warm = simulator_running(control)
     if warm:
         active.append(warm)
-    current = state.get("current_job")
+    current = active[0] if active else state.get("current_job")
     current_state = (current or {}).get("state")
     if active:
         execution = "RUNNING"
@@ -535,5 +617,5 @@ def control_status(control):
         execution = current_state
     else:
         execution = "READY" if state.get("next_job") or current_state == "PENDING" else "IDLE"
-    return {**state, "active_jobs": active, "execution_status": execution,
+    return {**state, "current_job": current, "active_jobs": active, "execution_status": execution,
             "scientific_conclusion": "INCONCLUSIVE"}

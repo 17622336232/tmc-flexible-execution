@@ -1,7 +1,12 @@
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from experiments.flexible_execution.evidence import Frame
+from experiments.flexible_execution.public_schedule import VALIDATION_ROLE, prepare_final
 from experiments.flexible_execution.public_task import VALIDATION, parse_intent, verify
+from experiments.task_attack.runtime import write_json
 
 
 class PublicInspectionScoreTest(unittest.TestCase):
@@ -32,3 +37,16 @@ class PublicInspectionScoreTest(unittest.TestCase):
         reply["side_when"].append("uncertain")
         with self.assertRaises(ValueError):
             parse_intent(reply)
+
+    def test_unfinished_validation_leaves_the_official_test_archive_sealed(self):
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            validation = root / "validation"
+            write_json(validation / "pilot_manifest.json", {"role": VALIDATION_ROLE, "cases": [{
+                "id": f"house-{index}", "order": ["conditional-a"]} for index in range(4)]})
+            with patch("experiments.flexible_execution.public_schedule.prepare") as blind_assignment:
+                with self.assertRaisesRegex(ValueError, "public_validation has 0/4 recorded cases"):
+                    prepare_final(root / "sealed-test.jsonl.gz", root / "blind-plan", validation, root / "selection",
+                                  root / "final", {"data": {"development_selection_instances": 48}})
+            blind_assignment.assert_not_called()
+            self.assertFalse((root / "final").exists())

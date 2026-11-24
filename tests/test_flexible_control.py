@@ -83,3 +83,19 @@ class SupervisorTest(unittest.TestCase):
             status = control.control_status(directory)
             self.assertEqual(status["active_jobs"], [])
             self.assertEqual(status["execution_status"], "EXITED_NEEDS_RECOVERY")
+
+    def test_unpublished_live_worker_blocks_a_different_queue(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            control_dir = root / "control"
+            original = root / "original-pilot"
+            arm = original / "example" / "conditional-a"
+            worker = {"pid": 123}
+            write_json(control_dir / "last_transition.json", {"state": "RUNNING", "arm": str(arm),
+                "attempt": 1, "process": None, "request_limit": 24, "request_ledger": str(control_dir / "requests.jsonl")})
+            with patch.object(control, "_find_worker", return_value=worker), patch.object(control, "_run_locked") as launch:
+                result = control.pilot_run(root / "different-pilot", control_dir, root, resume=True, max_jobs=1)
+            launch.assert_not_called()
+            self.assertTrue(result["worker_owned_by_another_batch"])
+            self.assertEqual(result["pilot_directory"], str(original))
+            self.assertEqual(result["active_jobs"][0]["process"], worker)

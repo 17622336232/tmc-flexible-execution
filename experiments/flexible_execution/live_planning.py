@@ -21,7 +21,9 @@ LATE_GRANT = re.compile(
 RESTRICTION = re.compile(r"不得|禁止|仅在|才可|才允许|之后才能|之后方可|do not|must not|only after", re.I)
 BODY_IDENTITY = re.compile(r"(?:编号|身份)[^。；\n]{0,24}(?:本体|本身)|(?:body|asset) identity", re.I)
 NEW_METHODS = ("conditional-serial", "conditional-async", "conditional-prefetch", "conditional-planner", "conditional-a")
-CONDITIONAL_MODES = {name: "ACTUAL_GPT_" + name.upper().replace("-", "_") for name in NEW_METHODS + RANKED_METHODS}
+STREAM_METHODS = ("conditional-stream", "conditional-stream-buffered")
+CONDITIONAL_MODES = {name: "ACTUAL_GPT_" + name.upper().replace("-", "_")
+                     for name in NEW_METHODS + RANKED_METHODS + STREAM_METHODS}
 
 
 def needs_body_identity(instruction):
@@ -144,7 +146,7 @@ def select(task, state, method, log, *, budget_ms=1000, max_candidates=32, max_p
             permission="all_pending_outcomes" if skill.permission is None else
             {"query": skill.permission.query_id, "after": list(skill.permission.outcomes)})
         log("candidate_checked", candidate=skill.id, admission=bool(action), check="permission_and_resources")
-    if method in ("conditional-serial", "conditional-async"):
+    if method in ("conditional-serial", "conditional-async", *STREAM_METHODS):
         log("candidate_rejected", reason="ordinary policy does not advance branch-specific material")
         return None
     if method in RANKED_METHODS:

@@ -67,8 +67,28 @@ class ModelDecisionInvalid(ValueError):
     pass
 
 
+def _execute_action(backend, obs, action, trace, step, image_id, event):
+    kind = action.get('type')
+    try:
+        with (trace.measure('action',step,action=kind,image_id=image_id) if trace else nullcontext()):
+            if kind=='move':
+                result=backend.move(action['goal'])
+                return dict(ok=True,position=result['position'],yaw=result['yaw'])
+            if kind=='approach':
+                result=backend.approach(obs,action['bbox'],action.get('standoff_m',2.))
+                return dict(ok=True,goal=result['goal'],measured_evidence=result['evidence'])
+            if kind in ('observe','record'):
+                return dict(ok=True,note='A fresh RGB image follows; current viewpoint unchanged.')
+            raise ValueError('Unknown action; use move, approach, observe, submit')
+    except Exception as error:
+        feedback=dict(ok=False,error_type=type(error).__name__,message=str(error)[:800])
+        event('task_tool_feedback',feedback=feedback)
+        return feedback
+
+
 def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trace=None,
-              prior_views=(), prior_memory='', episode_started=None, step_offset=0, submit_guard=None):
+              prior_views=(), prior_memory='', episode_started=None, step_offset=0, submit_guard=None,
+              decision_pipeline=None):
     directory.mkdir(parents=True,exist_ok=True)
     if model is None:
         model=ModelClient(directory/'model_calls.jsonl')
@@ -123,10 +143,18 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
         event('task_reasoning',step=step,image=image_id)
         images=[dict(label='HISTORICAL onboard RGB '+x['image_id']+'; observation memory only',data=x['data']) for x in image_memory]
         images.append(dict(label='CURRENT onboard RGB '+image_id+'; current geometry belongs to this image',data=obs['data']))
+        def execute(action):
+            return _execute_action(backend, obs, action, trace, step, image_id, event)
+
+        early_feedback = None
         try:
-            with (trace.measure('model_request',step,image_id=image_id,image_sha256=meta['sha256'])
-                  if trace else nullcontext()):
-                decision=model.request(SYSTEM,payload,images)
+            if decision_pipeline is None:
+                with (trace.measure('model_request',step,image_id=image_id,image_sha256=meta['sha256'])
+                      if trace else nullcontext()):
+                    decision=model.request(SYSTEM,payload,images)
+            else:
+                decision, early_feedback = decision_pipeline(model, payload, images, execute=execute, trace=trace,
+                                                             step=step, image_sha256=meta['sha256'])
         except ModelAttemptLimitExceeded:
             end_reason='request_budget_exhausted'
             event('request_budget_exhausted',step=step)
@@ -185,21 +213,8 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
                 trace.event('report_written',step,image_id=image_id,outcome=report['outcome'])
             return report,dict(calls=model.calls,model_wall_seconds=model.wall_seconds,decisions=step-step_offset,
                                episode_wall_seconds=time.monotonic()-started)
-        try:
-            with (trace.measure('action',step,action=kind,image_id=image_id) if trace else nullcontext()):
-                if kind=='move':
-                    result=backend.move(action['goal'])
-                    feedback=dict(ok=True,position=result['position'],yaw=result['yaw'])
-                elif kind=='approach':
-                    result=backend.approach(obs,action['bbox'],action.get('standoff_m',2.))
-                    feedback=dict(ok=True,goal=result['goal'],measured_evidence=result['evidence'])
-                elif kind in ('observe','record'):
-                    feedback=dict(ok=True,note='A fresh RGB image follows; current viewpoint unchanged.')
-                else:raise ValueError('Unknown action; use move, approach, observe, submit')
-        except Exception as error:
-            # Explicit local tool feedback, not a scripted replacement route.
-            feedback=dict(ok=False,error_type=type(error).__name__,message=str(error)[:800])
-            event('task_tool_feedback',feedback=feedback)
+        # The segmented arm may already have executed this exact accepted move.
+        feedback = early_feedback if early_feedback is not None else execute(action)
         history.append(dict(action=action,feedback=feedback))
     report=dict(outcome='incomplete',records=records,summary='Experimental episode budget exhausted')
     write_json(directory/'report.json',report)
