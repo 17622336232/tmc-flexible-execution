@@ -176,9 +176,9 @@ def _heldout_layout(row, output, development_assets, used_seeds, split_seed):
 def prepare_final(blind, development, calibration, selection, native_training, diagnostic, output, checkout, defaults,
                   auth_project):
     """Freeze the custom protocol before generating any held-out scene or starting inference."""
-    from .candidate_ranking import RANKED_METHODS
+    from .candidate_ranking import ONLINE_RANKED_METHODS, RANKED_METHODS, RETRIEVAL_METHOD
     from .control import _runtime_inputs, verified_cohort
-    from .learning_schedule import ROLE as RANKER_ROLE, build_config
+    from .learning_schedule import ROLE as RANKER_ROLE, build_config, registered_config, select_live_configuration
     from .pilot_schedule import VISUAL_ROLES
 
     data = defaults["data"]
@@ -199,21 +199,24 @@ def prepare_final(blind, development, calibration, selection, native_training, d
     if disk_usage(output).free < minimum_free:
         raise OSError("Disk reserve is below the registered minimum")
     cost = read_json(selection / "calibrated_costs.json")
-    ranking = read_json(selection / "calibrated_rankers.json")
-    if _hash(cost) != chosen["cost_config_sha256"] or _hash(ranking) != chosen["ranker_config_sha256"]:
+    ranking, rank_selection = select_live_configuration(selection, chosen)
+    native_rankers = registered_config(native_training, native_catalog)
+    if (_hash(cost) != chosen["cost_config_sha256"] or native_rankers["training_rows"] != ranking["training_rows"]
+            or set(native_rankers["policies"]) != set(ONLINE_RANKED_METHODS)):
         raise ValueError("The selected controller configuration no longer matches development")
-    cap = ranking["policies"][RANKED_METHODS[-1]]["check_cap"]
+    cap = rank_selection["selected_check_cap"]
     bind = {}
-    for seed in data["training_seeds"]:
-        config = build_config(diagnostic, ranking["training_rows"], seed, cap)
+    for seed_index, seed in enumerate(data["training_seeds"]):
+        config = build_config(diagnostic, ranking["training_rows"], seed, cap, include_retrieval=True)
         config_file = output / "rankers" / f"seed-{seed}.json"
         _save_locked(config_file, config)
-        for method in RANKED_METHODS:
-            if method == RANKED_METHODS[0] and bind:
+        for method in ONLINE_RANKED_METHODS:
+            seedless = method in (RANKED_METHODS[0], RETRIEVAL_METHOD)
+            if seedless and seed_index:
                 continue
-            label = method if method == RANKED_METHODS[0] else f"{method}-seed-{seed}"
+            label = method if seedless else f"{method}-seed-{seed}"
             bind[label] = {"method": method, "ranker_file": str(config_file), "sha256": _hash(config),
-                           "seed": seed if label != method else None}
+                           "seed": None if seedless else seed, "check_cap": cap}
     methods = ("conditional-async", "conditional-prefetch", "conditional-planner", "conditional-stream", "conditional-a", *bind)
     template = {"schema": 1, "role": FINAL_ROLE, "intended_pairs": len(assigned["cases"]),
                 "ranker_bindings": bind, "cost_config_sha256": _hash(cost)}
@@ -222,7 +225,8 @@ def prepare_final(blind, development, calibration, selection, native_training, d
     inputs = _runtime_inputs(checkout, {**template, "cases": signature_cases}, auth_project.resolve(), (11674, 11675))
     lock = {key: inputs[key] for key in ("model", "reasoning_effort", "request_limit", "source_sha256", "environment_sha256")}
     frozen = {**lock, "schema": 1, "role": FINAL_ROLE, "blind_assignment_sha256": _hash(assigned),
-              "selection": selection_evidence, "calibration": calibration_evidence, "native_training": native_evidence,
+              "selection": selection_evidence, "ranking_selection": rank_selection,
+              "calibration": calibration_evidence, "native_training": native_evidence,
               "methods": list(methods),
               "ranker_bindings": bind, "cost_config_sha256": _hash(cost), "metrics": defaults["evaluation"],
               "asset_replacement": "ordered independent seeds; reject exact training or development texture-group overlap",

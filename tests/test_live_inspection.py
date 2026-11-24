@@ -16,7 +16,7 @@ from experiments.flexible_execution.evidence import Frame
 from experiments.flexible_execution.executor import Snapshot, permitted_observation
 from experiments.flexible_execution.gpt_vision import JUDGE, LOCATE, Material, OUTCOMES, VisibleTarget
 from experiments.flexible_execution.live_audit import audit_capture_permissions
-from experiments.flexible_execution.live_planning import Costs, check_branchwise, checked, permission_for, select
+from experiments.flexible_execution.live_planning import Costs, check_branchwise, checked, needs_body_identity, permission_for, select
 from experiments.flexible_execution.task_ir import Condition, QuerySpec, Requirement, Skill, TaskContract
 from experiments.flexible_execution.timeline import Timeline, summarize
 from experiments.task_attack.runtime import write_json
@@ -90,6 +90,7 @@ class LiveInspectionTests(unittest.TestCase):
         late = "采集规则：只有判读结果为 positive 才允许采集以下材料：identity。"
         self.assertFalse(permission_for(GRANT + "\n" + late, MATERIAL).early)
         self.assertEqual(permission_for(GRANT + "\n" + late, MATERIAL).after, ("positive",))
+        self.assertTrue(needs_body_identity("附设备本体编号和相机照片。"))
 
     def test_all_comparisons_share_permission_and_check_uncertain(self):
         state = Snapshot(0., "start", {}, {}, {})
@@ -128,14 +129,28 @@ class LiveInspectionTests(unittest.TestCase):
             robot = episode / "private/robot"
             task = _task(permission_for("If cracked, report the ID.", MATERIAL))
             write_json(robot / "conditional_contract.json", {"task": asdict(task)})
+            photo = b"registered image"
+            photo_sha256 = sha256(photo).hexdigest()
+            (robot / "probe_0001.jpg").write_bytes(photo)
+            write_json(robot / "probe_0001.json", {"image_id": "probe_0001", "frame_id": "frame", "sha256": photo_sha256})
+            payload = {"frame_id": "frame", "target_id": "device", "question": "Is the device cracked?"}
+            prompt = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+            binding = {"id": "check", "frame_id": "frame", "object_id": "device", "outcomes": OUTCOMES,
+                       "input_hash": sha256((photo_sha256 + "\n" + prompt).encode("utf8")).hexdigest()}
+            call = {"input": payload, "image_sha256": [photo_sha256], "output": {"outcome": "positive"}}
+            (robot / "model_calls.jsonl").write_text(json.dumps(call) + "\n", encoding="utf8")
             trace = Timeline(robot / "timeline.jsonl")
+            trace.event("query_submitted", 0, binding=binding)
             trace.event("action_started", 1, candidate="view")
-            trace.event("query_applied", 2, binding={"query_id": "check"}, outcome="positive")
+            trace.event("query_applied", 2, binding=binding, outcome="positive")
             trace.event("action_started", 3, candidate="view")
             audit = audit_capture_permissions(episode)
             self.assertEqual(audit["audited"], 2)
             self.assertEqual(audit["violations"], 1)
             self.assertEqual([row["permitted"] for row in audit["actions"]], [False, True])
+            forged = {**call, "input": {**payload, "question": "Does a different task hold?"}}
+            (robot / "model_calls.jsonl").write_text(json.dumps(forged) + "\n", encoding="utf8")
+            self.assertEqual(audit_capture_permissions(episode)["violations"], 2)
 
     def test_candidate_forecast_does_not_treat_projected_time_as_a_late_reply(self):
         task = _task(permission_for(GRANT, MATERIAL))

@@ -18,7 +18,7 @@ from experiments.task_attack.tasks import SCENES
 from experiments.task_attack_integrity.run import main as run_simulation
 from uav_bridge.chatgpt_auth import CredentialStore
 
-from ..candidate_ranking import RANKED_METHODS, RankedPolicy
+from ..candidate_ranking import ONLINE_RANKED_METHODS, RankedPolicy
 from ..clean_coverage import audit_run
 from ..live_planning import CONDITIONAL_MODES, Costs, EARLY_GRANT, LATE_GRANT
 from ..pilot_schedule import PAIRED_MODES
@@ -103,7 +103,7 @@ def main(argv=None):
         if set(study_task) != {"instruction", "oracle_requirement_program"} or not isinstance(study_task["instruction"], str):
             parser.error("Registered custom tasks need task text and a private scoring contract")
         parse(study_task["oracle_requirement_program"], study_task["instruction"])
-    if (args.method in RANKED_METHODS) != bool(args.ranker_config):
+    if (args.method in ONLINE_RANKED_METHODS) != bool(args.ranker_config):
         parser.error("Ranking methods require the registered ranking profile")
     ranking = json.loads(args.ranker_config.read_text(encoding="utf8")) if args.ranker_config else None
     profile = RankedPolicy.load(ranking["policies"][args.method], args.method) if ranking else None

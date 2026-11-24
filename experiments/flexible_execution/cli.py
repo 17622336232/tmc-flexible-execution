@@ -13,7 +13,7 @@ import yaml
 from .audit import capture
 from .clean_coverage import audit_run
 from .control import DEFAULT_AUTH_PROJECT, control_status, is_live, pilot_run
-from .learning_schedule import prepare_ranker_pilot
+from .learning_schedule import prepare_configurations, prepare_ranker_pilot
 from .live_audit import audit_live_connection
 from .live_calibration import calibrate, calibrate_visual
 from .pilot_schedule import (
@@ -25,13 +25,14 @@ from .runner import manifest, read_json, reproduce, run
 CHECKOUT = Path(__file__).resolve().parents[2]
 DEFAULTS = Path(__file__).with_name("experiment_defaults.yaml")
 CUSTOM_CONNECTION = "custom-vision-connection-v3"
-CUSTOM_FINAL_PILOT = "custom-visual/test-pilot-v2"
+CUSTOM_FINAL_PILOT = "custom-visual/test-pilot-v3"
 VISUAL_INPUTS = "development-visual-v2"
-VISUAL_PILOTS = {"calibration": "visual-calibration-v3", "selection": "visual-selection-v2"}
+VISUAL_PILOTS = {"calibration": "visual-calibration-v3", "selection": "visual-selection-v3"}
 PUBLIC_VALIDATION_PILOT = "public-visual/validation-pilot-v1"
 PUBLIC_FINAL_PILOT = "public-visual/test-pilot-v1"
 STREAM_PILOT = "segmented-generation-v1"
-NATIVE_TRAINING_PILOT = "native-training-check-v1"
+NATIVE_TRAINING_PILOT = "native-training-check-v2"
+RANKING_CONFIGURATIONS = "ranking-configurations-v1"
 
 
 def _scene_python():
@@ -313,10 +314,12 @@ def _continue_stage(output_root, directory, defaults, args, launch_limit):
     layout_manifest = layouts / "split_manifest_v2.json"
     if not layout_manifest.is_file():
         _prepare_scenes(("visual-development-prepare", "--output", layouts))
+    selection_plan = prepare_configurations(pilots / RANKING_CONFIGURATIONS, diagnostic)
     native_training = pilots / NATIVE_TRAINING_PILOT
     if not (native_training / "pilot_manifest.json").is_file():
         _prepare_scenes(("native-training-prepare", "--output", native_training, "--development-manifest", layout_manifest,
-                         "--cost-config", comparison / "calibrated_costs.json", "--ranker-config", ranked / "calibrated_rankers.json"))
+                         "--cost-config", comparison / "calibrated_costs.json", "--ranker-config",
+                         selection_plan["caps"]["4"]["path"]))
     train_status = pilot_status(native_training)
     if train_status["recorded_pairs"] < train_status["planned_pairs"]:
         return run_batch(native_training)
@@ -329,7 +332,7 @@ def _continue_stage(output_root, directory, defaults, args, launch_limit):
     selection = pilots / VISUAL_PILOTS["selection"]
     if not (selection / "pilot_manifest.json").is_file():
         prepare_visual(selection, read_json(layout_manifest), calibrate_visual(calibration, prior), "selection",
-                       rankers=read_json(ranked / "calibrated_rankers.json"))
+                       selection_plan=selection_plan)
     selected_status = pilot_status(selection)
     if selected_status["recorded_pairs"] < selected_status["planned_pairs"]:
         return run_batch(selection)
@@ -429,6 +432,9 @@ def main(argv=None):
     learn = commands.add_parser("ranker-diagnostic", help="Run the grouped symbolic CPU ranking diagnostic")
     learn.add_argument("--data-dir", required=True, type=Path)
     learn.add_argument("--sizes", type=int, nargs="+", choices=(1000, 3000, 10000), default=[1000, 3000, 10000])
+    ranking_config = commands.add_parser("ranker-configurations", help="Freeze the bounded visual ranking grid")
+    ranking_config.add_argument("--data-dir", required=True, type=Path)
+    ranking_config.add_argument("--output", required=True, type=Path)
     native_training = commands.add_parser("native-training-prepare", help="Register the independent native ranking checks")
     for name in ("development-manifest", "cost-config", "ranker-config", "output"):
         native_training.add_argument("--" + name, required=True, type=Path)
@@ -566,6 +572,9 @@ def main(argv=None):
         from .ranker_audit import audit
 
         print(json.dumps(audit(args.data_dir, args.output), ensure_ascii=False, indent=2))
+        return
+    if args.command == "ranker-configurations":
+        print(json.dumps(prepare_configurations(args.output, args.data_dir), ensure_ascii=False, indent=2))
         return
     if args.command == "pilot-report":
         from .pilot_report import rebuild

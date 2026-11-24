@@ -7,7 +7,7 @@ from itertools import count
 from math import dist, isfinite
 from time import monotonic
 
-from .candidate_ranking import RANKED_METHODS, select_ranked
+from .candidate_ranking import ONLINE_RANKED_METHODS, select_ranked
 from .executor import forecast_async, permitted_observation, project, ready_times, report_time
 from .gpt_vision import OUTCOMES
 from .search import Candidate, Search, witness
@@ -19,11 +19,13 @@ LATE_GRANT = re.compile(
     r"采集规则：只有判读结果为 (positive|negative|uncertain) 才允许采集以下材料："
     r"([a-z][a-z0-9_]*(?:、[a-z][a-z0-9_]*)*)。")
 RESTRICTION = re.compile(r"不得|禁止|仅在|才可|才允许|之后才能|之后方可|do not|must not|only after", re.I)
-BODY_IDENTITY = re.compile(r"(?:编号|身份)[^。；\n]{0,24}(?:本体|本身)|(?:body|asset) identity", re.I)
+BODY_IDENTITY = re.compile(
+    r"(?:编号|身份)[^。；\n]{0,24}(?:本体|本身)|(?:本体|本身)[^。；\n]{0,12}(?:编号|身份)|(?:body|asset) identity",
+    re.I)
 NEW_METHODS = ("conditional-serial", "conditional-async", "conditional-prefetch", "conditional-planner", "conditional-a")
 STREAM_METHODS = ("conditional-stream", "conditional-stream-buffered")
 CONDITIONAL_MODES = {name: "ACTUAL_GPT_" + name.upper().replace("-", "_")
-                     for name in NEW_METHODS + RANKED_METHODS + STREAM_METHODS}
+                     for name in NEW_METHODS + ONLINE_RANKED_METHODS + STREAM_METHODS}
 
 
 def needs_body_identity(instruction):
@@ -174,7 +176,7 @@ def select(task, state, method, log, *, budget_ms=1000, max_candidates=32, max_p
     if method in ("conditional-serial", "conditional-async", *STREAM_METHODS):
         log("candidate_rejected", reason="ordinary policy does not advance branch-specific material")
         return None
-    if method in RANKED_METHODS:
+    if method in ONLINE_RANKED_METHODS:
         if ranked_policy is None:
             raise ValueError("The learned comparison needs its frozen ranking profile")
         choice = select_ranked(task, state, checked, log, ranker=ranked_policy.ranker,

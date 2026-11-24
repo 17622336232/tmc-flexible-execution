@@ -9,15 +9,17 @@ import signal
 import subprocess
 import sys
 import time
+from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
 from shutil import disk_usage
+from statistics import median
 
 from experiments.task_attack import EFFORT, MODEL
 from experiments.task_attack.model import EXTERNAL_RESPONSE_CODES
 from experiments.task_attack.runtime import write_json
 
-from .candidate_ranking import RANKED_METHODS
+from .candidate_ranking import ONLINE_RANKED_METHODS
 from .clean_coverage import audit_run
 from .custom_schedule import FINAL_ROLE as CUSTOM_FINAL_ROLE
 from .learning_schedule import ROLE as RANKER_ROLE, registered_config
@@ -53,6 +55,32 @@ PUBLIC_SOURCES = ("experiments/flexible_execution/public_task.py", "experiments/
 
 def _now():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _batch_estimate(control, directory, protocol, count):
+    path = control / "jobs.jsonl"
+    same_pilot, same_simulator = deque(maxlen=24), deque(maxlen=24)
+    if path.is_file():
+        with path.open(encoding="utf8") as handle:
+            for line in handle:
+                row = json.loads(line)
+                if (row["state"] not in TASK_TERMINAL or not row.get("started_at") or not row.get("finished_at")
+                        or row.get("model") != protocol["model"]
+                        or row.get("reasoning_effort") != protocol["reasoning_effort"]):
+                    continue
+                seconds = (datetime.fromisoformat(row["finished_at"]) -
+                           datetime.fromisoformat(row["started_at"])).total_seconds()
+                if seconds <= 0:
+                    continue
+                if Path(row["arm"]).parents[1] == directory:
+                    same_pilot.append(seconds)
+                elif row["stage"].startswith("public-") == protocol["stage"].startswith("public-"):
+                    same_simulator.append(seconds)
+    observations = same_pilot or same_simulator
+    return {"prior_recorded_launches": len(observations),
+            "prior_scope": "same pilot" if same_pilot else "same simulator" if same_simulator else None,
+            "typical_seconds_per_launch": median(observations) if observations else None,
+            "estimated_wall_seconds": median(observations) * count if observations else None}
 
 
 def _proc(pid):
@@ -214,12 +242,13 @@ def plans(directory, protocol, catalog):
             identifier = f"v{protocol['version']}-{case['id']}-{method}-{fingerprint[:16]}"
             job = {"id": identifier, "stage": protocol["stage"], "input_sha256": fingerprint,
                    "case": case, "method": method, "model": protocol["model"],
-                   "ranker_config_sha256": catalog.get("ranker_config_sha256") if execution_method in RANKED_METHODS else None,
+                   "ranker_config_sha256": catalog.get("ranker_config_sha256") if execution_method in ONLINE_RANKED_METHODS else None,
                    "reasoning_effort": protocol["reasoning_effort"], "state": "PENDING", "attempt": 0,
                    "arm": str(directory / case["id"] / method)}
             if binding:
                 job.update(execution_method=execution_method, ranker_file=binding["ranker_file"],
-                           training_seed=binding["seed"], ranker_config_sha256=binding["sha256"])
+                           training_seed=binding["seed"], ranker_config_sha256=binding["sha256"],
+                           ranker_check_cap=binding.get("check_cap"))
             if catalog.get("role") in (PUBLIC_VALIDATION_ROLE, PUBLIC_FINAL_ROLE):
                 job["public_runtime"] = catalog["runtime"]
             if catalog.get("role") == PUBLIC_FINAL_ROLE:
@@ -487,7 +516,7 @@ def _gazebo_command(job, directory, catalog, auth_project, episode, remaining, l
             command.append("--handoff-at-observation")
         if case.get("typed_task_program"):
             command.append("--compile-task-program")
-    if method in RANKED_METHODS:
+    if method in ONLINE_RANKED_METHODS:
         ranker_path = Path(job.get("ranker_file", directory / "calibrated_rankers.json"))
         if _hash(_read(ranker_path)) != job["ranker_config_sha256"]:
             raise ValueError("The ranking checkpoint assignment changed")
@@ -566,16 +595,19 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
         raise ValueError("Cannot launch an empty pilot schedule")
     launched = 0
     opened = {}
+    batch_started = time.monotonic()
     batch = {"opened_at": _now(), "max_launches": max_jobs, "max_new_dispatches": max_jobs * REQUEST_LIMIT,
              "max_seconds_per_launch": max(case["episode_timeout_seconds"] for case in catalog["cases"])
-             + STARTUP_CLEANUP_SECONDS}
+             + STARTUP_CLEANUP_SECONDS, "estimate": _batch_estimate(control, directory, protocol, max_jobs)}
 
     def refresh(current=None):
         used = sum(RequestBudget(path, REQUEST_LIMIT).summary()["reserved"] - at_start
                    for path, at_start in opened.items())
         return _publish(directory, control, all_jobs, current,
-                        {**batch, "launched": launched, "actual_new_dispatches": used})
+                        {**batch, "launched": launched, "actual_new_dispatches": used,
+                         "actual_wall_seconds": time.monotonic() - batch_started})
 
+    refresh()
     for template in all_jobs:
         arm = Path(template["arm"])
         job = _read(arm / "job.json") or template

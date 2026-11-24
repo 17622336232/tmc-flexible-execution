@@ -2,13 +2,14 @@
 
 import json
 from math import isfinite
+from pathlib import Path
 from random import Random
 
 from experiments.task_attack import FAMILIES
 from experiments.task_attack.runtime import write_json
 from experiments.task_attack.tasks import SCENES
 
-from .candidate_ranking import RANKED_METHODS
+from .candidate_ranking import ONLINE_RANKED_METHODS, RANKED_METHODS, RETRIEVAL_METHOD
 from .live_planning import CONDITIONAL_MODES, NEW_METHODS, STREAM_METHODS
 from .runner import _hash
 
@@ -121,13 +122,28 @@ def prepare_stream(directory, base, calibration):
     return catalog
 
 
-def prepare_visual(directory, inputs, calibration, split, *, rankers=None):
+def prepare_visual(directory, inputs, calibration, split, *, rankers=None, selection_plan=None):
     from .development_inputs import scene_fingerprint
 
-    methods = (("conditional-serial", "conditional-async", "conditional-a") if split == "calibration" else
-               ("conditional-async", "conditional-prefetch", "conditional-planner", "conditional-a", *STREAM_METHODS,
-                *RANKED_METHODS))
-    if split == "selection" and not rankers:
+    if selection_plan and (split != "selection" or rankers):
+        raise ValueError("The registered configuration grid belongs to visual selection")
+    bindings = {}
+    if selection_plan:
+        for limit, source in selection_plan["caps"].items():
+            profile = _read(Path(source["path"]))
+            if (_hash(profile) != source["config_sha256"] or set(profile["policies"]) != set(ONLINE_RANKED_METHODS)
+                    or any(row["check_cap"] != int(limit) for row in profile["policies"].values())):
+                raise ValueError("A ranking configuration differs from the frozen development grid")
+            for method in ONLINE_RANKED_METHODS:
+                bindings[f"{method}-cap{limit}"] = {"method": method, "ranker_file": source["path"],
+                     "sha256": source["config_sha256"], "check_cap": int(limit),
+                     "seed": None if method in (RANKED_METHODS[0], RETRIEVAL_METHOD) else profile["training_seed"]}
+    if split == "calibration":
+        methods = ("conditional-serial", "conditional-async", "conditional-a")
+    else:
+        methods = ("conditional-async", "conditional-prefetch", "conditional-planner", "conditional-a",
+                   *STREAM_METHODS, *(bindings or RANKED_METHODS))
+    if split == "selection" and not (rankers or bindings):
         raise ValueError("Configuration selection needs the previously registered ranking comparison")
     cases = []
     for row in inputs["cases"]:
@@ -143,6 +159,8 @@ def prepare_visual(directory, inputs, calibration, split, *, rankers=None):
         raise ValueError("The development cohort needs the 48 isolated layouts for its role")
     catalog = {"schema": 1, "role": VISUAL_ROLES[split], "layout_manifest_sha256": _hash(inputs),
                "cost_config_sha256": _hash(calibration), "intended_pairs": len(cases), "cases": cases}
+    if bindings:
+        catalog.update(schema=2, ranker_bindings=bindings, ranker_selection_plan=selection_plan)
     directory.mkdir(parents=True, exist_ok=True)
     files = [("calibrated_costs.json", calibration), ("pilot_manifest.json", catalog)]
     if rankers:

@@ -79,13 +79,24 @@ python3 -m experiments.flexible_execution.cli pilot-report \
 
 在线候选先通过廉价的许可和路线准入。普通成功标签模型和完整代价标签模型使用同一候选及特征，排序以后才逐项检查共同后续。C 在同一个检查上限下按预测净收益提前停止。动作派发前仍用当前状态复查许可、可达性和预留时间。符号训练、实际可见状态回放和在线视觉对照分别记账。
 
+检索组从与 B1 完全相同的训练子集取七个最近的候选，以标准化结构特征为距离，用这些经程序验证的符号标签的平均收益排序。取样、归一化和索引文件都在运行前锁定。检索、启发式、普通监督、B1 和 C 共用候选池、检查器和时钟预算。
+
+符号选参先对比 1,000、3,000、10,000 个训练状态在三个种子下的受限时间，时间并列选数据较少的一组。视觉选参固定同一训练规模，在同一批 48 个独立场景中匹配比较最多检查 4 或 8 个候选。五种排序方法和两种上限均进入每个场景。优先选择通过整项验收更多的上限，其次比较失败按截止时间计入的平均时长，最后选择较小上限。正式测试为普通监督、B1 和 C 各保留三个训练种子。统计先把同一基础场景中同种子的结果配对，再按场景来源分组计算区间。
+
 ```bash
 python3 -m experiments.flexible_execution.cli ranker-diagnostic \
   --data-dir outputs/ranker-diagnostic-v1 --sizes 1000 3000 10000
 python3 -m experiments.flexible_execution.cli ranker-audit \
   --data-dir outputs/ranker-diagnostic-v1 --output outputs/ranker-diagnostic-v1/training_audit.json
+python3 -m experiments.flexible_execution.cli ranker-configurations \
+  --data-dir outputs/ranker-diagnostic-v1 --output outputs/natural-pilot/ranking-configurations-v1
+python3 -m experiments.flexible_execution.cli native-training-prepare \
+  --development-manifest outputs/development-visual-v2/split_manifest_v2.json \
+  --cost-config outputs/natural-pilot/conditional-comparison-v4/calibrated_costs.json \
+  --ranker-config outputs/natural-pilot/ranking-configurations-v1/cap-4.json \
+  --output outputs/natural-pilot/native-training-check-v2
 python3 -m experiments.flexible_execution.cli pilot-run \
-  --pilot-dir outputs/natural-pilot/learned-order-v1 --resume --max-jobs 4
+  --pilot-dir outputs/natural-pilot/native-training-check-v2 --resume --max-jobs 7
 ```
 
 公开验证入口在 `experiments.flexible_execution.public_task`。AI2-THOR 固定在 5.0.0，从官方 ProcTHOR 验证集加载房屋。相机通过软件 OpenGL 取得初始和侧向图像。模型收到任务文字和执行过程中拍到的 RGB。独立评分用姿态和实例分割核对完整报告。公开房间是本研究的派生任务，正式测试取官方测试房屋，验证房用于调试。 [ProcTHOR 官方数据](https://github.com/allenai/procthor-10k/tree/439193522244720b86d8c81cde2e51e3a4d150cf)
@@ -103,8 +114,8 @@ python3 -m experiments.flexible_execution.cli public-plan \
 
 ```bash
 python3 -m experiments.flexible_execution.cli visual-development-prepare \
-  --output outputs/development-visual-v1 \
-  --pilot-dir outputs/natural-pilot/visual-calibration-v1 \
+  --output outputs/development-visual-v2 \
+  --pilot-dir outputs/natural-pilot/visual-calibration-v3 \
   --cost-config outputs/natural-pilot/conditional-comparison-v4/calibrated_costs.json
 ```
 

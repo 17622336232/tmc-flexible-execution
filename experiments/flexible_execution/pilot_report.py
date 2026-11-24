@@ -2,6 +2,7 @@
 
 import csv
 import json
+from collections import Counter
 from math import isfinite
 from pathlib import Path
 from random import Random
@@ -9,6 +10,7 @@ from statistics import mean
 
 from experiments.task_attack.runtime import write_json
 
+from .candidate_ranking import RANKED_METHODS, RETRIEVAL_METHOD
 from .clean_coverage import audit_run
 from .custom_schedule import FINAL_ROLE as CUSTOM_FINAL_ROLE
 from .live_audit import audit_capture_permissions
@@ -46,17 +48,20 @@ def _attempt_costs(arm, final, public):
             "last_request_wall_time": max(dispatch_times, default=None)}
 
 
-def _arm_row(directory, case, method):
+def _arm_row(directory, case, method, binding=None):
     arm = directory / case["id"] / method
     job = _read(arm / "job.json")
+    binding = binding or {}
     row = {"case": case["id"], "group": case.get("group_id", case["id"]), "family": case["family"],
            "domain": case["domain"], "seed": case["seed"], "method": method,
+           "execution_method": binding.get("method", method), "ranker_check_cap": binding.get("check_cap"),
+           "training_seed": binding.get("seed"),
            "deadline_seconds": case["episode_timeout_seconds"], "state": "PENDING"}
     if not job:
         return row
     row.update(state=job["state"], logical_id=job["id"], infrastructure_attempts=job["attempt"],
                actual_dispatches=job.get("request_budget", {}).get("reserved"),
-               cumulative_task_seconds=job.get("charged_seconds"), training_seed=job.get("training_seed"))
+               cumulative_task_seconds=job.get("charged_seconds"))
     if job["state"] not in RECORDED:
         return row
     output = job.get("artifact_dir")
@@ -85,8 +90,8 @@ def _arm_row(directory, case, method):
     if timing.is_file():
         clock = summarize(timing)
         events = [json.loads(line) for line in timing.read_text(encoding="utf8").splitlines()]
-        ranking = next((event for event in events if event["event"] == "candidate_search_summary"
-                        and "ranker" in event), None)
+        search = next((event for event in events if event["event"] == "candidate_search_summary"), None)
+        selected = next((event for event in events if event["event"] == "candidate_selected"), None)
         typed_guard = [event["accepted"] for event in events if event["event"] == "typed_task_acceptance"]
         row.update(model_request_seconds=clock["model_request_seconds"],
                    model_action_overlap_seconds=clock["model_action_overlap_seconds"],
@@ -95,9 +100,12 @@ def _arm_row(directory, case, method):
                    action_seconds=sum(interval["seconds"] for interval in clock["intervals"].get("action", [])),
                    observation_seconds=sum(interval["seconds"] for interval in clock["intervals"].get("observation", [])),
                    search_seconds=sum(interval["seconds"] for interval in clock["intervals"].get("search", [])))
-        if ranking:
-            row.update(ranked_candidates=ranking["generated"], ranked_candidates_verified=ranking["checked"],
-                       ranking_stop_reason=ranking["stop_reason"], checkpoint_sha256=ranking["checkpoint"])
+        if search and "ranker" in search:
+            row.update(ranked_candidates=search["generated"], ranked_candidates_verified=search["checked"],
+                       ranking_stop_reason=search["stop_reason"], checkpoint_sha256=search["checkpoint"])
+        if search and selected:
+            row.update(selected_candidate=selected["candidate"], selected_forecast_seconds=selected["expected_finish"],
+                       baseline_forecast_seconds=search["baseline_finish"])
         if typed_guard:
             row.update(typed_submission_checks=len(typed_guard), typed_submission_accepted=typed_guard[-1])
     if result and result.get("execution_completed") and (root / "clean_coverage.json").is_file():
@@ -160,6 +168,17 @@ def _interval(values, seed, replicates):
     return [draws[int(.025 * (replicates - 1))], draws[int(.975 * (replicates - 1))]]
 
 
+def _paired_summary(rows):
+    groups = {}
+    for row in rows:
+        groups.setdefault(row["group"], []).append(row)
+    values = {key: [mean(row[key] for row in group) for group in groups.values()]
+              for key in ("success_difference", "restricted_seconds_difference")}
+    return {"matched_cases": len(rows), "independent_groups": len(groups),
+            **{key: {"mean": mean(numbers) if numbers else None,
+                     "cluster_bootstrap_95": _interval(numbers, 17, 2000)} for key, numbers in values.items()}}
+
+
 def _pair_rows(rows, reference):
     cases = {}
     for row in rows:
@@ -176,24 +195,64 @@ def _pair_rows(rows, reference):
                               "success_difference": int(row["success"]) - int(target["success"]),
                               "restricted_seconds_difference": row["restricted_seconds"] - target["restricted_seconds"]}
                 reports.setdefault(method, []).append(difference)
-    result = {}
-    for name, rows in reports.items():
-        groups = {}
-        for row in rows:
-            groups.setdefault(row["group"], []).append(row)
-        values = {key: [mean(row[key] for row in group) for group in groups.values()]
-                  for key in ("success_difference", "restricted_seconds_difference")}
-        result[name] = {"matched_cases": len(rows), "independent_groups": len(groups),
-                        **{key: {"mean": mean(numbers), "cluster_bootstrap_95": _interval(numbers, 17, 2000)}
-                           for key, numbers in values.items()}}
-    return result
+    return {method: _paired_summary(differences) for method, differences in reports.items()}
+
+
+def _paired_ranking(rows):
+    by_case, planned = {}, {}
+    for row in rows:
+        policy = row["ranker_check_cap"], row["execution_method"]
+        seed = row["training_seed"]
+        planned.setdefault(policy, set()).add(seed)
+        by_case.setdefault(row["case"], {})[(*policy, seed)] = row
+    heuristic, ordinary, b1, adaptive = RANKED_METHODS
+    contrasts = [(b1, ordinary), (b1, heuristic), (b1, RETRIEVAL_METHOD), (adaptive, b1)]
+    output = []
+    for cap, method in planned:
+        for target, reference in contrasts:
+            if method != target or (cap, reference) not in planned:
+                continue
+            targets, references = planned[cap, target], planned[cap, reference]
+            seeds = (targets | references) - {None} or {None}
+            if any(group != {None} and group != seeds for group in (targets, references)):
+                raise ValueError("Ranking comparison does not have matching declared training seeds")
+            pairs = []
+            for arms in by_case.values():
+                matches = [(arms.get((cap, target, seed if seed in targets else None)),
+                            arms.get((cap, reference, seed if seed in references else None))) for seed in seeds]
+                if any(row is None or row["state"] not in RECORDED for pair in matches for row in pair):
+                    continue
+                pairs.append({"group": matches[0][0]["group"],
+                    "success_difference": mean(int(a["success"]) - int(b["success"]) for a, b in matches),
+                    "restricted_seconds_difference": mean(a["restricted_seconds"] - b["restricted_seconds"]
+                                                          for a, b in matches)})
+            output.append({"target": target, "reference": reference, "check_cap": cap, "seed_pairs_per_case": len(seeds),
+                           "planned_cases": len(by_case), **_paired_summary(pairs)})
+    return output
+
+
+def _native_forecast_check(rows):
+    baseline = {row["case"]: row["restricted_seconds"] for row in rows
+                if row["method"] == "conditional-async" and row["state"] in RECORDED}
+    checked = []
+    for row in rows:
+        if row["case"] not in baseline or "selected_forecast_seconds" not in row:
+            continue
+        forecast = row["baseline_forecast_seconds"] - row["selected_forecast_seconds"]
+        observed = baseline[row["case"]] - row["restricted_seconds"]
+        checked.append({"case": row["case"], "method": row["method"], "selected": row["selected_candidate"],
+                        "forecast_gain_seconds": forecast, "matched_observed_gain_seconds": observed,
+                        "absolute_gap_seconds": abs(forecast - observed)})
+    return checked
 
 
 def rebuild(directory, output):
     catalog = _read(directory / "pilot_manifest.json")
     if not catalog or not catalog["cases"]:
         raise ValueError("A frozen nonempty pilot manifest is required")
-    rows = [_arm_row(directory, case, method) for case in catalog["cases"] for method in case["order"]]
+    bindings = catalog.get("ranker_bindings", {})
+    rows = [_arm_row(directory, case, method, bindings.get(method))
+            for case in catalog["cases"] for method in case["order"]]
     groups = {}
     for row in rows:
         groups.setdefault(row["method"], []).append(row)
@@ -202,8 +261,11 @@ def rebuild(directory, output):
         valid = [row for row in cases if row["state"] in RECORDED]
         methods[method] = {"planned": len(cases), "recorded": len(valid),
                            "successes": sum(row["success"] for row in valid),
+                           "success_rate": mean(row["success"] for row in valid) if valid else None,
                            "scored_completion_claims": sum("wrong_completion_claim" in row for row in valid),
                            "wrong_completion_claims": sum(row.get("wrong_completion_claim", False) for row in valid),
+                           "failure_types": dict(Counter(row.get("failure_reason") or row["state"]
+                                                        for row in valid if not row["success"])),
                            "statuses": {state: sum(row["state"] == state for row in cases)
                                         for state in sorted({row["state"] for row in cases})},
                            "mean_restricted_seconds": mean(row["restricted_seconds"] for row in valid) if valid else None}
@@ -221,8 +283,11 @@ def rebuild(directory, output):
     result = {"mode": mode, "role": catalog["role"], "reference": reference,
               "planned_episodes": len(rows), "recorded_episodes": sum(r["state"] in RECORDED for r in rows),
               "methods": methods, "matched_differences": _pair_rows(rows, reference),
+              "paired_ranking_comparisons": _paired_ranking(rows),
               "energy_measurement": None, "independently_scored_constraint_violations": permission,
               "scientific_conclusion": "INCONCLUSIVE"}
+    if catalog.get("data_role") == "INDEPENDENT_NATIVE_TRAINING_CHECK":
+        result["real_trajectory_forecast_checks"] = _native_forecast_check(rows)
     output.mkdir(parents=True, exist_ok=True)
     with (output / "episodes.csv").open("w", newline="", encoding="utf8") as handle:
         header = sorted({key for row in rows for key in row})

@@ -6,13 +6,15 @@ import json
 from math import isfinite
 from pathlib import Path
 from time import monotonic
-from typing import Optional
+from typing import Optional, Union
 
 from .executor import forecast_async, permitted_observation, project, ready_times
 
 
 RANKED_METHODS = ("conditional-rank-heuristic", "conditional-rank-ordinary", "conditional-rank-b1",
                   "conditional-rank-c")
+RETRIEVAL_METHOD = "conditional-rank-retrieval"
+ONLINE_RANKED_METHODS = (*RANKED_METHODS, RETRIEVAL_METHOD)
 
 
 def features(task, snapshot, prefix):
@@ -61,15 +63,50 @@ class LinearRanker:
 
 
 @dataclass(frozen=True)
+class RetrievalRanker:
+    offset: object
+    scale: object
+    points: object
+    gains: object
+    neighbors: int
+    digest: str
+    objective: str = "retrieval"
+
+    @classmethod
+    def load(cls, path):
+        import numpy as np
+
+        raw = path.read_bytes()
+        row = json.loads(raw)
+        offset, scale, points, gains = (np.asarray(row[key], dtype=np.float64)
+                                        for key in ("offset", "scale", "points", "gains"))
+        neighbors = row["neighbors"]
+        if (row["objective"] != "retrieval" or offset.shape != (10,) or scale.shape != (10,)
+                or points.shape != (gains.size, 10) or gains.ndim != 1
+                or any(not np.isfinite(value).all() for value in (offset, scale, points, gains))
+                or (scale <= 0).any() or type(neighbors) is not int or not 1 <= neighbors <= gains.size):
+            raise ValueError("The retrieval index does not match the candidate feature format")
+        return cls(offset, scale, points, gains, neighbors, sha256(raw).hexdigest())
+
+    def score(self, row):
+        import numpy as np
+
+        distance = self.points - (np.asarray(row) - self.offset) / self.scale
+        squared = np.einsum("ij,ij->i", distance, distance)
+        nearest = np.argsort(squared, kind="stable")[:self.neighbors]
+        return float(np.mean(self.gains[nearest]))
+
+
+@dataclass(frozen=True)
 class RankedPolicy:
-    ranker: Optional[LinearRanker]
+    ranker: Optional[Union[LinearRanker, RetrievalRanker]]
     check_cap: int
     minimum_net_gain: Optional[float]
 
     @classmethod
     def load(cls, row, method):
         objective = {RANKED_METHODS[0]: None, RANKED_METHODS[1]: "ordinary",
-                     RANKED_METHODS[2]: "cost", RANKED_METHODS[3]: "cost"}[method]
+                     RANKED_METHODS[2]: "cost", RANKED_METHODS[3]: "cost", RETRIEVAL_METHOD: "retrieval"}[method]
         cap = row["check_cap"]
         minimum = row["minimum_net_gain"]
         if (type(cap) is not int or not 1 <= cap <= 32
@@ -80,7 +117,10 @@ class RankedPolicy:
         checkpoint = row["checkpoint"]
         if bool(checkpoint) != bool(objective):
             raise ValueError("The registered ranking method needs its corresponding checkpoint")
-        ranker = LinearRanker.load(Path(checkpoint), objective) if checkpoint else None
+        if objective == "retrieval":
+            ranker = RetrievalRanker.load(Path(checkpoint))
+        else:
+            ranker = LinearRanker.load(Path(checkpoint), objective) if checkpoint else None
         if (None if ranker is None else ranker.digest) != row["checkpoint_sha256"]:
             raise ValueError("The registered ranking checkpoint digest changed")
         return cls(ranker, cap, minimum)
@@ -115,6 +155,8 @@ def select_ranked(task, state, check, log, *, ranker, check_cap, budget_ms, max_
     eligible = tuple(skill for skill in task.skills if needed.intersection(skill.covers))
     ranked = []
     for prefix in _prefixes(task, state, eligible, max_prepare, generated_cap, deadline):
+        if monotonic() >= deadline:
+            break
         row = features(task, state, prefix)
         score = -row[1] if ranker is None else ranker.score(row)
         key = tuple(action.skill.id for action in prefix)
