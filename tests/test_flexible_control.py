@@ -13,6 +13,23 @@ from experiments.task_attack.runtime import write_json
 
 
 class SupervisorTest(unittest.TestCase):
+    def test_truncated_timing_log_does_not_prevent_estimating_the_next_batch(self):
+        with tempfile.TemporaryDirectory() as temp:
+            control_dir = Path(temp)
+            pilot = control_dir / "pilot"
+            protocol = {"stage": "matched-baselines", "model": control.MODEL, "reasoning_effort": control.EFFORT}
+            record = {**protocol, "state": "FINISHED_VALID", "arm": str(pilot / "case" / "method"),
+                      "started_at": "2026-11-24T21:10:00+00:00", "finished_at": "2026-11-24T21:11:40+00:00"}
+            (control_dir / "jobs.jsonl").write_text(json.dumps(record) + '\n{"started_at":', encoding="utf8")
+            estimate = control._batch_estimate(control_dir, pilot, protocol, 2)
+            self.assertEqual(estimate["prior_scope"], "same pilot")
+            self.assertEqual(estimate["unreadable_timing_records"], 1)
+            self.assertEqual(estimate["estimated_wall_seconds"], 200)
+            new = control._save(control_dir, {**record, "state": "PENDING"})
+            lines = (control_dir / "jobs.jsonl").read_text(encoding="utf8").splitlines()
+            self.assertEqual(lines[-2], '{"started_at":')
+            self.assertEqual(json.loads(lines[-1]), new)
+
     def test_project_spends_remaining_launches_on_the_next_stage(self):
         stages = [({"stage": "first", "last_batch": {"launched": 1}, "active_jobs": []}, 1),
                   ({"stage": "next", "last_batch": {"launched": 2}, "active_jobs": []}, 2)]

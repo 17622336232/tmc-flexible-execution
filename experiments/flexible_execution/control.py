@@ -60,27 +60,36 @@ def _now():
 def _batch_estimate(control, directory, protocol, count):
     path = control / "jobs.jsonl"
     same_pilot, same_simulator = deque(maxlen=24), deque(maxlen=24)
+    unreadable = 0
     if path.is_file():
         with path.open(encoding="utf8") as handle:
             for line in handle:
-                row = json.loads(line)
-                if (row["state"] not in TASK_TERMINAL or not row.get("started_at") or not row.get("finished_at")
-                        or row.get("model") != protocol["model"]
-                        or row.get("reasoning_effort") != protocol["reasoning_effort"]):
+                try:
+                    row = json.loads(line)
+                    if (row["state"] not in TASK_TERMINAL or not row.get("started_at") or not row.get("finished_at")
+                            or row.get("model") != protocol["model"]
+                            or row.get("reasoning_effort") != protocol["reasoning_effort"]):
+                        continue
+                    seconds = (datetime.fromisoformat(row["finished_at"]) -
+                               datetime.fromisoformat(row["started_at"])).total_seconds()
+                    pilot = Path(row["arm"]).parents[1]
+                    stage = row["stage"]
+                    if not isinstance(stage, str):
+                        raise ValueError("Timing record has an invalid stage")
+                except (ValueError, KeyError, TypeError, IndexError):
+                    unreadable += 1
                     continue
-                seconds = (datetime.fromisoformat(row["finished_at"]) -
-                           datetime.fromisoformat(row["started_at"])).total_seconds()
                 if seconds <= 0:
                     continue
-                if Path(row["arm"]).parents[1] == directory:
+                if pilot == directory:
                     same_pilot.append(seconds)
-                elif row["stage"].startswith("public-") == protocol["stage"].startswith("public-"):
+                elif stage.startswith("public-") == protocol["stage"].startswith("public-"):
                     same_simulator.append(seconds)
     observations = same_pilot or same_simulator
-    return {"prior_recorded_launches": len(observations),
+    typical = median(observations) if observations else None
+    return {"prior_recorded_launches": len(observations), "unreadable_timing_records": unreadable,
             "prior_scope": "same pilot" if same_pilot else "same simulator" if same_simulator else None,
-            "typical_seconds_per_launch": median(observations) if observations else None,
-            "estimated_wall_seconds": median(observations) * count if observations else None}
+            "typical_seconds_per_launch": typical, "estimated_wall_seconds": typical * count if typical is not None else None}
 
 
 def _proc(pid):
@@ -265,8 +274,13 @@ def _save(control, job, **patch):
     job = {**job, **patch, "updated_at": _now()}
     write_json(Path(job["arm"]) / "job.json", job)
     write_json(control / "last_transition.json", job)
-    with (control / "jobs.jsonl").open("a", encoding="utf8") as handle:
-        handle.write(json.dumps(job, ensure_ascii=False, allow_nan=False) + "\n")
+    with (control / "jobs.jsonl").open("a+b") as handle:
+        handle.seek(0, os.SEEK_END)
+        if handle.tell():
+            handle.seek(-1, os.SEEK_END)
+            if handle.read(1) != b"\n":
+                handle.write(b"\n")
+        handle.write((json.dumps(job, ensure_ascii=False, allow_nan=False) + "\n").encode("utf8"))
         handle.flush()
         os.fsync(handle.fileno())
     return job

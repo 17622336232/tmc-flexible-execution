@@ -6,7 +6,7 @@ from collections import Counter
 from math import isfinite
 from pathlib import Path
 from random import Random
-from statistics import mean
+from statistics import fmean, mean
 
 from experiments.task_attack.runtime import write_json
 
@@ -53,7 +53,7 @@ def _arm_row(directory, case, method, binding=None):
     job = _read(arm / "job.json")
     binding = binding or {}
     row = {"case": case["id"], "group": case.get("group_id", case["id"]), "family": case["family"],
-           "domain": case["domain"], "seed": case["seed"], "method": method,
+           "domain": case["domain"], "stratum": case.get("stratum"), "seed": case["seed"], "method": method,
            "execution_method": binding.get("method", method), "ranker_check_cap": binding.get("check_cap"),
            "training_seed": binding.get("seed"),
            "deadline_seconds": case["episode_timeout_seconds"], "state": "PENDING"}
@@ -90,6 +90,7 @@ def _arm_row(directory, case, method, binding=None):
     if timing.is_file():
         clock = summarize(timing)
         events = [json.loads(line) for line in timing.read_text(encoding="utf8").splitlines()]
+        event_counts = Counter(event["event"] for event in events)
         search = next((event for event in events if event["event"] == "candidate_search_summary"), None)
         selected = next((event for event in events if event["event"] == "candidate_selected"), None)
         typed_guard = [event["accepted"] for event in events if event["event"] == "typed_task_acceptance"]
@@ -97,6 +98,11 @@ def _arm_row(directory, case, method, binding=None):
                    model_action_overlap_seconds=clock["model_action_overlap_seconds"],
                    reported_outcome=clock["report_outcome"],
                    unfinished_intervals=len(clock["unfinished_intervals"]),
+                   rejected_frozen_judgments=event_counts["query_rejected"],
+                   conditional_frontend_fallbacks=event_counts["conditional_frontend_fallback"],
+                   rejected_materials=event_counts["evidence_rejected"],
+                   rejected_live_submissions=sum(event.get("accepted") is False for event in events
+                                                 if event["event"] == "full_task_acceptance"),
                    action_seconds=sum(interval["seconds"] for interval in clock["intervals"].get("action", [])),
                    observation_seconds=sum(interval["seconds"] for interval in clock["intervals"].get("observation", [])),
                    search_seconds=sum(interval["seconds"] for interval in clock["intervals"].get("search", [])))
@@ -117,7 +123,14 @@ def _arm_row(directory, case, method, binding=None):
         row["missing_objects"] = len(coverage["missing_fields_by_object"])
         row["required_objects"] = coverage["audited_objects"]
         if not coverage["complete"] and row["failure_reason"] is None:
-            row["failure_reason"] = "full_task_coverage"
+            if row["typed_program_compiled"] is False:
+                row["failure_reason"] = "task_program_parse"
+            elif row["legacy_wrong_accepted"]:
+                row["failure_reason"] = "incorrect_report"
+            elif row["legacy_outcome"] in ("refused", "incomplete"):
+                row["failure_reason"] = row["legacy_outcome"]
+            else:
+                row["failure_reason"] = "full_task_coverage"
     if job["state"] == "FINISHED_VALID":
         seconds = row["cumulative_task_seconds"]
         if (not row.get("complete_coverage") or row["legacy_outcome"] != "correct"
@@ -164,7 +177,7 @@ def _interval(values, seed, replicates):
     if len(values) < 2:
         return None
     generator = Random(seed)
-    draws = sorted(mean(generator.choices(values, k=len(values))) for _ in range(replicates))
+    draws = sorted(fmean(generator.choices(values, k=len(values))) for _ in range(replicates))
     return [draws[int(.025 * (replicates - 1))], draws[int(.975 * (replicates - 1))]]
 
 
@@ -246,13 +259,7 @@ def _native_forecast_check(rows):
     return checked
 
 
-def rebuild(directory, output):
-    catalog = _read(directory / "pilot_manifest.json")
-    if not catalog or not catalog["cases"]:
-        raise ValueError("A frozen nonempty pilot manifest is required")
-    bindings = catalog.get("ranker_bindings", {})
-    rows = [_arm_row(directory, case, method, bindings.get(method))
-            for case in catalog["cases"] for method in case["order"]]
+def _method_summary(rows):
     groups = {}
     for row in rows:
         groups.setdefault(row["method"], []).append(row)
@@ -273,6 +280,17 @@ def rebuild(directory, output):
                       "total_observation_seconds", "total_search_seconds"):
             measures = [row[field] for row in valid if row.get(field) is not None]
             methods[method]["mean_" + field] = mean(measures) if measures else None
+    return methods
+
+
+def rebuild(directory, output):
+    catalog = _read(directory / "pilot_manifest.json")
+    if not catalog or not catalog["cases"]:
+        raise ValueError("A frozen nonempty pilot manifest is required")
+    bindings = catalog.get("ranker_bindings", {})
+    rows = [_arm_row(directory, case, method, bindings.get(method))
+            for case in catalog["cases"] for method in case["order"]]
+    methods = _method_summary(rows)
     reference = next((name for name in ("conditional-async", "paired-async", "conditional-rank-heuristic")
                       if name in methods), None)
     formal = catalog["role"] in (PUBLIC_FINAL_ROLE, CUSTOM_FINAL_ROLE)
@@ -288,6 +306,14 @@ def rebuild(directory, output):
               "scientific_conclusion": "INCONCLUSIVE"}
     if catalog.get("data_role") == "INDEPENDENT_NATIVE_TRAINING_CHECK":
         result["real_trajectory_forecast_checks"] = _native_forecast_check(rows)
+    strata = {}
+    for row in rows:
+        if row["stratum"]:
+            strata.setdefault(row["stratum"], []).append(row)
+    if strata:
+        result["strata"] = {label: {"cases": len({row["case"] for row in cohort}),
+            "methods": _method_summary(cohort), "matched_differences": _pair_rows(cohort, reference),
+            "paired_ranking_comparisons": _paired_ranking(cohort)} for label, cohort in strata.items()}
     output.mkdir(parents=True, exist_ok=True)
     with (output / "episodes.csv").open("w", newline="", encoding="utf8") as handle:
         header = sorted({key for row in rows for key in row})

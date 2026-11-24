@@ -221,11 +221,14 @@ def status(directory):
     manifest = _read(directory / "pilot_manifest.json")
     if manifest is None:
         raise ValueError("Prepare the development pairing schedule before auditing its runs")
-    finished = successful = 0
+    finished = successful = planned_arms = recorded_arms = accepted_arms = 0
     incomplete = []
     for case in manifest["cases"]:
         arms = {method: _arm(directory, case, method) for method in case["order"]}
         waiting = [method for method, outcome in arms.items() if outcome is None]
+        planned_arms += len(arms)
+        recorded_arms += len(arms) - len(waiting)
+        accepted_arms += sum(row["completed_coverage"] for row in arms.values() if row is not None)
         if waiting:
             incomplete.append({"case": case["id"], "pending": waiting})
             continue
@@ -234,4 +237,5 @@ def status(directory):
         finished += 1
         successful += all(row["completed_coverage"] for row in arms.values())
     return {"role": manifest["role"], "planned_pairs": len(manifest["cases"]), "recorded_pairs": finished,
-            "pairs_with_both_reports_and_coverage": successful, "pending": incomplete}
+            "pairs_with_both_reports_and_coverage": successful, "planned_arms": planned_arms,
+            "recorded_arms": recorded_arms, "accepted_arms": accepted_arms, "pending": incomplete}

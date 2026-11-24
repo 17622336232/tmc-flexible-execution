@@ -29,7 +29,7 @@ class ScheduleTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             case = prepare(root, self.defaults, 480)["cases"][0]
-            for method in case["order"]:
+            for count, method in enumerate(case["order"], 1):
                 folder = root / case["id"] / method
                 folder.mkdir(parents=True)
                 preflight = {**case, "mode": PAIRED_MODES[method], "model": "same-model", "reasoning_effort": "max"}
@@ -37,6 +37,9 @@ class ScheduleTests(unittest.TestCase):
                 self.assertEqual(status(root)["recorded_pairs"], 0)
                 (folder / "result.json").write_text(json.dumps({"score": {"outcome": "correct"}}))
                 (folder / "clean_coverage.json").write_text(json.dumps({"complete": True}))
+                self.assertEqual(status(root)["recorded_arms"], count)
+                self.assertEqual(status(root)["accepted_arms"], count)
+                self.assertEqual(status(root)["recorded_pairs"], int(count == 2))
             self.assertEqual(status(root)["pairs_with_both_reports_and_coverage"], 1)
             (folder / "clean_preflight.json").write_text(json.dumps({**preflight, "seed": case["seed"] + 1}))
             with self.assertRaisesRegex(ValueError, "frozen case"):

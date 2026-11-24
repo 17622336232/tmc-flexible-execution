@@ -156,6 +156,12 @@ def status(directory, defaults):
     training_pilot = pilot_manifest.parent / NATIVE_TRAINING_PILOT
     visual_root = directory.parent / VISUAL_INPUTS / "split_manifest_v2.json"
     visual_inputs = read_json(visual_root) if visual_root.is_file() else None
+    visual_development = {}
+    for role, name in VISUAL_PILOTS.items():
+        cohort = pilot_manifest.parent / name
+        visual_development[role] = (pilot_status(cohort) if (cohort / "pilot_manifest.json").is_file() else
+            {"planned_pairs": defaults["data"]["development_" + role + "_instances"],
+             "recorded_pairs": 0, "recorded_arms": 0, "accepted_arms": 0, "catalog_registered": False})
     public = _public_visual(directory.parent)
     public_matched = directory.parent / PUBLIC_VALIDATION_PILOT
     public_final = directory.parent / PUBLIC_FINAL_PILOT
@@ -178,6 +184,7 @@ def status(directory, defaults):
             if (training_pilot / "pilot_manifest.json").is_file() else None),
         "visual_layouts": None if visual_inputs is None else {key: visual_inputs[key] for key in (
             "state", "layout_count", "distinct_asset_groups", "split_roles_share_exact_assets")},
+        "visual_development": visual_development,
         "public_visual_validation": public,
         "public_visual_matched_development": (pilot_status(public_matched)
             if (public_matched / "pilot_manifest.json").is_file() else None),
@@ -363,7 +370,23 @@ def _continue_stage(output_root, directory, defaults, args, launch_limit):
     custom_status_final = pilot_status(custom_final)
     if custom_status_final["recorded_pairs"] < custom_status_final["planned_pairs"]:
         return run_batch(custom_final)
-    return {"execution_status": "READY", "stage": "evaluation-development",
+    from .pilot_report import rebuild
+
+    evaluated = {"custom": custom_final}
+    if public_status_final:
+        evaluated["public"] = public_final
+    reports = {}
+    for name, cohort in evaluated.items():
+        report_dir = output_root / "study-reports" / name
+        result = rebuild(cohort, report_dir)
+        if result["recorded_episodes"] != result["planned_episodes"]:
+            raise ValueError("The rebuilt final report does not contain its registered episodes")
+        reports[name] = {"summary": str(report_dir / "summary.json"), "episodes": str(report_dir / "episodes.csv"),
+                         "recorded_episodes": result["recorded_episodes"]}
+    status = "IN_PROGRESS" if public_status_final else "BLOCKED_EXTERNAL"
+    next_action = ("Inspect the independently rebuilt paired results and prepare the research conclusions"
+                   if public_status_final else "Restore the registered ProcTHOR input and validation pilot")
+    return {"execution_status": status, "stage": "reproducible-analysis",
             "scientific_conclusion": "INCONCLUSIVE", "run_directory": str(directory), "development": development,
             "ranker_development": ranked_status, "typed_vision_development": typed_status,
             "public_visual_validation": _public_visual(output_root),
@@ -371,7 +394,7 @@ def _continue_stage(output_root, directory, defaults, args, launch_limit):
             "public_visual_heldout": public_status_final,
             "custom_visual_heldout": custom_status_final,
             "visual_calibration": calibrated_status, "visual_selection": selected_status,
-            "next_action": "Finish baseline and protocol checks before the held-out test"}, 0
+            "final_reports": reports, "next_action": next_action}, 0
 
 
 def _continue(output_root, directory, defaults, args):
