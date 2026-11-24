@@ -7,6 +7,7 @@ from itertools import count
 from math import dist, isfinite
 from time import monotonic
 
+from .candidate_ranking import RANKED_METHODS, select_ranked
 from .executor import forecast_async, permitted_observation, project, ready_times, report_time
 from .gpt_vision import OUTCOMES
 from .search import Search, witness
@@ -20,7 +21,7 @@ LATE_GRANT = re.compile(
 RESTRICTION = re.compile(r"不得|禁止|仅在|才可|才允许|之后才能|之后方可|do not|must not|only after", re.I)
 BODY_IDENTITY = re.compile(r"(?:编号|身份)[^。；\n]{0,24}(?:本体|本身)|(?:body|asset) identity", re.I)
 NEW_METHODS = ("conditional-serial", "conditional-async", "conditional-prefetch", "conditional-planner", "conditional-a")
-CONDITIONAL_MODES = {name: "ACTUAL_GPT_" + name.upper().replace("-", "_") for name in NEW_METHODS}
+CONDITIONAL_MODES = {name: "ACTUAL_GPT_" + name.upper().replace("-", "_") for name in NEW_METHODS + RANKED_METHODS}
 
 
 def needs_body_identity(instruction):
@@ -136,7 +137,7 @@ def _planner(task, state, *, budget_ms, max_candidates, max_prepare, log):
     return best
 
 
-def select(task, state, method, log, *, budget_ms=1000, max_candidates=32, max_prepare=3):
+def select(task, state, method, log, *, budget_ms=1000, max_candidates=32, max_prepare=3, ranked_policy=None):
     for skill in task.skills:
         action = permitted_observation(task, state, skill)
         log("candidate_generated", candidate=skill.id, materials=list(skill.covers), site=skill.site,
@@ -146,7 +147,13 @@ def select(task, state, method, log, *, budget_ms=1000, max_candidates=32, max_p
     if method in ("conditional-serial", "conditional-async"):
         log("candidate_rejected", reason="ordinary policy does not advance branch-specific material")
         return None
-    if method == "conditional-planner":
+    if method in RANKED_METHODS:
+        if ranked_policy is None:
+            raise ValueError("The learned comparison needs its frozen ranking profile")
+        choice = select_ranked(task, state, checked, log, ranker=ranked_policy.ranker,
+                               check_cap=min(max_candidates, ranked_policy.check_cap), budget_ms=budget_ms,
+                               max_prepare=max_prepare, minimum_net_gain=ranked_policy.minimum_net_gain)
+    elif method == "conditional-planner":
         choice = _planner(task, state, budget_ms=budget_ms, max_candidates=max_candidates,
                           max_prepare=max_prepare, log=log)
     else:

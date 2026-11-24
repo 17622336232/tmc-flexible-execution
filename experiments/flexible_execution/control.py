@@ -16,6 +16,7 @@ from experiments.task_attack.model import EXTERNAL_RESPONSE_CODES
 from experiments.task_attack.runtime import write_json
 
 from .clean_coverage import audit_run
+from .learning_schedule import ROLE as RANKER_ROLE, registered_config
 from .live_planning import CONDITIONAL_MODES
 from .pilot_schedule import PAIRED_MODES, _read, _valid_preflight
 from .request_budget import RequestBudget
@@ -40,6 +41,7 @@ RUN_SOURCES = (
 )
 CONDITIONAL_SOURCES = ("experiments/flexible_execution/adapters/live_inspection.py",
                        "experiments/flexible_execution/live_planning.py")
+RANKING_SOURCE = "experiments/flexible_execution/candidate_ranking.py"
 
 
 def _now():
@@ -97,8 +99,12 @@ def simulator_running(control):
 
 def _runtime_inputs(checkout, catalog, auth_project, ports):
     sources = []
-    conditional = catalog.get("role") == "CONDITIONAL_CONNECTION_DEVELOPMENT"
-    for label in RUN_SOURCES + (CONDITIONAL_SOURCES if conditional else ()):
+    ranked = catalog.get("role") == RANKER_ROLE
+    conditional = ranked or catalog.get("role") == "CONDITIONAL_CONNECTION_DEVELOPMENT"
+    stage_sources = CONDITIONAL_SOURCES if conditional else ()
+    if ranked or (conditional and (checkout / RANKING_SOURCE).is_file()):
+        stage_sources += (RANKING_SOURCE,)
+    for label in RUN_SOURCES + stage_sources:
         source = checkout / label
         if source.is_dir():
             sources.extend(path for path in source.rglob("*") if path.is_file() and
@@ -111,8 +117,9 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
     system_paths = [Path("/etc/os-release"), Path("/opt/ros/noetic/setup.bash"),
                     legacy / "sim_ws/devel/setup.bash", legacy / "sim_ws/devel/lib/vla_sim/vla_traj_server",
                     legacy / "sim_ws/devel/lib/vla_sim/vla_cloud_bridge", legacy / ".venv/pyvenv.cfg"]
-    return {"version": 3 if conditional else 2,
-            "stage": "conditional-development" if conditional else "matched-baselines", "catalog_sha256": _hash(catalog),
+    return {"version": 4 if ranked else (3 if conditional else 2),
+            "stage": "ranked-development" if ranked else ("conditional-development" if conditional else "matched-baselines"),
+            "catalog_sha256": _hash(catalog),
             "model": MODEL, "reasoning_effort": EFFORT, "request_limit": REQUEST_LIMIT,
             "max_infra_attempts": MAX_ATTEMPTS, "startup_cleanup_seconds": STARTUP_CLEANUP_SECONDS,
             "ros_ports": list(ports), "auth_project": str(auth_project), "legacy_project": str(legacy.resolve()),
@@ -149,6 +156,7 @@ def plans(directory, protocol, catalog):
             identifier = f"v{protocol['version']}-{case['id']}-{method}-{fingerprint[:16]}"
             yield {"id": identifier, "stage": protocol["stage"], "input_sha256": fingerprint,
                    "case": case, "method": method, "model": protocol["model"],
+                   "ranker_config_sha256": catalog.get("ranker_config_sha256"),
                    "reasoning_effort": protocol["reasoning_effort"], "state": "PENDING", "attempt": 0,
                    "arm": str(directory / case["id"] / method)}
 
@@ -177,6 +185,8 @@ def _evidence(root, job):
     expected_limit = job.get("request_limit")
     if expected_limit is not None and pre.get("request_budget", {}).get("limit") != expected_limit:
         raise ValueError("Result uses a different request budget: " + str(root))
+    if pre.get("ranker_config_sha256") != job.get("ranker_config_sha256"):
+        raise ValueError("Result uses a different ranking profile: " + str(root))
     return pre, _read(root / "result.json")
 
 
@@ -348,6 +358,8 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
         raise ValueError("The existing pilot schedule is required")
     if catalog.get("cost_config_sha256") and _hash(_read(directory / "calibrated_costs.json")) != catalog["cost_config_sha256"]:
         raise ValueError("Conditional cost calibration does not match its frozen catalog")
+    if catalog.get("role") == RANKER_ROLE:
+        registered_config(directory, catalog)
     ports = (11674, 11675)
     protocol = _runtime_inputs(checkout, catalog, auth_project, ports)
     lock = directory / "run_protocol.json"
@@ -437,6 +449,9 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
                 command.extend(("--early-fields", ",".join(next_case["early_fields"])))
             if next_case.get("handoff_at_observation"):
                 command.append("--handoff-at-observation")
+        if catalog.get("role") == RANKER_ROLE:
+            registered_config(directory, catalog)
+            command.extend(("--ranker-config", str(directory / "calibrated_rankers.json")))
         config = {"state": "RUNNING", "process": None, "attempt": attempt, "command": command,
                   "workdir": str(checkout), "started_at": _now(), "finished_at": None, "result": None,
                   "request_ledger": str(ledger), "request_limit": REQUEST_LIMIT, "request_budget": budget,

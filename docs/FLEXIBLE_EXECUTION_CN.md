@@ -63,11 +63,38 @@ python3 -m experiments.flexible_execution.cli audit-clean \
   --episode-dir outputs/existing-gpt-pilot/cracks-serial-seed1-recheck
 ```
 
-开发实例排程从现有 24 项任务各安排两组种子，并固定每组的串行和异步运行顺序。准备和状态命令只读写本地文件。当前首轮完整配对还需要实际模型验证，排程不当作已经取得的数据。
+开发实例排程从现有 24 项任务各安排两组种子，并固定每组的串行和异步运行顺序。准备和状态命令只读写本地文件。执行命令核对冻结协议，跳过已经验收的回合，并在有记录的剩余预算内接续。
 
 ```bash
 python3 -m experiments.flexible_execution.cli pilot-prepare --pilot-dir outputs/natural-pilot
 python3 -m experiments.flexible_execution.cli pilot-status --pilot-dir outputs/natural-pilot
+python3 -m experiments.flexible_execution.cli continue --profile local5060 --resume --max-jobs 2
+python3 -m experiments.flexible_execution.cli pilot-report \
+  --pilot-dir outputs/natural-pilot --output outputs/natural-pilot/reports/base
 ```
 
 配对目录用 `pair-001/paired-serial` 和 `pair-001/paired-async` 这样的相对路径。状态核对同一场景种子、任务、设备数量、后端、时限、模型和推理强度，两边都产生运行结果才记为已记录，整项覆盖另外统计。
+
+## 候选排序和公开视觉
+
+在线候选先通过廉价的许可和路线准入。普通成功标签模型和完整代价标签模型使用同一候选及特征，排序以后才逐项检查共同后续。C 在同一个检查上限下按预测净收益提前停止。动作派发前仍用当前状态复查许可、可达性和预留时间。符号训练、实际可见状态回放和在线视觉对照分别记账。
+
+```bash
+python3 -m experiments.flexible_execution.cli ranker-diagnostic \
+  --data-dir outputs/ranker-diagnostic-v1 --sizes 1000 3000 10000
+python3 -m experiments.flexible_execution.cli pilot-run \
+  --pilot-dir outputs/natural-pilot/learned-order-v1 --resume --max-jobs 4
+```
+
+公开验证入口在 `experiments.flexible_execution.public_task`。AI2-THOR 固定在 5.0.0，从官方 ProcTHOR 验证集加载房屋。相机通过软件 OpenGL 取得初始和侧向图像。模型收到任务文字和执行过程中拍到的 RGB。独立评分用姿态和实例分割核对完整报告。公开房间是本研究的派生任务，正式测试取官方测试房屋，验证房用于调试。 [ProcTHOR 官方数据](https://github.com/allenai/procthor-10k/tree/439193522244720b86d8c81cde2e51e3a4d150cf)
+
+## 参考工作的数据和训练方式
+
+| 工作 | 数据与实验 | 本项目采用的做法 |
+| --- | --- | --- |
+| SELP | 自建无人机导航及桌面操作任务，有领域内规划微调、约束核验和仿真实验。 [论文](https://arxiv.org/html/2409.19471) | 由任务约束和环境核验候选，用独立规则核对成功。 |
+| TypeFly | 作者编排难度递增的飞行任务，用提示词让云端模型生成 MiniSpec，视觉在边缘处理，执行中可继续查询。规划模型采用提示工程。 [项目](https://typefly.github.io/) | 使用现有模型，保留任务总时延、查询和真实动作的账；分段执行需另行比较。 |
+| Hi Robot | 用遥操作示范和基于观测构造的对话训练高层策略，同时训练底层控制，在实体机器人上验证。 [论文](https://arxiv.org/html/2502.19417) | 用实拍图和已执行动作生成监督依据，分别记录上层规划与底层执行。 |
+| InteLiPlan | 300 条自建文本样本覆盖正常及失败恢复场景，视觉与可行性转为文本输入，LoRA 微调 Mistral 7B 和 DeepSeek 8B。 [论文](https://arxiv.org/html/2409.14506v4) | 保留失败与恢复的训练标签，冻结在线视觉及证据检查。 |
+
+当前闭环模型为 GPT-6.1 Terra（max），A 无需微调。B1 在本机训练小排序器。Qwen3-1.7B 留作 B2 的压缩对照。

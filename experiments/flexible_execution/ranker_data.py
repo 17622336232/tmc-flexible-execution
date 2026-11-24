@@ -6,6 +6,7 @@ from itertools import permutations
 from math import dist
 from random import Random
 
+from .candidate_ranking import features
 from .evaluate import score
 from .executor import forecast_async, permitted_observation, project, ready_times
 from .fixtures import Diagnostic, QueryFixture
@@ -92,26 +93,6 @@ class _CandidateRollout(Episode):
             self.act(action, "candidate_before_pending_fallback")
 
 
-def _features(task, snapshot, prefix):
-    elapsed = snapshot.at
-    current = snapshot
-    requested = set()
-    duration = 0.
-    for action in prefix:
-        requested.update(action.skill.covers)
-        duration += action.seconds
-        current = project(task, current, action)
-    query = task.queries[0]
-    return [
-        float(len(prefix)), duration / task.deadline, len(requested) / len(task.requirements),
-        len(snapshot.evidence) / len(task.requirements), (task.deadline - elapsed) / task.deadline,
-        (query.estimated_ready - elapsed) / task.deadline, (query.latest_ready - elapsed) / task.deadline,
-        sum(action.skill.fresh_for is not None for action in prefix) / len(prefix),
-        sum(action.skill.permission is None for action in prefix) / len(prefix),
-        task.travel_seconds(current.site, task.terminal) / task.deadline,
-    ]
-
-
 def _rollouts(case, prefix):
     results = []
     for branch in BRANCHES:
@@ -152,7 +133,7 @@ def label(case, group_hash, structure_hash):
             result_seconds = (sum(row["restricted_seconds"] for row in rollouts) / len(rollouts)
                               if rollouts else case.task.deadline)
             candidates.append({"candidate": [skill.id for skill in skills],
-                               "features": _features(case.task, state, actions),
+                               "features": features(case.task, state, actions),
                                "verified_common_continuation": bool(proof),
                                "success_label": int(successful),
                                "cost_gain_label": (baseline_seconds - result_seconds) / case.task.deadline,

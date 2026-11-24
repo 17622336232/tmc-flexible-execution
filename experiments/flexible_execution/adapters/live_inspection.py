@@ -7,7 +7,6 @@ from dataclasses import asdict, replace
 from hashlib import sha256
 from io import BytesIO
 from math import dist, isfinite
-from threading import Event
 from time import monotonic
 
 from PIL import Image
@@ -177,18 +176,17 @@ def _worlds(instruction, intent, target, first_pose, views, started, timeout, co
 
 
 async def _inspect(backend, directory, trace, client, started, task, spec, poses, materials, source, first,
-                   first_target, reused, question, independent, method, hold_at_view):
+                   first_target, reused, question, independent, method, hold_at_view, ranked_policy):
     elapsed = lambda: monotonic() - started
     loop = asyncio.get_running_loop()
     log = lambda event, **fields: trace.event(event, 3, **fields)
-    invoked = Event()
     final_deadline = started + task.deadline
     client.deadline_monotonic = started + spec.latest_ready
+    sent_before = client.calls
 
     def infer(payload, prompt):
         with trace.measure("model_request", 3, purpose="judge_frozen_photo", frame_id=first.id,
                            image_sha256=first.digest):
-            invoked.set()
             return judge(client, payload, prompt)
 
     steps = 3
@@ -226,10 +224,12 @@ async def _inspect(backend, directory, trace, client, started, task, spec, poses
         return observed
 
     try:
-        if await loop.run_in_executor(None, invoked.wait, max(0., spec.latest_ready - elapsed())):
+        while not future.done() and client.calls == sent_before:
+            await asyncio.sleep(.015)
+        if not future.done():
             state = Snapshot(elapsed(), location, {}, {}, {})
             with trace.measure("search", 3, policy=method):
-                choice = select(task, state, method, log)
+                choice = select(task, state, method, log, ranked_policy=ranked_policy)
             if choice and not future.done() and checked(task, replace(state, at=elapsed()), choice.prepare)[0]:
                 for action in choice.prepare:
                     if future.done() or elapsed() + action.seconds + task.report_seconds >= task.deadline:
@@ -371,7 +371,8 @@ def submission_guard(task_text, directory, model, trace, conditional_summary):
     return validate
 
 
-def run_live(backend, instruction, directory, event, timeout, *, model, trace, method, costs, hold_at_view=False):
+def run_live(backend, instruction, directory, event, timeout, *, model, trace, method, costs, hold_at_view=False,
+             ranked_policy=None):
     started = monotonic()
     model.deadline_monotonic = backend.execution_deadline_monotonic = started + timeout
     outcome = None
@@ -421,7 +422,8 @@ def run_live(backend, instruction, directory, event, timeout, *, model, trace, m
                    "calibration_id": costs.calibration_id, "method": method, "handoff_at_observation": hold_at_view})
         outcome = asyncio.run(_inspect(backend, directory, trace, model, started, task, spec, poses, materials,
                               source, first, target, reused, intent.question,
-                              [(other, goal) for other, goal in measured if other.id != target.id], method, hold_at_view))
+                              [(other, goal) for other, goal in measured if other.id != target.id], method,
+                              hold_at_view, ranked_policy))
         step = outcome["step"]
     except (RuntimeError, ValueError) as error:
         if getattr(model, "external_error", None) is not None:

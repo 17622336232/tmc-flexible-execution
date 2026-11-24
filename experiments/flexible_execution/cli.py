@@ -9,7 +9,8 @@ import yaml
 
 from .audit import capture
 from .clean_coverage import audit_run
-from .control import DEFAULT_AUTH_PROJECT, control_status, pilot_run
+from .control import DEFAULT_AUTH_PROJECT, control_status, is_live, pilot_run
+from .learning_schedule import prepare_ranker_pilot
 from .live_audit import audit_live_connection
 from .live_calibration import calibrate
 from .pilot_schedule import prepare as prepare_pilot, prepare_conditional, status as pilot_status
@@ -83,6 +84,23 @@ def _ranker_diagnostic(output_root):
             "training_sizes": sorted({row["training_states"] for row in rows["run_rows"]})}
 
 
+def _public_visual(output_root):
+    attempts = []
+    for directory in sorted((output_root / "public-visual").glob("closed-loop-attempt-*")):
+        result = directory / "result.json"
+        process = directory / "process.json"
+        identity = read_json(process).get("process") if process.is_file() else None
+        if result.is_file():
+            data = read_json(result)
+            attempts.append({"directory": str(directory), "state": "RECORDED", "complete": data["complete"],
+                             "requests": data["requests"]["reserved"], "seconds": data["episode_seconds"]})
+        elif is_live(identity):
+            attempts.append({"directory": str(directory), "state": "RUNNING", "process": identity})
+        else:
+            attempts.append({"directory": str(directory), "state": "EXITED_NEEDS_RECOVERY"})
+    return attempts
+
+
 def status(directory, defaults):
     path = directory / "protocol.json"
     stats_path = directory / "statistics.json"
@@ -101,14 +119,19 @@ def status(directory, defaults):
                 for trial in gpt)
     live = control_status(directory.parent / "control")
     pilot_manifest = directory.parent / "natural-pilot" / "pilot_manifest.json"
+    ranker_pilot = pilot_manifest.parent / "learned-order-v1"
+    public = _public_visual(directory.parent)
+    online_public = [job for job in public if job["state"] == "RUNNING"]
     return {
         "profile": defaults["execution_profile"],
-        "execution_status": live["execution_status"],
+        "execution_status": "RUNNING" if online_public else live["execution_status"],
         "scientific_conclusion": live["scientific_conclusion"],
         "control": live,
         "development": pilot_status(pilot_manifest.parent) if pilot_manifest.is_file() else None,
         "conditional_development": _conditional_results(pilot_manifest.parent),
         "ranker_diagnostic": _ranker_diagnostic(directory.parent),
+        "ranker_live_development": pilot_status(ranker_pilot) if (ranker_pilot / "pilot_manifest.json").is_file() else None,
+        "public_visual_validation": public,
         "run_directory": str(directory),
         "local_diagnostics": {"completed": completed, "planned": planned, "summary": stats},
         "legacy_cpu_sensor": _sensor_result(directory / "legacy_cpu_sensor"),
@@ -133,6 +156,9 @@ def _continue(output_root, directory, defaults, args):
     state = control_status(control)
     if state["active_jobs"] or (state["execution_status"] == "BLOCKED_EXTERNAL" and not args.retry_external):
         return state
+    active_public = [row for row in _public_visual(output_root) if row["state"] == "RUNNING"]
+    if active_public:
+        return {"execution_status": "RUNNING", "stage": "public-visual-validation", "active_jobs": active_public}
     pilots = output_root / "natural-pilot"
     if not (pilots / "pilot_manifest.json").is_file():
         prepare_pilot(pilots, defaults, 480)
@@ -194,9 +220,22 @@ def _continue(output_root, directory, defaults, args):
         return run_batch(comparison)
     if development["recorded_pairs"] < development["planned_pairs"]:
         return run_batch(pilots)
-    return {"execution_status": "READY", "stage": "ranker-data",
+    diagnostic = output_root / "ranker-diagnostic-v1"
+    if not (diagnostic / "latest_summary.json").is_file():
+        from .ranker_train import experiments
+
+        experiments(diagnostic, defaults["data"]["training_state_counts"], defaults["data"]["split_seed"])
+    ranked = pilots / "learned-order-v1"
+    if not (ranked / "pilot_manifest.json").is_file():
+        prepare_ranker_pilot(ranked, read_json(pilots / "pilot_manifest.json"),
+                             read_json(comparison / "calibrated_costs.json"), diagnostic)
+    ranked_status = pilot_status(ranked)
+    if ranked_status["recorded_pairs"] < ranked_status["planned_pairs"]:
+        return run_batch(ranked)
+    return {"execution_status": "READY", "stage": "evaluation-development",
             "scientific_conclusion": "INCONCLUSIVE", "run_directory": str(directory), "development": development,
-            "next_action": "Generate verified, independently grouped candidate-cost labels"}
+            "ranker_development": ranked_status, "public_visual_validation": _public_visual(output_root),
+            "next_action": "Finish visual development data and protocol checks before the held-out test"}
 
 
 def main(argv=None):

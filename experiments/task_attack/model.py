@@ -99,6 +99,7 @@ class ModelClient:
             self.request_timeout()
             record['logical_job_attempt']=self.request_budget.reserve(
                 model=MODEL,effort=self.effort,image_sha256=record['image_sha256'])
+            record['dispatched_monotonic_seconds']=time.monotonic()
             self.calls += 1
 
         try:
@@ -125,6 +126,8 @@ class ModelClient:
             raise
         finally:
             record['wall_seconds'] = time.monotonic()-start
+            if 'dispatched_monotonic_seconds' in record:
+                record['return_monotonic_seconds']=time.monotonic()
             self.wall_seconds += record['wall_seconds']
             if self.log:
                 self.log.parent.mkdir(parents=True,exist_ok=True)

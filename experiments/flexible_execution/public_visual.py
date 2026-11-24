@@ -3,6 +3,7 @@
 import argparse
 import gzip
 import hashlib
+from io import BytesIO
 import json
 import os
 from pathlib import Path
@@ -45,9 +46,8 @@ def prepare_build(build_dir, renderer):
     return {"commit": THOR_COMMIT, "source": build.url, "executable": build.executable_path}
 
 
-def smoke(archive, output, build_dir, index=0, renderer="vulkan", display=None):
+def open_controller(house, build_dir, renderer, display, *, segmentation=False, timeout=90):
     from ai2thor.controller import Controller
-    from PIL import Image
 
     class ProjectController(Controller):
         @property
@@ -58,29 +58,45 @@ def smoke(archive, output, build_dir, index=0, renderer="vulkan", display=None):
             command = super().unity_command(width, height, headless)
             return command + ["-force-glcore"] if renderer == "opengl" else command
 
+    return ProjectController(scene=house, platform=_platform(renderer), commit_id=THOR_COMMIT,
+                             width=320, height=240, x_display=display, renderDepthImage=False,
+                             renderInstanceSegmentation=segmentation, rotateStepDegrees=90,
+                             server_start_timeout=timeout)
+
+
+def camera_jpeg(event):
+    from PIL import Image
+
+    pixels = event.frame
+    if not event.metadata["lastActionSuccess"] or pixels is None or pixels.shape != (240, 320, 3):
+        raise RuntimeError("The Unity renderer did not return a complete RGB observation")
+    if int(pixels.min()) >= int(pixels.max()):
+        raise RuntimeError("The camera returned a single-color frame")
+    payload = BytesIO()
+    Image.fromarray(pixels).save(payload, format="JPEG", quality=90)
+    return payload.getvalue()
+
+
+def source_record(index, digest, renderer, mode):
+    return {"dataset": "ProcTHOR-10K", "official_split": "val", "revision": PROCTHOR_REVISION,
+            "archive_sha256": VALIDATION_SHA256, "archive_bytes": VALIDATION_BYTES, "house_index": index,
+            "house_sha256": digest, "mode": mode, "ai2thor": "5.0.0",
+            "platform": _platform(renderer).__name__, "renderer": renderer, "build_commit": THOR_COMMIT}
+
+
+def smoke(archive, output, build_dir, index=0, renderer="vulkan", display=None):
     house, digest = _house(archive, index)
     started = monotonic()
     output.mkdir(parents=True, exist_ok=False)
-    manifest = {"dataset": "ProcTHOR-10K", "official_split": "val", "revision": PROCTHOR_REVISION,
-                "archive_sha256": VALIDATION_SHA256, "archive_bytes": VALIDATION_BYTES, "house_index": index,
-                "house_sha256": digest, "mode": "PUBLIC_VISUAL_VALIDATION_SMOKE", "ai2thor": "5.0.0",
-                "platform": _platform(renderer).__name__, "renderer": renderer, "build_commit": THOR_COMMIT}
+    manifest = source_record(index, digest, renderer, "PUBLIC_VISUAL_VALIDATION_SMOKE")
     write_json(output / "source.json", manifest)
     controller = None
     try:
-        controller = ProjectController(scene=house, platform=_platform(renderer), commit_id=THOR_COMMIT,
-                                       width=320, height=240, x_display=display,
-                                       renderDepthImage=False, renderInstanceSegmentation=False,
-                                       rotateStepDegrees=90, server_start_timeout=90.)
+        controller = open_controller(house, build_dir, renderer, display)
         observations = []
         for step, event in enumerate((controller.last_event, controller.step(action="RotateRight")), 1):
-            pixels = event.frame
-            if not event.metadata["lastActionSuccess"] or pixels is None or pixels.shape != (240, 320, 3):
-                raise RuntimeError("The Unity renderer did not return a complete RGB observation")
-            if int(pixels.min()) >= int(pixels.max()):
-                raise RuntimeError("The camera returned a single-color frame")
             path = output / f"camera_{step}.jpg"
-            Image.fromarray(pixels).save(path, format="JPEG", quality=90)
+            path.write_bytes(camera_jpeg(event))
             pose = event.metadata["agent"]
             observations.append({"frame": path.name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
                                  "position": pose["position"], "rotation": pose["rotation"]})

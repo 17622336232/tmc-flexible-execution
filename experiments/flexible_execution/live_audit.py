@@ -32,7 +32,15 @@ def audit_live_connection(episode):
                         and frozen_call.get("image_sha256") == [photo["sha256"]])
     interval = {row["event"]: row["monotonic_seconds"] for row in rows
                 if row.get("purpose") == "judge_frozen_photo" and row["event"].startswith("model_request_")}
-    if not {"model_request_started", "model_request_finished"} <= interval.keys():
+    precise_interval = {"model_request_started": frozen_call.get("dispatched_monotonic_seconds"),
+                        "model_request_finished": frozen_call.get("return_monotonic_seconds")}
+    timing_source = "no_complete_model_interval"
+    if all(isinstance(value, (float, int)) for value in precise_interval.values()):
+        interval = precise_interval
+        timing_source = "recorded_dispatch_and_model_return"
+    elif {"model_request_started", "model_request_finished"} <= interval.keys():
+        timing_source = "outer_request_timeline"
+    else:
         interval = {}
     witnesses = [row for row in rows if row["event"] == "candidate_checked" and row.get("common")]
     grant = {row["field"] for row in rows if row["event"] == "permission_checked" and row["early"]}
@@ -74,7 +82,7 @@ def audit_live_connection(episode):
                          captured["monotonic_seconds"] < interval["model_request_finished"],
                          "used_by_full_controller": sent_to_controller})
     report = episode / "clean_coverage.json"
-    return {"frozen_photo_bound": frozen_bound, "accepted_materials": accepted,
+    return {"frozen_photo_bound": frozen_bound, "model_timing_source": timing_source, "accepted_materials": accepted,
             "full_report_coverage": bool(report.is_file() and read_json(report)["complete"]),
             "live_report_verifier_accepted": any(row["event"] == "full_task_acceptance" and row["accepted"]
                                                  for row in rows),

@@ -1,6 +1,7 @@
 """Rebuild paired development metrics from saved arm outcomes and event ledgers."""
 
 import csv
+import json
 from math import isfinite
 from pathlib import Path
 from random import Random
@@ -47,10 +48,19 @@ def _arm_row(directory, case, method):
     timing = root / "private/robot/timeline.jsonl"
     if timing.is_file():
         clock = summarize(timing)
+        events = [json.loads(line) for line in timing.read_text(encoding="utf8").splitlines()]
+        ranking = next((event for event in events if event["event"] == "candidate_search_summary"
+                        and "ranker" in event), None)
         row.update(model_request_seconds=clock["model_request_seconds"],
                    model_action_overlap_seconds=clock["model_action_overlap_seconds"],
+                   reported_outcome=clock["report_outcome"],
+                   unfinished_intervals=len(clock["unfinished_intervals"]),
                    action_seconds=sum(interval["seconds"] for interval in clock["intervals"].get("action", [])),
+                   observation_seconds=sum(interval["seconds"] for interval in clock["intervals"].get("observation", [])),
                    search_seconds=sum(interval["seconds"] for interval in clock["intervals"].get("search", [])))
+        if ranking:
+            row.update(ranked_candidates=ranking["generated"], ranked_candidates_verified=ranking["checked"],
+                       ranking_stop_reason=ranking["stop_reason"], checkpoint_sha256=ranking["checkpoint"])
     if result and result.get("execution_completed") and (root / "clean_coverage.json").is_file():
         coverage = audit_run(root)
         saved = _read(root / "clean_coverage.json")
@@ -59,6 +69,8 @@ def _arm_row(directory, case, method):
         row["complete_coverage"] = coverage["complete"]
         row["missing_objects"] = len(coverage["missing_fields_by_object"])
         row["required_objects"] = coverage["audited_objects"]
+        if not coverage["complete"] and row["failure_reason"] is None:
+            row["failure_reason"] = "full_task_coverage"
     if job["state"] == "FINISHED_VALID":
         seconds = row["cumulative_task_seconds"]
         if (not row.get("complete_coverage") or row["legacy_outcome"] != "correct"
@@ -66,6 +78,8 @@ def _arm_row(directory, case, method):
                 or not 0 < seconds <= row["deadline_seconds"]):
             raise ValueError("A saved success failed independent validation for " + row["logical_id"])
         row.update(success=True, restricted_seconds=seconds)
+    if row.get("reported_outcome") is not None:
+        row["wrong_completion_claim"] = row["reported_outcome"] == "accepted" and not row["success"]
     return row
 
 
@@ -119,14 +133,18 @@ def rebuild(directory, output):
         valid = [row for row in cases if row["state"] in RECORDED]
         methods[method] = {"planned": len(cases), "recorded": len(valid),
                            "successes": sum(row["success"] for row in valid),
+                           "scored_completion_claims": sum("wrong_completion_claim" in row for row in valid),
+                           "wrong_completion_claims": sum(row.get("wrong_completion_claim", False) for row in valid),
                            "statuses": {state: sum(row["state"] == state for row in cases)
                                         for state in sorted({row["state"] for row in cases})},
                            "mean_restricted_seconds": mean(row["restricted_seconds"] for row in valid) if valid else None}
-    reference = "conditional-async" if "conditional-async" in methods else "paired-async"
+    reference = next((name for name in ("conditional-async", "paired-async", "conditional-rank-heuristic")
+                      if name in methods), None)
     result = {"mode": "NATURAL_LATENCY_DEVELOPMENT", "role": catalog["role"], "reference": reference,
               "planned_episodes": len(rows), "recorded_episodes": sum(r["state"] in RECORDED for r in rows),
               "methods": methods, "matched_differences": _pair_rows(rows, reference),
-              "energy_measurement": None, "scientific_conclusion": "INCONCLUSIVE"}
+              "energy_measurement": None, "independently_scored_constraint_violations": None,
+              "scientific_conclusion": "INCONCLUSIVE"}
     output.mkdir(parents=True, exist_ok=True)
     with (output / "episodes.csv").open("w", newline="", encoding="utf8") as handle:
         header = sorted({key for row in rows for key in row})

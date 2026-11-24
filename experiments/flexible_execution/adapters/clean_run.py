@@ -17,10 +17,12 @@ from experiments.task_attack.runtime import write_json
 from experiments.task_attack_integrity.run import main as run_simulation
 from uav_bridge.chatgpt_auth import CredentialStore
 
+from ..candidate_ranking import RANKED_METHODS, RankedPolicy
 from ..clean_coverage import audit_run
 from ..live_planning import CONDITIONAL_MODES, Costs, EARLY_GRANT
 from ..pilot_schedule import PAIRED_MODES
 from ..request_budget import RequestBudget
+from ..runner import _hash
 from ..timeline import Timeline, summarize
 from .gpt_probe import run_paired, run_probe
 
@@ -64,6 +66,7 @@ def main(argv=None):
     parser.add_argument("--max-request-attempts", type=int, default=24)
     parser.add_argument("--request-ledger", type=Path, help="Persistent request ledger for this logical job")
     parser.add_argument("--cost-config", type=Path, help="Calibrated design input for the conditional methods")
+    parser.add_argument("--ranker-config", type=Path, help="Frozen candidate scoring and check budget")
     parser.add_argument("--early-fields", help="Shared controlled-language grant for this development instance")
     parser.add_argument("--handoff-at-observation", action="store_true",
                         help="Allow a shared handoff at the acquired view with time reserved to revisit")
@@ -78,6 +81,10 @@ def main(argv=None):
     conditional = args.method in CONDITIONAL_MODES
     if conditional != bool(args.cost_config) or ((args.early_fields or args.handoff_at_observation) and not conditional):
         parser.error("Conditional methods require a cost file and own the optional development grant")
+    if (args.method in RANKED_METHODS) != bool(args.ranker_config):
+        parser.error("Ranking methods require the registered ranking profile")
+    ranking = json.loads(args.ranker_config.read_text(encoding="utf8")) if args.ranker_config else None
+    profile = RankedPolicy.load(ranking["policies"][args.method], args.method) if ranking else None
     clause = ""
     early_fields = args.early_fields.split(",") if args.early_fields else []
     if early_fields:
@@ -110,6 +117,8 @@ def main(argv=None):
     if conditional:
         preflight.update(early_fields=early_fields, calibration_id=costs.calibration_id,
                          handoff_at_observation=args.handoff_at_observation)
+    if ranking:
+        preflight.update(ranker_config_sha256=_hash(ranking), ranker_policy=ranking["policies"][args.method])
     ready = (preflight["signed_in"] and preflight["plan_usage_enabled"] and preflight["model_in_catalog"]
              and (preflight["access_token_valid"] or preflight["refresh_available"]))
     preflight["ready_to_attempt_model_call"] = ready
@@ -123,7 +132,8 @@ def main(argv=None):
         client = ModelClient(directory / "model_calls.jsonl", credential_store=credentials, request_budget=budget)
         execution = {"serial": run_agent, "async-probe": run_probe}.get(args.method)
         if conditional:
-            execution = partial(run_live, method=args.method, costs=costs, hold_at_view=args.handoff_at_observation)
+            execution = partial(run_live, method=args.method, costs=costs, hold_at_view=args.handoff_at_observation,
+                                ranked_policy=profile)
             if clause:
                 original_hash = sha256(task.encode("utf8")).hexdigest()
                 task = task + "\n" + clause
