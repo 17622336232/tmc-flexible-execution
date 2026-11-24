@@ -40,8 +40,15 @@ def _attempt_costs(arm, final, public, *, allow_final_truncated=False):
              "attempts_with_raw_timing": 0, "transport_calls_with_duration": 0,
              "interrupted_raw_log_tails": 0}
     dispatch_times = []
+    cpu_times = []
     for root in _attempt_roots(arm, final):
         allow_truncated = root != final or allow_final_truncated
+        cpu = _read(root.parent / "worker_cpu.json")
+        if cpu is not None:
+            seconds = (cpu["user_seconds"], cpu["system_seconds"])
+            if cpu["scope"] != "reaped_local_worker_and_descendants" or any(not isfinite(value) or value < 0 for value in seconds):
+                raise ValueError("Invalid recorded worker CPU usage for " + str(root))
+            cpu_times.append(sum(seconds))
         logs = root if public else root / "private/robot"
         calls, timeline = logs / "model_calls.jsonl", logs / "timeline.jsonl"
         if calls.is_file():
@@ -59,7 +66,9 @@ def _attempt_costs(arm, final, public, *, allow_final_truncated=False):
             costs["unclosed_timing_intervals"] += len(clock["unfinished_intervals"])
             for kind in ("action", "observation", "search"):
                 costs[f"total_{kind}_seconds"] += sum(item["seconds"] for item in clock["intervals"].get(kind, []))
-    return {**costs, "first_request_wall_time": min(dispatch_times, default=None),
+    return {**costs, "attempts_with_worker_cpu": len(cpu_times),
+            "total_local_worker_cpu_seconds": sum(cpu_times) if cpu_times else None,
+            "first_request_wall_time": min(dispatch_times, default=None),
             "last_request_wall_time": max(dispatch_times, default=None)}
 
 
@@ -291,6 +300,13 @@ def _native_forecast_check(rows):
     return checked
 
 
+def _failure_category(row):
+    reason = row.get("failure_reason")
+    if isinstance(reason, dict):
+        return reason.get("code") or reason.get("category") or reason.get("type") or row["state"]
+    return reason or row["state"]
+
+
 def _method_summary(rows):
     groups = {}
     for row in rows:
@@ -307,15 +323,16 @@ def _method_summary(rows):
                            "audited_conditional_actions": sum(row.get("audited_conditional_actions", 0) for row in valid),
                            "conditional_permission_violations": sum(row.get("conditional_permission_violations", 0) for row in valid),
                            "interrupted_raw_log_tails": sum(row.get("interrupted_raw_log_tails", 0) for row in valid),
-                           "failure_types": dict(Counter(row.get("failure_reason") or row["state"]
-                                                        for row in valid if not row["success"])),
+                           "worker_cpu_measured_episodes": sum(row.get("total_local_worker_cpu_seconds") is not None
+                                                               for row in valid),
+                           "failure_types": dict(Counter(_failure_category(row) for row in valid if not row["success"])),
                            "frontend_alignment_counts": dict(Counter(row["frontend_alignment"] for row in valid
                                                                      if "frontend_alignment" in row)),
                            "statuses": {state: sum(row["state"] == state for row in cases)
                                         for state in sorted({row["state"] for row in cases})},
                            "mean_restricted_seconds": mean(row["restricted_seconds"] for row in valid) if valid else None}
         for field in ("actual_dispatches", "total_model_transport_wall_seconds", "total_action_seconds",
-                      "total_observation_seconds", "total_search_seconds"):
+                      "total_observation_seconds", "total_search_seconds", "total_local_worker_cpu_seconds"):
             measures = [row[field] for row in valid if row.get(field) is not None]
             methods[method]["mean_" + field] = mean(measures) if measures else None
     return methods
@@ -335,7 +352,10 @@ def rebuild(directory, output):
     mode = "ACTUAL_LANGUAGE_AND_VISION_CLOSED_LOOP" if formal else "NATURAL_LATENCY_DEVELOPMENT"
     permission_rows = [row for row in rows if "conditional_permission_violations" in row]
     permission = (None if not permission_rows else {"scope": "registered conditional camera permissions",
-        "scored_episodes": len(permission_rows), "violations": sum(row["conditional_permission_violations"] for row in permission_rows)})
+        "scored_episodes": len(permission_rows),
+        "audited_attempts": sum(row["attempts_with_permission_audit"] for row in permission_rows),
+        "audited_actions": sum(row["audited_conditional_actions"] for row in permission_rows),
+        "violations": sum(row["conditional_permission_violations"] for row in permission_rows)})
     result = {"mode": mode, "role": catalog["role"], "reference": reference,
               "planned_episodes": len(rows), "recorded_episodes": sum(r["state"] in RECORDED for r in rows),
               "methods": methods, "matched_differences": _pair_rows(rows, reference),

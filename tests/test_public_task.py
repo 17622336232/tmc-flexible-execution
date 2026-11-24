@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from experiments.flexible_execution.evidence import Frame
 from experiments.flexible_execution.live_calibration import calibrate_public_visual
+from experiments.flexible_execution.pilot_report import _method_summary
 from experiments.flexible_execution.public_audit import audit_camera_permissions
 from experiments.flexible_execution.public_schedule import VALIDATION_ROLE, prepare_final
 from experiments.flexible_execution.public_task import VALIDATION, parse_intent, verify
@@ -57,6 +58,15 @@ class PublicInspectionScoreTest(unittest.TestCase):
                     trace.event("approved_preparation", "side", permission=grant)
                 self.assertEqual(audit_camera_permissions(episode, "right"),
                                  {"audited": 1, "violations": int(not allowed)})
+
+    def test_structured_public_model_failures_still_enter_the_summary(self):
+        row = {"state": "FINISHED_TASK_FAILURE", "method": "conditional-a", "success": False,
+               "restricted_seconds": 480,
+               "failure_reason": {"type": "TransportError", "code": "unsupported_output", "status": 200}}
+        method = _method_summary([row])[row["method"]]
+        self.assertEqual(method["recorded"], 1)
+        self.assertEqual(method["successes"], 0)
+        self.assertEqual(method["failure_types"], {"unsupported_output": 1})
 
     def test_unfinished_validation_leaves_the_official_test_archive_sealed(self):
         with TemporaryDirectory() as temp:

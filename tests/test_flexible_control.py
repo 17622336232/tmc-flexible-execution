@@ -173,9 +173,13 @@ class SupervisorTest(unittest.TestCase):
                 logs.mkdir(parents=True)
                 call = {"logical_job_attempt": attempt, "wall_seconds": wall, "started_at": attempt}
                 (logs / "model_calls.jsonl").write_text(json.dumps(call) + "\n")
+                write_json(episode.parent / "worker_cpu.json", {"scope": "reaped_local_worker_and_descendants",
+                                                                "user_seconds": wall, "system_seconds": 0.5})
             costs = _attempt_costs(Path(relpath(arm)), episode, False)
             self.assertEqual(costs["total_model_transport_wall_seconds"], 12.)
             self.assertEqual(costs["transport_calls_with_duration"], 2)
+            self.assertEqual(costs["attempts_with_worker_cpu"], 2)
+            self.assertEqual(costs["total_local_worker_cpu_seconds"], 13.)
 
     def test_cost_rollup_preserves_complete_rows_from_interrupted_attempt(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -192,6 +196,7 @@ class SupervisorTest(unittest.TestCase):
             complete.mkdir(parents=True)
             costs = _attempt_costs(arm, complete, False)
             self.assertEqual(costs["total_model_transport_wall_seconds"], 5.)
+            self.assertIsNone(costs["total_local_worker_cpu_seconds"])
             self.assertEqual(costs["interrupted_raw_log_tails"], 2)
             self.assertEqual(costs["unclosed_timing_intervals"], 1)
             with self.assertRaises(json.JSONDecodeError):

@@ -12,6 +12,7 @@ import time
 from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
+from resource import RUSAGE_CHILDREN, getrusage
 from shutil import disk_usage
 from statistics import median
 
@@ -444,6 +445,12 @@ def _wait_child(child, job, refresh):
     return child.returncode, None
 
 
+def _record_worker_cpu(attempt, before):
+    after = getrusage(RUSAGE_CHILDREN)
+    write_json(attempt / "worker_cpu.json", {"scope": "reaped_local_worker_and_descendants",
+        "user_seconds": after.ru_utime - before.ru_utime, "system_seconds": after.ru_stime - before.ru_stime})
+
+
 def _finish(control, job, stop=None, returncode=None):
     root = _attempt_path(job, job["attempt"]) / "episode"
     status, detail = _outcome(root, job, returncode, stop)
@@ -703,6 +710,7 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
         write_json(run / "launch.json", {**job, **config})
         job = _save(control, job, **config)
         opened.setdefault(ledger, budget["reserved"])
+        before_cpu = getrusage(RUSAGE_CHILDREN)
         with (run / "launcher.log").open("xb") as log:
             try:
                 child = subprocess.Popen(command, cwd=checkout, stdout=log, stderr=subprocess.STDOUT,
@@ -715,8 +723,11 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
                 returncode, stop = _wait_child(child, job, refresh)
             except KeyboardInterrupt:
                 _stop(job["process"], owned_group=bool(job.get("public_runtime")))
-                refresh(_finish(control, job, "CANCELLED_BY_USER", child.wait()))
+                returncode = child.wait()
+                _record_worker_cpu(run, before_cpu)
+                refresh(_finish(control, job, "CANCELLED_BY_USER", returncode))
                 raise
+        _record_worker_cpu(run, before_cpu)
         job = _finish(control, job, stop, returncode)
         if job["state"] not in TASK_TERMINAL:
             return refresh(job)
