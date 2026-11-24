@@ -1,6 +1,7 @@
 """Assign independent custom evaluation inputs before rendering any test scene."""
 
 from collections import Counter
+from hashlib import sha256
 from random import Random
 
 from experiments.task_attack.runtime import write_json
@@ -88,3 +89,37 @@ def prepare(output, defaults, development):
         write_json(path, manifest)
     return {"state": manifest["state"], "strata": manifest["counts"], "cases": len(cases),
             "recorded_episodes": 0, "manifest_sha256": _hash(manifest)}
+
+
+def prepare_development(output, calibration):
+    from .development_inputs import PILLOW_VERSION, _reuse_or_build, scene_fingerprint
+    from .pilot_schedule import TYPED_ROLE
+
+    output = output.resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    instruction = ("查看这一排设备。报告有裂纹或者温度严格高于80摄氏度的设备，"
+                   "写出设备本体编号、是否有裂纹及温度，附每台的相机证据。没有符合条件的设备时报告无结果。")
+    program = {"scope": {"mode": "all", "description": "这排设备"},
+               "fields": {"cracked": "flag", "temperature": "number"},
+               "filter": _predicate("or", _comparison("eq", "cracked", True), _comparison("gt", "temperature", 80)),
+               "extreme": None, "report": ["cracked", "temperature"]}
+    parse(program, instruction)
+    task = {"instruction": instruction, "oracle_requirement_program": program}
+    task_file = output / "custom-development-task.json"
+    case = {"id": "custom-connection-001", "family": "cracks", "domain": "equipment", "seed": 3_700_101,
+            "layout_seed": 3_700_102, "equipment_count": 2, "source_profile": "independent", "backend": "cpu",
+            "episode_timeout_seconds": 480, "typed_task_program": True, "order": ["conditional-serial"],
+            "study_task_file": str(task_file), "study_task_sha256": _hash(task), "collection_clause": None}
+    layout = _reuse_or_build(case, output / "layout-development-only")
+    case["scene_fingerprint"] = scene_fingerprint({**layout, "instruction_sha256":
+                                                    sha256(instruction.encode("utf8")).hexdigest()})
+    catalog = {"schema": 1, "role": TYPED_ROLE, "intended_pairs": 1, "cost_config_sha256": _hash(calibration),
+               "asset_renderer": {"package": "Pillow", "version": PILLOW_VERSION},
+               "cases": [case]}
+    for path, value in ((task_file, task), (output / "calibrated_costs.json", calibration),
+                        (output / "pilot_manifest.json", catalog)):
+        if path.is_file() and read_json(path) != value:
+            raise ValueError("The registered custom development case has changed")
+        if not path.is_file():
+            write_json(path, value)
+    return catalog

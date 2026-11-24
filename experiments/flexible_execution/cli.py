@@ -2,7 +2,10 @@
 
 import argparse
 import json
+import os
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 import yaml
@@ -19,6 +22,24 @@ from .runner import manifest, read_json, reproduce, run
 
 CHECKOUT = Path(__file__).resolve().parents[2]
 DEFAULTS = Path(__file__).with_name("experiment_defaults.yaml")
+CUSTOM_CONNECTION = "custom-vision-connection-v2"
+VISUAL_INPUTS = "development-visual-v2"
+VISUAL_PILOTS = {role: f"visual-{role}-v2" for role in ("calibration", "selection")}
+
+
+def _scene_python():
+    legacy = Path(os.environ.get("VLA_LEGACY_ROOT", str(Path.home() / "uav" / "Embodied-intelligent-behavior")))
+    environment = legacy / ".venv"
+    if (environment / "bin/activate").is_file() and (environment / "bin/python3").is_file():
+        return environment / "bin/python3"
+    return Path(sys.executable)
+
+
+def _prepare_scenes(arguments):
+    # The online simulator activates this same virtual environment. Pillow
+    # versions can produce different text pixels from identical fixtures.
+    subprocess.run([str(_scene_python()), "-m", "experiments.flexible_execution.cli", *map(str, arguments)],
+                   cwd=CHECKOUT, check=True)
 
 
 def _sensor_result(directory):
@@ -121,7 +142,8 @@ def status(directory, defaults):
     pilot_manifest = directory.parent / "natural-pilot" / "pilot_manifest.json"
     ranker_pilot = pilot_manifest.parent / "learned-order-v1"
     typed_pilot = pilot_manifest.parent / "typed-vision-v1"
-    visual_root = directory.parent / "development-visual-v1/split_manifest_v2.json"
+    custom_pilot = pilot_manifest.parent / CUSTOM_CONNECTION
+    visual_root = directory.parent / VISUAL_INPUTS / "split_manifest_v2.json"
     visual_inputs = read_json(visual_root) if visual_root.is_file() else None
     public = _public_visual(directory.parent)
     online_public = [job for job in public if job["state"] == "RUNNING"]
@@ -135,6 +157,7 @@ def status(directory, defaults):
         "ranker_diagnostic": _ranker_diagnostic(directory.parent),
         "ranker_live_development": pilot_status(ranker_pilot) if (ranker_pilot / "pilot_manifest.json").is_file() else None,
         "typed_vision_development": pilot_status(typed_pilot) if (typed_pilot / "pilot_manifest.json").is_file() else None,
+        "custom_vision_connection": pilot_status(custom_pilot) if (custom_pilot / "pilot_manifest.json").is_file() else None,
         "visual_layouts": None if visual_inputs is None else {key: visual_inputs[key] for key in (
             "state", "layout_count", "distinct_asset_groups", "split_roles_share_exact_assets")},
         "public_visual_validation": public,
@@ -252,20 +275,24 @@ def _continue_stage(output_root, directory, defaults, args, launch_limit):
     typed_status = pilot_status(typed)
     if typed_status["recorded_pairs"] < typed_status["planned_pairs"]:
         return run_batch(typed)
-    layouts = output_root / "development-visual-v1"
+    custom = pilots / CUSTOM_CONNECTION
+    prior = read_json(comparison / "calibrated_costs.json")
+    if not (custom / "pilot_manifest.json").is_file():
+        _prepare_scenes(("custom-development-prepare", "--output", custom, "--cost-config",
+                         comparison / "calibrated_costs.json"))
+    if not pilot_status(custom)["recorded_pairs"]:
+        return run_batch(custom)
+    layouts = output_root / VISUAL_INPUTS
     layout_manifest = layouts / "split_manifest_v2.json"
     if not layout_manifest.is_file():
-        from .development_inputs import prepare
-
-        prepare(layouts, defaults)
-    calibration = pilots / "visual-calibration-v1"
-    prior = read_json(comparison / "calibrated_costs.json")
+        _prepare_scenes(("visual-development-prepare", "--output", layouts))
+    calibration = pilots / VISUAL_PILOTS["calibration"]
     if not (calibration / "pilot_manifest.json").is_file():
         prepare_visual(calibration, read_json(layout_manifest), prior, "calibration")
     calibrated_status = pilot_status(calibration)
     if calibrated_status["recorded_pairs"] < calibrated_status["planned_pairs"]:
         return run_batch(calibration)
-    selection = pilots / "visual-selection-v1"
+    selection = pilots / VISUAL_PILOTS["selection"]
     if not (selection / "pilot_manifest.json").is_file():
         prepare_visual(selection, read_json(layout_manifest), calibrate_visual(calibration, prior), "selection")
     selected_status = pilot_status(selection)
@@ -311,6 +338,9 @@ def main(argv=None):
     custom_plan = commands.add_parser("custom-plan", help="Assign the three blind custom evaluation strata")
     custom_plan.add_argument("--development-manifest", required=True, type=Path)
     custom_plan.add_argument("--output", required=True, type=Path)
+    custom_dev = commands.add_parser("custom-development-prepare", help="Register a custom-task connection check")
+    custom_dev.add_argument("--cost-config", required=True, type=Path)
+    custom_dev.add_argument("--output", required=True, type=Path)
     visual_inputs = commands.add_parser("visual-development-prepare", help="Materialize the 96 development layouts")
     visual_inputs.add_argument("--output", required=True, type=Path)
     visual_inputs.add_argument("--pilot-dir", type=Path, help="Register the initial calibration run")
@@ -360,12 +390,27 @@ def main(argv=None):
         defaults = yaml.safe_load(DEFAULTS.read_text(encoding="utf8"))
         print(json.dumps(prepare(args.output, defaults, read_json(args.development_manifest)), ensure_ascii=False, indent=2))
         return
+    if args.command == "custom-development-prepare":
+        if Path(sys.executable).parent != _scene_python().parent:
+            _prepare_scenes((args.command, "--output", args.output.resolve(), "--cost-config", args.cost_config.resolve()))
+            return
+        from .custom_schedule import prepare_development
+
+        catalog = prepare_development(args.output, read_json(args.cost_config))
+        print(json.dumps({"case": catalog["cases"][0]["id"], "output": str(args.output)}, ensure_ascii=False))
+        return
     if args.command == "visual-development-prepare":
+        if bool(args.pilot_dir) != bool(args.cost_config):
+            parser.error("Supply both --pilot-dir and --cost-config to register calibration")
+        if Path(sys.executable).parent != _scene_python().parent:
+            command = [args.command, "--output", args.output.resolve()]
+            if args.pilot_dir:
+                command.extend(("--pilot-dir", args.pilot_dir.resolve(), "--cost-config", args.cost_config.resolve()))
+            _prepare_scenes(command)
+            return
         from .development_inputs import prepare
 
         defaults = yaml.safe_load(DEFAULTS.read_text(encoding="utf8"))
-        if bool(args.pilot_dir) != bool(args.cost_config):
-            parser.error("Supply both --pilot-dir and --cost-config to register calibration")
         result = prepare(args.output, defaults)
         if args.pilot_dir:
             catalog = prepare_visual(args.pilot_dir, read_json(args.output / "split_manifest_v2.json"),

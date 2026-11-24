@@ -163,6 +163,7 @@ def _valid_preflight(preflight, case, method, directory):
             or preflight.get("layout_seed") != case.get("layout_seed")
             or preflight.get("collection_rule") != case.get("collection_rule")
             or preflight.get("scene_fingerprint") != case.get("scene_fingerprint")
+            or preflight.get("study_task_sha256") != case.get("study_task_sha256")
             or planned != case["episode_timeout_seconds"] or not isinstance(budget, (int, float))
             or not 0 < budget <= planned):
         raise ValueError("Run does not match the frozen case and method: " + str(directory))

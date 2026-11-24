@@ -108,6 +108,8 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
         stage_sources += (RANKING_SOURCE,)
     if typed:
         stage_sources += ("experiments/flexible_execution/requirement_program.py",)
+    if any(case.get("study_task_sha256") for case in catalog.get("cases", ())):
+        stage_sources += ("experiments/flexible_execution/custom_evaluation.py",)
     if any(case.get("layout_seed") is not None for case in catalog.get("cases", ())):
         stage_sources += ("experiments/task_attack_operator/scene.py", "experiments/task_attack_recessed/scene.py",
                           "experiments/task_attack_value/scene.py", "experiments/flexible_execution/development_inputs.py")
@@ -471,6 +473,11 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
             command.extend(("--layout-seed", str(next_case["layout_seed"])))
         if next_case.get("scene_fingerprint"):
             command.extend(("--scene-fingerprint", next_case["scene_fingerprint"]))
+        if next_case.get("study_task_sha256"):
+            study = Path(next_case["study_task_file"])
+            if _hash(_read(study)) != next_case["study_task_sha256"]:
+                raise ValueError("The study instruction does not match its registered input")
+            command.extend(("--study-task", str(study)))
         if job["method"] in CONDITIONAL_MODES:
             command.extend(("--cost-config", str(directory / "calibrated_costs.json")))
             if next_case.get("early_fields"):

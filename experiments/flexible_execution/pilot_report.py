@@ -40,7 +40,8 @@ def _arm_row(directory, case, method):
         _valid_preflight(preflight, case, method, root)
     for earned, name in (("probe_completed", "base_frontend_completed"),
                          ("conditional_query_bound", "conditional_query_bound"),
-                         ("conditional_materials", "active_conditional_materials")):
+                         ("conditional_materials", "active_conditional_materials"),
+                         ("typed_task_program_compiled", "typed_program_compiled")):
         row[name] = (result or {}).get("robot_metrics", {}).get(earned)
     row["legacy_outcome"] = (result or {}).get("score", {}).get("outcome")
     row["failure_reason"] = (job.get("result") or {}).get("reason")
@@ -51,6 +52,7 @@ def _arm_row(directory, case, method):
         events = [json.loads(line) for line in timing.read_text(encoding="utf8").splitlines()]
         ranking = next((event for event in events if event["event"] == "candidate_search_summary"
                         and "ranker" in event), None)
+        typed_guard = [event["accepted"] for event in events if event["event"] == "typed_task_acceptance"]
         row.update(model_request_seconds=clock["model_request_seconds"],
                    model_action_overlap_seconds=clock["model_action_overlap_seconds"],
                    reported_outcome=clock["report_outcome"],
@@ -61,6 +63,8 @@ def _arm_row(directory, case, method):
         if ranking:
             row.update(ranked_candidates=ranking["generated"], ranked_candidates_verified=ranking["checked"],
                        ranking_stop_reason=ranking["stop_reason"], checkpoint_sha256=ranking["checkpoint"])
+        if typed_guard:
+            row.update(typed_submission_checks=len(typed_guard), typed_submission_accepted=typed_guard[-1])
     if result and result.get("execution_completed") and (root / "clean_coverage.json").is_file():
         coverage = audit_run(root)
         saved = _read(root / "clean_coverage.json")

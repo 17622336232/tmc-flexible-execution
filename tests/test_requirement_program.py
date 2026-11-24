@@ -1,9 +1,34 @@
 import unittest
 
+from experiments.flexible_execution.clean_coverage import score_coverage
 from experiments.flexible_execution.requirement_program import check_submission, parse
 
 
 class RequirementProgramTests(unittest.TestCase):
+    def test_custom_or_needs_evidence_for_rejected_subjects(self):
+        instruction = "Report cracked devices or devices above 80 degrees."
+        fields = {"cracked": "flag", "temperature": "number"}
+        task = {"scope": {"mode": "all", "description": "all devices"}, "fields": fields,
+                "filter": {"op": "or", "children": [
+                    {"op": "eq", "field": "cracked", "right": {"literal": True}},
+                    {"op": "gt", "field": "temperature", "right": {"literal": 80}}]},
+                "extreme": None, "report": ["cracked", "temperature"]}
+        actual = [{"identity": "EQ-01", "cracked": True, "temperature": 65},
+                  {"identity": "EQ-02", "cracked": False, "temperature": 78}]
+        truth = {"task": instruction, "devices": actual, "oracle_requirement_program": task}
+        first = {"object_id": "EQ-01", "evidence_image_id": "view", "facts": {"cracked": True, "temperature": 65}}
+        second = {"object_id": "EQ-02", "evidence_image_id": "view", "facts": {"cracked": False}}
+        report = {"outcome": "accepted", "records": [first]}
+        decision = {"action": {"type": "submit"}, "records": [first, second], "report": report}
+        calls = [{"input": {"authorized_task": instruction, "current_image_id": "view"},
+                  "image_sha256": ["registered"], "output": decision}]
+        actions = [{"image_id": "view", "step": 1, "decision": decision}]
+        missing = score_coverage(truth, report, {"view": "registered"}, calls, actions)
+        self.assertEqual(missing["missing_fields_by_object"], {"EQ-02": ["temperature"]})
+        self.assertFalse(missing["complete"])
+        second["facts"]["temperature"] = 78
+        self.assertTrue(score_coverage(truth, report, {"view": "registered"}, calls, actions)["complete"])
+
     def test_compound_boolean_and_threshold_do_not_treat_unknown_as_false(self):
         draft = {"scope": {"mode": "all", "description": "the row"},
                  "fields": {"cracked": "flag", "temperature": "number"},

@@ -7,6 +7,8 @@ from random import Random
 from shutil import disk_usage
 from xml.etree import ElementTree
 
+from PIL import __version__ as PILLOW_VERSION
+
 from experiments.task_attack.runtime import write_json
 from experiments.task_attack.tasks import SCENES
 from experiments.task_attack_recessed.scene import build_scene
@@ -138,7 +140,8 @@ def prepare(output, defaults):
     if disk_usage(output).free < defaults["resources"]["minimum_free_disk_gb"] * 1024**3:
         raise OSError("Disk reserve is below the registered minimum")
     cases = list(_cases(data["split_seed"], splits))
-    design = {"role": "VISUAL_DEVELOPMENT_LAYOUTS", "split_seed": data["split_seed"], "cases": cases}
+    design = {"role": "VISUAL_DEVELOPMENT_LAYOUTS", "split_seed": data["split_seed"], "cases": cases,
+              "asset_renderer": {"package": "Pillow", "version": PILLOW_VERSION}}
     plan = output / "layout_plan.json"
     if plan.is_file() and read_json(plan) != design:
         raise ValueError("The existing development assignment differs from this protocol")
@@ -153,6 +156,7 @@ def prepare(output, defaults):
     counts = {role: dict(Counter(row["mechanism_requested"] for row in rows if row["split"] == role))
               for role in splits}
     manifest = {"role": design["role"], "state": "LAYOUTS_PREPARED", "layout_plan_sha256": _hash(design),
+                "asset_renderer": design["asset_renderer"],
                 "layout_count": len(rows), "visual_episode_count": 0, "planned_mechanisms": counts,
                 "distinct_asset_groups": len({row["asset_group_sha256"] for row in rows}), "cases": rows}
     initial = output / "split_manifest.json"
