@@ -7,10 +7,11 @@ from .gpt_vision import Material
 from .live_planning import needs_body_identity, permission_for
 from .material_schema import INSPECTION_FIELDS, value_matches
 from .runner import read_json
+from .timeline import read_trace_rows
 
 
-def _rows(path):
-    return [json.loads(line) for line in path.read_text(encoding="utf8").splitlines()] if path.is_file() else []
+def _rows(path, *, allow_truncated=False):
+    return read_trace_rows(path, allow_truncated=allow_truncated)[0] if path.is_file() else []
 
 
 def _camera_frames(robot):
@@ -44,20 +45,23 @@ def _verified_judgment(events, calls, frames):
     return (applied, matches[0]) if len(matches) == 1 else ({}, {})
 
 
-def audit_capture_permissions(episode):
+def audit_capture_permissions(episode, *, allow_truncated=False):
     robot = episode / "private/robot"
     contract = robot / "conditional_contract.json"
     trace = robot / "timeline.jsonl"
     if not contract.is_file() or not trace.is_file():
         return None
     task = read_json(contract)["task"]
-    events = _rows(trace)
+    events = _rows(trace, allow_truncated=allow_truncated)
     skills = {skill["id"]: skill for skill in task["skills"]}
     requirements = {r["id"]: r for r in task["requirements"]}
-    grants = {row["field"]: row["source"] for row in events if row["event"] == "permission_checked" and row["early"]}
-    applied, _ = _verified_judgment(events, _rows(robot / "model_calls.jsonl"), _camera_frames(robot))
+    calls = _rows(robot / "model_calls.jsonl", allow_truncated=allow_truncated)
+    applied, _ = _verified_judgment(events, calls, _camera_frames(robot))
+    grants = {}
     checked = []
     for row in events:
+        if row["event"] == "permission_checked" and row["early"]:
+            grants[row["field"]] = row["source"]
         if row["event"] != "action_started" or row.get("candidate") not in skills:
             continue
         skill = skills[row["candidate"]]

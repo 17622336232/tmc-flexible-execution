@@ -1,7 +1,6 @@
 """Rebuild paired development metrics from saved arm outcomes and event ledgers."""
 
 import csv
-import json
 from collections import Counter
 from math import isfinite
 from pathlib import Path
@@ -16,31 +15,39 @@ from .custom_schedule import FINAL_ROLE as CUSTOM_FINAL_ROLE
 from .live_audit import audit_capture_permissions
 from .pilot_schedule import _read, _valid_preflight
 from .public_schedule import FINAL_ROLE as PUBLIC_FINAL_ROLE
-from .timeline import summarize
+from .timeline import read_trace_rows, summarize
 
 
 RECORDED = {"FINISHED_VALID", "FINISHED_TASK_FAILURE", "TIMEOUT"}
 
 
-def _attempt_costs(arm, final, public):
-    roots = {path.resolve() for path in arm.glob("attempt-*/episode")} | {final.resolve()}
+def _attempt_roots(arm, final):
+    return sorted({path.resolve() for path in arm.glob("attempt-*/episode")} | {final.resolve()})
+
+
+def _attempt_costs(arm, final, public, *, allow_final_truncated=False):
+    final = final.resolve()
     costs = {"total_model_transport_wall_seconds": 0., "total_action_seconds": 0.,
              "total_observation_seconds": 0., "total_search_seconds": 0., "unclosed_timing_intervals": 0,
-             "attempts_with_raw_timing": 0, "transport_calls_with_duration": 0}
+             "attempts_with_raw_timing": 0, "transport_calls_with_duration": 0,
+             "interrupted_raw_log_tails": 0}
     dispatch_times = []
-    for root in sorted(roots):
+    for root in _attempt_roots(arm, final):
+        allow_truncated = root != final or allow_final_truncated
         logs = root if public else root / "private/robot"
         calls, timeline = logs / "model_calls.jsonl", logs / "timeline.jsonl"
         if calls.is_file():
-            for line in calls.read_text(encoding="utf8").splitlines():
-                call = json.loads(line)
+            records, truncated = read_trace_rows(calls, allow_truncated=allow_truncated)
+            costs["interrupted_raw_log_tails"] += truncated
+            for call in records:
                 if "logical_job_attempt" in call:
                     costs["transport_calls_with_duration"] += 1
                     costs["total_model_transport_wall_seconds"] += call["wall_seconds"]
                     dispatch_times.append(call["started_at"])
         if timeline.is_file():
-            clock = summarize(timeline)
+            clock = summarize(timeline, allow_truncated=allow_truncated)
             costs["attempts_with_raw_timing"] += 1
+            costs["interrupted_raw_log_tails"] += clock["truncated_tail"]
             costs["unclosed_timing_intervals"] += len(clock["unfinished_intervals"])
             for kind in ("action", "observation", "search"):
                 costs[f"total_{kind}_seconds"] += sum(item["seconds"] for item in clock["intervals"].get(kind, []))
@@ -68,13 +75,18 @@ def _arm_row(directory, case, method, binding=None):
     row.update(artifact_dir=output, success=False, restricted_seconds=case["episode_timeout_seconds"])
     if not output:
         return row
-    root = Path(output)
-    row.update(_attempt_costs(arm, root, bool(job.get("public_runtime"))))
+    root = Path(output).resolve()
+    allow_truncated = job["state"] == "TIMEOUT"
+    row.update(_attempt_costs(arm, root, bool(job.get("public_runtime")), allow_final_truncated=allow_truncated))
     if job.get("public_runtime"):
         return _public_arm(row, root, job)
-    permission = audit_capture_permissions(root)
-    if permission is not None:
-        row.update(audited_conditional_actions=permission["audited"], conditional_permission_violations=permission["violations"])
+    audits = [audit_capture_permissions(attempt, allow_truncated=attempt != root or allow_truncated)
+              for attempt in _attempt_roots(arm, root)]
+    audited = [audit for audit in audits if audit is not None]
+    if audited:
+        row.update(attempts_with_permission_audit=len(audited),
+                   audited_conditional_actions=sum(audit["audited"] for audit in audited),
+                   conditional_permission_violations=sum(audit["violations"] for audit in audited))
     preflight, result = _read(root / "clean_preflight.json"), _read(root / "result.json")
     if preflight:
         _valid_preflight(preflight, case, job.get("execution_method", method), root)
@@ -88,8 +100,8 @@ def _arm_row(directory, case, method, binding=None):
     row["legacy_wrong_accepted"] = (result or {}).get("score", {}).get("wrong_accepted")
     timing = root / "private/robot/timeline.jsonl"
     if timing.is_file():
-        clock = summarize(timing)
-        events = [json.loads(line) for line in timing.read_text(encoding="utf8").splitlines()]
+        clock = summarize(timing, allow_truncated=allow_truncated)
+        events, _ = read_trace_rows(timing, allow_truncated=allow_truncated)
         event_counts = Counter(event["event"] for event in events)
         search = next((event for event in events if event["event"] == "candidate_search_summary"), None)
         selected = next((event for event in events if event["event"] == "candidate_selected"), None)
@@ -169,7 +181,7 @@ def _public_arm(row, root, job):
             raise ValueError("Saved public success could not be independently verified: " + job["id"])
         row.update(success=True, restricted_seconds=seconds, complete_coverage=True, conditional_permission_violations=0)
     if (root / "timeline.jsonl").is_file():
-        clock = summarize(root / "timeline.jsonl")
+        clock = summarize(root / "timeline.jsonl", allow_truncated=job["state"] == "TIMEOUT")
         row.update(model_request_seconds=clock["model_request_seconds"],
                    model_action_overlap_seconds=clock["model_action_overlap_seconds"],
                    action_seconds=sum(interval["seconds"] for interval in clock["intervals"].get("action", [])),
@@ -284,6 +296,10 @@ def _method_summary(rows):
                            "success_rate": mean(row["success"] for row in valid) if valid else None,
                            "scored_completion_claims": sum("wrong_completion_claim" in row for row in valid),
                            "wrong_completion_claims": sum(row.get("wrong_completion_claim", False) for row in valid),
+                           "permission_scored_episodes": sum("conditional_permission_violations" in row for row in valid),
+                           "audited_conditional_actions": sum(row.get("audited_conditional_actions", 0) for row in valid),
+                           "conditional_permission_violations": sum(row.get("conditional_permission_violations", 0) for row in valid),
+                           "interrupted_raw_log_tails": sum(row.get("interrupted_raw_log_tails", 0) for row in valid),
                            "failure_types": dict(Counter(row.get("failure_reason") or row["state"]
                                                         for row in valid if not row["success"])),
                            "frontend_alignment_counts": dict(Counter(row["frontend_alignment"] for row in valid

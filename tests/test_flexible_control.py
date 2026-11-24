@@ -11,6 +11,7 @@ from experiments.flexible_execution import cli, control
 from experiments.flexible_execution.pilot_report import _attempt_costs
 from experiments.flexible_execution.request_budget import RequestBudget
 from experiments.flexible_execution.storage import archive_sensor_logs
+from experiments.flexible_execution.timeline import Timeline
 from experiments.task_attack.runtime import write_json
 
 
@@ -175,3 +176,26 @@ class SupervisorTest(unittest.TestCase):
             costs = _attempt_costs(Path(relpath(arm)), episode, False)
             self.assertEqual(costs["total_model_transport_wall_seconds"], 12.)
             self.assertEqual(costs["transport_calls_with_duration"], 2)
+
+    def test_cost_rollup_preserves_complete_rows_from_interrupted_attempt(self):
+        with tempfile.TemporaryDirectory() as temp:
+            arm = Path(temp)
+            first = arm / "attempt-001/episode/private/robot"
+            trace = Timeline(first / "timeline.jsonl")
+            trace.event("action_started", "capture")
+            with trace.path.open("ab") as log:
+                log.write(b'{"event":"\xe4')
+            calls = first / "model_calls.jsonl"
+            call = {"logical_job_attempt": 1, "wall_seconds": 5., "started_at": 1}
+            calls.write_bytes(json.dumps(call).encode() + b'\n{"input"')
+            complete = arm / "attempt-002/episode"
+            complete.mkdir(parents=True)
+            costs = _attempt_costs(arm, complete, False)
+            self.assertEqual(costs["total_model_transport_wall_seconds"], 5.)
+            self.assertEqual(costs["interrupted_raw_log_tails"], 2)
+            self.assertEqual(costs["unclosed_timing_intervals"], 1)
+            with self.assertRaises(json.JSONDecodeError):
+                _attempt_costs(arm, first.parent.parent, False)
+            calls.write_bytes(calls.read_bytes() + b"\n")
+            with self.assertRaises(json.JSONDecodeError):
+                _attempt_costs(arm, complete, False)

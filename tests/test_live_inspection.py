@@ -161,6 +161,20 @@ class LiveInspectionTests(unittest.TestCase):
             (robot / "model_calls.jsonl").write_text(json.dumps(forged) + "\n", encoding="utf8")
             self.assertEqual(audit_capture_permissions(episode)["violations"], 2)
 
+    def test_permission_audit_does_not_use_a_grant_from_after_the_camera_action(self):
+        with TemporaryDirectory() as temp:
+            episode = Path(temp)
+            robot = episode / "private/robot"
+            instruction = "Inspect the object.\n" + GRANT
+            task = replace(_task(permission_for(instruction, MATERIAL)), instruction=instruction)
+            write_json(robot / "conditional_contract.json", {"task": asdict(task)})
+            trace = Timeline(robot / "timeline.jsonl")
+            trace.event("action_started", 1, candidate="view")
+            trace.event("permission_checked", 2, field=MATERIAL.field, source=GRANT, early=True)
+            trace.event("action_started", 3, candidate="view")
+            audit = audit_capture_permissions(episode)
+            self.assertEqual([row["permitted"] for row in audit["actions"]], [False, True])
+
     def test_candidate_forecast_does_not_treat_projected_time_as_a_late_reply(self):
         task = _task(permission_for(GRANT, MATERIAL))
         task = replace(task, queries=(replace(task.queries[0], estimated_ready=5.),),
