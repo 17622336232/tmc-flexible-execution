@@ -405,6 +405,11 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
             return refresh(job)
         if launched >= max_jobs:
             return refresh()
+        # Later arms in a long batch must still use the version frozen before
+        # the first arm, even when the development checkout is being edited.
+        current = _runtime_inputs(checkout, catalog, auth_project, ports)
+        if current != {key: value for key, value in protocol.items() if key != "code_git_commit"}:
+            checkout = _locked_source(protocol, current, checkout, control, catalog, auth_project, ports)
         next_case = job["case"]
         remaining = next_case["episode_timeout_seconds"] - job.get("charged_seconds", 0.)
         ledger = control / "requests" / (job["id"] + ".jsonl")
@@ -430,6 +435,8 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
             command.extend(("--cost-config", str(directory / "calibrated_costs.json")))
             if next_case.get("early_fields"):
                 command.extend(("--early-fields", ",".join(next_case["early_fields"])))
+            if next_case.get("handoff_at_observation"):
+                command.append("--handoff-at-observation")
         config = {"state": "RUNNING", "process": None, "attempt": attempt, "command": command,
                   "workdir": str(checkout), "started_at": _now(), "finished_at": None, "result": None,
                   "request_ledger": str(ledger), "request_limit": REQUEST_LIMIT, "request_budget": budget,

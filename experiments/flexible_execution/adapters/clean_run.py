@@ -65,6 +65,8 @@ def main(argv=None):
     parser.add_argument("--request-ledger", type=Path, help="Persistent request ledger for this logical job")
     parser.add_argument("--cost-config", type=Path, help="Calibrated design input for the conditional methods")
     parser.add_argument("--early-fields", help="Shared controlled-language grant for this development instance")
+    parser.add_argument("--handoff-at-observation", action="store_true",
+                        help="Allow a shared handoff at the acquired view with time reserved to revisit")
     args = parser.parse_args(argv)
     if not isfinite(args.episode_timeout) or args.episode_timeout <= 0:
         parser.error("Choose a positive finite episode timeout")
@@ -74,7 +76,7 @@ def main(argv=None):
     if not isfinite(planned) or planned < args.episode_timeout:
         parser.error("The logical job duration must cover the attempt duration")
     conditional = args.method in CONDITIONAL_MODES
-    if conditional != bool(args.cost_config) or (args.early_fields and not conditional):
+    if conditional != bool(args.cost_config) or ((args.early_fields or args.handoff_at_observation) and not conditional):
         parser.error("Conditional methods require a cost file and own the optional development grant")
     clause = ""
     early_fields = args.early_fields.split(",") if args.early_fields else []
@@ -106,7 +108,8 @@ def main(argv=None):
                      episode_timeout_seconds=args.episode_timeout, planned_episode_timeout_seconds=planned,
                      request_budget=budget.summary())
     if conditional:
-        preflight.update(early_fields=early_fields, calibration_id=costs.calibration_id)
+        preflight.update(early_fields=early_fields, calibration_id=costs.calibration_id,
+                         handoff_at_observation=args.handoff_at_observation)
     ready = (preflight["signed_in"] and preflight["plan_usage_enabled"] and preflight["model_in_catalog"]
              and (preflight["access_token_valid"] or preflight["refresh_available"]))
     preflight["ready_to_attempt_model_call"] = ready
@@ -120,7 +123,7 @@ def main(argv=None):
         client = ModelClient(directory / "model_calls.jsonl", credential_store=credentials, request_budget=budget)
         execution = {"serial": run_agent, "async-probe": run_probe}.get(args.method)
         if conditional:
-            execution = partial(run_live, method=args.method, costs=costs)
+            execution = partial(run_live, method=args.method, costs=costs, hold_at_view=args.handoff_at_observation)
             if clause:
                 original_hash = sha256(task.encode("utf8")).hexdigest()
                 task = task + "\n" + clause
@@ -135,8 +138,8 @@ def main(argv=None):
             return execution(backend, task, directory, event, timeout, model=client, trace=trace)
         finally:
             write_json(root / "job_clock.json", {**clock, "elapsed_seconds": time.monotonic() - started})
-            write_json(root / "clean_timing.json", summarize(trace.path))
             write_json(root / "request_budget_summary.json", budget.summary())
+            write_json(root / "clean_timing.json", summarize(trace.path))
 
     os.environ.setdefault("ROS_HOME", str(root / "ros_home"))
     code = run_simulation([

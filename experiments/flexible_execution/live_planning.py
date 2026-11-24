@@ -18,8 +18,13 @@ LATE_GRANT = re.compile(
     r"采集规则：只有判读结果为 (positive|negative|uncertain) 才允许采集以下材料："
     r"([a-z][a-z0-9_]*(?:、[a-z][a-z0-9_]*)*)。")
 RESTRICTION = re.compile(r"不得|禁止|仅在|才可|才允许|之后才能|之后方可|do not|must not|only after", re.I)
+BODY_IDENTITY = re.compile(r"(?:编号|身份)[^。；\n]{0,24}(?:本体|本身)|(?:body|asset) identity", re.I)
 NEW_METHODS = ("conditional-serial", "conditional-async", "conditional-prefetch", "conditional-planner", "conditional-a")
 CONDITIONAL_MODES = {name: "ACTUAL_GPT_" + name.upper().replace("-", "_") for name in NEW_METHODS}
+
+
+def needs_body_identity(instruction):
+    return bool(BODY_IDENTITY.search(instruction))
 
 
 @dataclass(frozen=True)
@@ -78,7 +83,7 @@ def _prefix_id(prefix):
 
 def checked(task, state, prefix):
     """Validate all possible outcomes at a common approved handoff location."""
-    proof = witness(task, state, tuple(prefix))
+    proof = witness(task, state, tuple(prefix), anchor_readiness=True)
     if proof is None:
         return None, []
     predicted = state
@@ -126,7 +131,7 @@ def _planner(task, state, *, budget_ms, max_candidates, max_prepare, log):
                     lower_bound = max([after.at] + list(expected.values())) + task.report_seconds
                     if lower_bound < (best.expected_finish if best else baseline):
                         heappush(frontier, (lower_bound, next(order), prefix + (action,), after))
-    log("search_finished", baseline_finish=baseline, expanded=examined, exhausted=bool(frontier),
+    log("candidate_search_summary", baseline_finish=baseline, expanded=examined, exhausted=bool(frontier),
         wall_seconds=monotonic() - start)
     return best
 
@@ -147,9 +152,9 @@ def select(task, state, method, log, *, budget_ms=1000, max_candidates=32, max_p
     else:
         search = Search(task, max_candidates=max_candidates, max_prepare=max_prepare, budget_ms=budget_ms)
         started = monotonic()
-        result = search.propose(state, shared_prefetch=method == "conditional-prefetch")
+        result = search.propose(state, shared_prefetch=method == "conditional-prefetch", anchor_readiness=True)
         choice = result.choice
-        log("search_finished", baseline_finish=result.baseline_finish, expanded=result.expanded,
+        log("candidate_search_summary", baseline_finish=result.baseline_finish, expanded=result.expanded,
             witnessed=result.witnessed, exhausted=result.exhausted_budget,
             wall_seconds=monotonic() - started)
     if not choice:

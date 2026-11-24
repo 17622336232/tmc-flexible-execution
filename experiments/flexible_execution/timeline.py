@@ -49,6 +49,9 @@ def summarize(path):
             if not event.endswith(("_started", "_finished")):
                 continue
             kind, phase = event.rsplit("_", 1)
+            if kind not in {"action", "observation", "model_request", "search"} or (
+                    event == "search_finished" and "ok" not in row):
+                continue
             key = kind, step
             if phase == "started":
                 if key in starts:

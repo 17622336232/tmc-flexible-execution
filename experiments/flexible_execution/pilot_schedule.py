@@ -48,7 +48,8 @@ def _read(path):
     return json.loads(path.read_text(encoding="utf8")) if path.is_file() else None
 
 
-def prepare_conditional(directory, base, calibration, *, connection_only=False):
+def prepare_conditional(directory, base, calibration, *, connection_only=False, hold_at_view=False,
+                        source_profile="single"):
     role = "CONDITIONAL_CONNECTION_DEVELOPMENT"
     seed = base["split_seed"] + 1
     if connection_only:
@@ -61,8 +62,10 @@ def prepare_conditional(directory, base, calibration, *, connection_only=False):
                "parent_schedule_sha256": _hash(base), "split_seed": seed,
                "cost_config_sha256": _hash(calibration), "intended_pairs": 1,
                "cases": [{"id": instance, "family": "cracks", "domain": "equipment", "seed": 1,
-                          "equipment_count": 2, "source_profile": "single", "backend": "cpu",
+                          "equipment_count": 2, "source_profile": source_profile, "backend": "cpu",
                           "episode_timeout_seconds": 480, "early_fields": ["identity"], "order": order}]}
+    if hold_at_view:
+        catalog["cases"][0]["handoff_at_observation"] = True
     directory.mkdir(parents=True, exist_ok=True)
     for filename, value in (("calibrated_costs.json", calibration), ("pilot_manifest.json", catalog)):
         path = directory / filename
@@ -104,6 +107,7 @@ def _valid_preflight(preflight, case, method, directory):
     mode = {**PAIRED_MODES, **CONDITIONAL_MODES}[method]
     if (preflight.get("mode") != mode or any(preflight.get(key) != case[key] for key in keys)
             or preflight.get("early_fields", []) != case.get("early_fields", [])
+            or preflight.get("handoff_at_observation", False) != case.get("handoff_at_observation", False)
             or planned != case["episode_timeout_seconds"] or not isinstance(budget, (int, float))
             or not 0 < budget <= planned):
         raise ValueError("Run does not match the frozen case and method: " + str(directory))

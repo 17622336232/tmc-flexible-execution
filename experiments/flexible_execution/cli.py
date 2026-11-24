@@ -10,6 +10,7 @@ import yaml
 from .audit import capture
 from .clean_coverage import audit_run
 from .control import DEFAULT_AUTH_PROJECT, control_status, pilot_run
+from .live_audit import audit_live_connection
 from .live_calibration import calibrate
 from .pilot_schedule import prepare as prepare_pilot, prepare_conditional, status as pilot_status
 from .runner import manifest, read_json, reproduce, run
@@ -56,6 +57,32 @@ def _gpt_results(output_root):
     return trials
 
 
+def _conditional_results(pilot):
+    summaries = []
+    for path in sorted(pilot.glob("conditional-*/pilot_manifest.json")):
+        directory = path.parent
+        summary = pilot_status(directory)
+        row = {"name": directory.name, "recorded": summary["recorded_pairs"],
+               "coverage_complete": summary["pairs_with_both_reports_and_coverage"]}
+        arm = directory / "connection-001/conditional-a/job.json"
+        if arm.is_file():
+            job = read_json(arm)
+            row["state"] = job["state"]
+            if job.get("artifact_dir"):
+                row["audit"] = audit_live_connection(Path(job["artifact_dir"]))
+        summaries.append(row)
+    return summaries
+
+
+def _ranker_diagnostic(output_root):
+    path = output_root / "ranker-diagnostic-v1/latest_summary.json"
+    if not path.is_file():
+        return {"models": 0, "mode": None}
+    rows = read_json(path)
+    return {"models": len(rows["run_rows"]), "mode": rows["mode"], "official_evaluation": False,
+            "training_sizes": sorted({row["training_states"] for row in rows["run_rows"]})}
+
+
 def status(directory, defaults):
     path = directory / "protocol.json"
     stats_path = directory / "statistics.json"
@@ -80,6 +107,8 @@ def status(directory, defaults):
         "scientific_conclusion": live["scientific_conclusion"],
         "control": live,
         "development": pilot_status(pilot_manifest.parent) if pilot_manifest.is_file() else None,
+        "conditional_development": _conditional_results(pilot_manifest.parent),
+        "ranker_diagnostic": _ranker_diagnostic(directory.parent),
         "run_directory": str(directory),
         "local_diagnostics": {"completed": completed, "planned": planned, "summary": stats},
         "legacy_cpu_sensor": _sensor_result(directory / "legacy_cpu_sensor"),
@@ -134,20 +163,33 @@ def _continue(output_root, directory, defaults, args):
     if not pilot_status(connection)["recorded_pairs"]:
         return run_batch(connection)
     arm = read_json(connection / "connection-001/conditional-a/job.json")
-    trace = Path(arm["artifact_dir"]) / "private/robot/timeline.jsonl"
-    events = [json.loads(line) for line in trace.read_text(encoding="utf8").splitlines()] if trace.is_file() else []
-    captured = {row["frame_id"] for row in events if row["event"] == "candidate_executed"
-                and row["finished_before_reply"] and row["candidate"].startswith("capture:")}
-    accepted = [row for row in events if row["event"] == "evidence_accepted" and row["frame_id"] in captured]
-    if not accepted:
+    verified = audit_live_connection(Path(arm["artifact_dir"]))
+    comparison_version = 1
+    for number in (2, 3, 4):
+        if verified["early_motion_with_usable_material"]:
+            break
+        version = pilots / f"conditional-connection-v{number}"
+        if not (version / "pilot_manifest.json").is_file():
+            prepare_conditional(version, read_json(pilots / "pilot_manifest.json"),
+                                read_json(connection / "calibrated_costs.json"),
+                                connection_only=True, hold_at_view=True,
+                                source_profile="independent" if number == 4 else "single")
+        if not pilot_status(version)["recorded_pairs"]:
+            return run_batch(version)
+        arm = read_json(version / "connection-001/conditional-a/job.json")
+        verified = audit_live_connection(Path(arm["artifact_dir"]))
+        comparison_version = number
+    if not verified["early_motion_with_usable_material"]:
         return {"execution_status": "NEEDS_DIAGNOSIS", "stage": "conditional-development",
                 "scientific_conclusion": "INCONCLUSIVE", "development": development,
-                "connection_job": arm["id"], "captured_while_pending": len(captured),
+                "connection_job": arm["id"], "verified_connection": verified,
                 "next_action": "Inspect the recorded permission, viewpoint, timing and material acceptance"}
-    comparison = pilots / "conditional-comparison-v1"
+    comparison = pilots / f"conditional-comparison-v{comparison_version}"
     if not (comparison / "pilot_manifest.json").is_file():
         calibration = read_json(connection / "calibrated_costs.json")
-        prepare_conditional(comparison, read_json(pilots / "pilot_manifest.json"), calibration)
+        prepare_conditional(comparison, read_json(pilots / "pilot_manifest.json"), calibration,
+                            hold_at_view=comparison_version > 1,
+                            source_profile="independent" if comparison_version == 4 else "single")
     if not pilot_status(comparison)["recorded_pairs"]:
         return run_batch(comparison)
     if development["recorded_pairs"] < development["planned_pairs"]:
@@ -162,11 +204,19 @@ def main(argv=None):
     commands = parser.add_subparsers(dest="command", required=True)
     clean = commands.add_parser("audit-clean", help="Recheck complete-object coverage and actual model image bindings")
     clean.add_argument("--episode-dir", required=True, type=Path)
+    live = commands.add_parser("audit-live", help="Recheck a real conditional action, photo and report handoff")
+    live.add_argument("--episode-dir", required=True, type=Path)
+    learn = commands.add_parser("ranker-diagnostic", help="Run the grouped symbolic CPU ranking diagnostic")
+    learn.add_argument("--data-dir", required=True, type=Path)
+    learn.add_argument("--sizes", type=int, nargs="+", choices=(1000, 3000, 10000), default=[1000, 3000, 10000])
     plan = commands.add_parser("pilot-prepare", help="Write the frozen 48-case development schedule locally")
     plan.add_argument("--pilot-dir", required=True, type=Path)
     plan.add_argument("--episode-timeout", type=float, default=480)
     pilot = commands.add_parser("pilot-status", help="Audit recorded pairs against their scheduled cases")
     pilot.add_argument("--pilot-dir", required=True, type=Path)
+    report = commands.add_parser("pilot-report", help="Rebuild episode and paired results from raw files")
+    report.add_argument("--pilot-dir", required=True, type=Path)
+    report.add_argument("--output", required=True, type=Path)
     batch = commands.add_parser("pilot-run", help="Run the next bounded batch from the locked pilot schedule")
     batch.add_argument("--pilot-dir", required=True, type=Path)
     batch.add_argument("--control-dir", type=Path, default=CHECKOUT / "outputs/control")
@@ -181,6 +231,21 @@ def main(argv=None):
         if name == "continue":
             _online_args(command)
     args = parser.parse_args(argv)
+    if args.command == "ranker-diagnostic":
+        from .ranker_train import experiments
+        defaults = yaml.safe_load(DEFAULTS.read_text(encoding="utf8"))
+        result = experiments(args.data_dir, args.sizes, defaults["data"]["split_seed"])
+        print(json.dumps({"mode": result["mode"], "status": result["status"],
+                          "runs": len(result["run_rows"]), "output": str(args.data_dir)}, ensure_ascii=False))
+        return
+    if args.command == "pilot-report":
+        from .pilot_report import rebuild
+        try:
+            result = rebuild(args.pilot_dir, args.output)
+        except (OSError, ValueError, KeyError) as error:
+            parser.exit(1, f"{error}\n")
+        print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
+        return
     if args.command in ("pilot-prepare", "pilot-status", "pilot-run"):
         defaults = yaml.safe_load(DEFAULTS.read_text(encoding="utf8"))
         try:
@@ -196,9 +261,10 @@ def main(argv=None):
             parser.exit(1, f"{error}\n")
         print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
         return
-    if args.command == "audit-clean":
+    if args.command in ("audit-clean", "audit-live"):
         try:
-            result = audit_run(args.episode_dir)
+            scorer = audit_run if args.command == "audit-clean" else audit_live_connection
+            result = scorer(args.episode_dir)
         except (ValueError, OSError, KeyError) as error:
             parser.exit(1, f"{error}\n")
         print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))

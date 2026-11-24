@@ -28,7 +28,8 @@ class SearchResult:
     exhausted_budget: bool
 
 
-def witness(task: TaskContract, state: Snapshot, prepare: Tuple[Action, ...]) -> Optional[Candidate]:
+def witness(task: TaskContract, state: Snapshot, prepare: Tuple[Action, ...], *,
+            anchor_readiness=False) -> Optional[Candidate]:
     """Prove that one common terminal move works after the expected evidence."""
     initial = state
     for proposed in prepare:
@@ -48,8 +49,9 @@ def witness(task: TaskContract, state: Snapshot, prepare: Tuple[Action, ...]) ->
         if not initial.supports(requirement, worst_finish)
         and any(requirement.applies(world) for world in worlds)
     )
+    clock = initial if anchor_readiness else state
     return Candidate(prepare, continuation, required,
-                     report_time(task, state, state.at + continuation.seconds))
+                     report_time(task, clock, state.at + continuation.seconds))
 
 
 class Search:
@@ -64,7 +66,7 @@ class Search:
             for requirement in task.requirements
         }
 
-    def propose(self, state: Snapshot, *, shared_prefetch=False) -> SearchResult:
+    def propose(self, state: Snapshot, *, shared_prefetch=False, anchor_readiness=False) -> SearchResult:
         end = monotonic() + self.budget_ms / 1000
         worlds = tuple(self.task.worlds(state.results))
         estimate = ready_times(self.task, state)
@@ -99,7 +101,8 @@ class Search:
                                  for world in worlds) / len(worlds)
                     candidate = Candidate(prefix, None, (), finish)
                 else:
-                    candidate = None if shared_prefetch else witness(self.task, state, prefix)
+                    candidate = None if shared_prefetch else witness(self.task, state, prefix,
+                                                                      anchor_readiness=anchor_readiness)
                 if candidate is not None:
                     witnessed += 1
                     if (candidate.expected_finish < baseline

@@ -1,4 +1,5 @@
 import unittest
+from dataclasses import replace
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -14,7 +15,7 @@ from experiments.flexible_execution.executor import Snapshot
 from experiments.flexible_execution.gpt_vision import JUDGE, LOCATE, Material, OUTCOMES, VisibleTarget
 from experiments.flexible_execution.live_planning import Costs, permission_for, select
 from experiments.flexible_execution.task_ir import Condition, QuerySpec, Requirement, Skill, TaskContract
-from experiments.flexible_execution.timeline import Timeline
+from experiments.flexible_execution.timeline import Timeline, summarize
 
 
 GRANT = "采集规则：允许在判读结果返回前采集以下材料：identity。"
@@ -53,6 +54,16 @@ class LiveInspectionTests(unittest.TestCase):
             checked = [row["branches"] for event, row in events if event == "candidate_checked" and row.get("common")]
             self.assertEqual({row["outcomes"]["check"] for row in checked[-1]}, set(OUTCOMES))
 
+    def test_candidate_forecast_does_not_treat_projected_time_as_a_late_reply(self):
+        task = _task(permission_for(GRANT, MATERIAL))
+        task = replace(task, queries=(replace(task.queries[0], estimated_ready=5.),),
+                       travel=(("start", "side", 5.), ("side", "handoff", 0.),
+                               ("start", "handoff", 0.), ("handoff", "side", 5.)))
+        state = Snapshot(0., "start", {}, {}, {})
+        choice = select(task, state, "conditional-a", lambda *_args, **_fields: None)
+        self.assertIsNotNone(choice)
+        self.assertEqual(choice.expected_finish, 18.)
+
     def test_evidence_requires_same_readable_object_region_and_fresh_camera(self):
         def jpeg(color):
             buffer = BytesIO()
@@ -67,7 +78,8 @@ class LiveInspectionTests(unittest.TestCase):
 
         class Stub:
             draft = {"same_object": True, "readable": True, "field": "identity", "value": "EQ-02",
-                     "object_bbox": [.1, .1, .5, .7], "material_bbox": [.2, .2, .3, .3]}
+                     "object_bbox": [.1, .1, .5, .7], "material_bbox": [.2, .2, .3, .3],
+                     "source_role": "body_identity"}
 
             def request(self, system, payload, images):
                 assert images[0]["data"] == origin.payload and images[1]["data"] == captured.payload
@@ -83,6 +95,9 @@ class LiveInspectionTests(unittest.TestCase):
                 reader.draft = dict(Stub.draft, **alteration)
                 rejected, _ = _verify(reader, "Report ID", requirement, MATERIAL, origin, target, photo, 2., 9.)
                 self.assertIsNone(rejected)
+        reader.draft = dict(Stub.draft, source_role="other")
+        rejected, _ = _verify(reader, "Read the asset identity", requirement, MATERIAL, origin, target, photo, 2., 9.)
+        self.assertIsNone(rejected)
 
     def test_conditional_photo_reaches_original_agent_and_complete_report_check(self):
         photographed = Event()
@@ -133,9 +148,10 @@ class LiveInspectionTests(unittest.TestCase):
                     return {"outcome": "positive"}
                 if system == live_inspection.READ_MATERIAL:
                     return {"same_object": True, "readable": True, "field": "identity", "value": "EQ-02",
-                            "object_bbox": [.1, .1, .5, .7], "material_bbox": [.2, .2, .3, .3]}
+                            "object_bbox": [.1, .1, .5, .7], "material_bbox": [.2, .2, .3, .3],
+                            "source_role": "body_identity"}
                 if system == live_inspection.ACCEPT_TASK:
-                    return {"complete": True, "reason": "Both requested facts are supported"}
+                    return {"issues": []}
                 selected = next(row["image_id"] for row in payload["recent_images"] if row["image_id"] == "probe_0004")
                 rows = [{"object_id": "EQ-02", "facts": {"cracked": True}, "evidence_image_id": selected}]
                 return {"action": {"type": "submit"}, "records": rows,
@@ -153,3 +169,4 @@ class LiveInspectionTests(unittest.TestCase):
             self.assertEqual(metrics["conditional_materials"], 1)
             self.assertEqual(report["outcome"], "accepted")
             self.assertIn(live_inspection.ACCEPT_TASK, model.purposes)
+            self.assertEqual(len(summarize(directory / "events.jsonl")["intervals"]["search"]), 1)
