@@ -32,7 +32,8 @@ def _stop(process):
         except subprocess.TimeoutExpired:pass
 
 
-def main(argv=None, *, sensor_exercise=None, agent_runner=run_agent, clean_study_task=None):
+def main(argv=None, *, sensor_exercise=None, agent_runner=run_agent, clean_study_task=None,
+         merge_report_fragments=False):
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--policy',choices=('clean','belief','belief_blind','belief_known_task','direct_effect','redvla_external','randomized','uao_spsa','iccv_uada_spsa','iccv_upa_spsa'),default='clean')
     p.add_argument('--family',choices=FAMILIES,default='cracks')
@@ -279,7 +280,7 @@ def main(argv=None, *, sensor_exercise=None, agent_runner=run_agent, clean_study
         report,metrics=agent_runner(backend,scene['truth']['task'],root/'private/robot',event,a.episode_timeout)
         with backend.lock:backend.finished=True
         if clean_study_task is None:
-            score = evaluate(scene['truth'], report, backend.attack)
+            score = evaluate(scene['truth'], report, backend.attack, merge_fragments=merge_report_fragments)
         else:
             from experiments.flexible_execution.custom_evaluation import score_program
 

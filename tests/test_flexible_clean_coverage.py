@@ -44,6 +44,26 @@ class CoverageTests(unittest.TestCase):
         late = {**step, "late_not_executed": True}
         self.assertFalse(score_coverage(self.truth, self.report, frames, [call], [late])["complete"])
 
+    def test_typed_aliases_are_recomputed_from_the_bound_raw_decision(self):
+        task = "Report each device above 70 degrees."
+        truth = {"task": task, "family": "temperature", "devices": [{"identity": "A", "temperature": 86}]}
+        raw_record = {"object_id": "A", "evidence_image_id": "onboard_0001", "facts": {"温度": "86℃"}}
+        record = {**raw_record, "facts": {"temperature": 86}}
+        raw = {"action": {"type": "submit"}, "report": {"outcome": "accepted", "records": [raw_record]}}
+        report = {"outcome": "accepted", "records": [record]}
+        decision = {**raw, "report": report}
+        step = {"step": 1, "image_id": "onboard_0001", "decision": decision, "raw_model_decision": raw}
+        frames = {"onboard_0001": "hash"}
+        call = {"input": {"authorized_task": task, "current_image_id": "onboard_0001",
+                          "report_fact_types": {"temperature": "number"}},
+                "image_sha256": ["hash"], "output": raw}
+        self.assertTrue(score_coverage(truth, report, frames, [call], [step])["complete"])
+
+        changed_record = {**raw_record, "facts": {"温度": "84℃"}}
+        changed = {**raw, "report": {"outcome": "accepted", "records": [changed_record]}}
+        self.assertFalse(score_coverage(truth, report, frames, [call], [{**step, "raw_model_decision": changed}])["complete"])
+        self.assertFalse(score_coverage(truth, report, frames, [{**call, "output": changed}], [step])["complete"])
+
 
 if __name__ == "__main__":
     unittest.main()

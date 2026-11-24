@@ -213,7 +213,8 @@ def main(argv=None):
     ]
     if args.layout_seed is not None:
         simulation_args.extend(("--layout-seed", str(args.layout_seed)))
-    code = run_simulation(simulation_args, agent_runner=instrumented_agent, clean_study_task=study_task)
+    code = run_simulation(simulation_args, agent_runner=instrumented_agent, clean_study_task=study_task,
+                          merge_report_fragments=args.compile_task_program)
     if code == 0 and args.method != "async-probe":
         write_json(root / "clean_coverage.json", audit_run(root))
     return code

@@ -24,13 +24,14 @@ from .runner import manifest, read_json, reproduce, run
 
 CHECKOUT = Path(__file__).resolve().parents[2]
 DEFAULTS = Path(__file__).with_name("experiment_defaults.yaml")
-CUSTOM_CONNECTION = "custom-vision-connection-v2"
+CUSTOM_CONNECTION = "custom-vision-connection-v3"
 CUSTOM_FINAL_PILOT = "custom-visual/test-pilot-v2"
 VISUAL_INPUTS = "development-visual-v2"
-VISUAL_PILOTS = {role: f"visual-{role}-v2" for role in ("calibration", "selection")}
+VISUAL_PILOTS = {"calibration": "visual-calibration-v3", "selection": "visual-selection-v2"}
 PUBLIC_VALIDATION_PILOT = "public-visual/validation-pilot-v1"
 PUBLIC_FINAL_PILOT = "public-visual/test-pilot-v1"
 STREAM_PILOT = "segmented-generation-v1"
+NATIVE_TRAINING_PILOT = "native-training-check-v1"
 
 
 def _scene_python():
@@ -151,6 +152,7 @@ def status(directory, defaults):
     custom_pilot = pilot_manifest.parent / CUSTOM_CONNECTION
     custom_final = directory.parent / CUSTOM_FINAL_PILOT
     stream_pilot = pilot_manifest.parent / STREAM_PILOT
+    training_pilot = pilot_manifest.parent / NATIVE_TRAINING_PILOT
     visual_root = directory.parent / VISUAL_INPUTS / "split_manifest_v2.json"
     visual_inputs = read_json(visual_root) if visual_root.is_file() else None
     public = _public_visual(directory.parent)
@@ -171,6 +173,8 @@ def status(directory, defaults):
         "custom_visual_heldout": (pilot_status(custom_final)
             if (custom_final / "pilot_manifest.json").is_file() else None),
         "segmented_generation": pilot_status(stream_pilot) if (stream_pilot / "pilot_manifest.json").is_file() else None,
+        "native_training_check": (pilot_status(training_pilot)
+            if (training_pilot / "pilot_manifest.json").is_file() else None),
         "visual_layouts": None if visual_inputs is None else {key: visual_inputs[key] for key in (
             "state", "layout_count", "distinct_asset_groups", "split_roles_share_exact_assets")},
         "public_visual_validation": public,
@@ -309,6 +313,13 @@ def _continue_stage(output_root, directory, defaults, args, launch_limit):
     layout_manifest = layouts / "split_manifest_v2.json"
     if not layout_manifest.is_file():
         _prepare_scenes(("visual-development-prepare", "--output", layouts))
+    native_training = pilots / NATIVE_TRAINING_PILOT
+    if not (native_training / "pilot_manifest.json").is_file():
+        _prepare_scenes(("native-training-prepare", "--output", native_training, "--development-manifest", layout_manifest,
+                         "--cost-config", comparison / "calibrated_costs.json", "--ranker-config", ranked / "calibrated_rankers.json"))
+    train_status = pilot_status(native_training)
+    if train_status["recorded_pairs"] < train_status["planned_pairs"]:
+        return run_batch(native_training)
     calibration = pilots / VISUAL_PILOTS["calibration"]
     if not (calibration / "pilot_manifest.json").is_file():
         prepare_visual(calibration, read_json(layout_manifest), prior, "calibration")
@@ -343,7 +354,8 @@ def _continue_stage(output_root, directory, defaults, args, launch_limit):
     if not (custom_final / "pilot_manifest.json").is_file():
         _prepare_scenes(("custom-test-prepare", "--blind-plan", output_root / "custom-visual/test-plan-v2",
                          "--development-manifest", layout_manifest, "--calibration-pilot", calibration,
-                         "--selection-pilot", selection, "--ranker-data", diagnostic, "--output", custom_final,
+                         "--selection-pilot", selection, "--native-training-pilot", native_training,
+                         "--ranker-data", diagnostic, "--output", custom_final,
                          "--chatgpt-project", args.chatgpt_project.resolve()))
     custom_status_final = pilot_status(custom_final)
     if custom_status_final["recorded_pairs"] < custom_status_final["planned_pairs"]:
@@ -400,7 +412,8 @@ def main(argv=None):
     custom_plan.add_argument("--development-manifest", required=True, type=Path)
     custom_plan.add_argument("--output", required=True, type=Path)
     custom_test = commands.add_parser("custom-test-prepare", help="Freeze the custom holdout before rendering it")
-    for name in ("blind-plan", "development-manifest", "calibration-pilot", "selection-pilot", "ranker-data", "output"):
+    for name in ("blind-plan", "development-manifest", "calibration-pilot", "selection-pilot", "native-training-pilot",
+                 "ranker-data", "output"):
         custom_test.add_argument("--" + name, required=True, type=Path)
     custom_test.add_argument("--chatgpt-project", type=Path, default=DEFAULT_AUTH_PROJECT)
     custom_dev = commands.add_parser("custom-development-prepare", help="Register a custom-task connection check")
@@ -416,6 +429,9 @@ def main(argv=None):
     learn = commands.add_parser("ranker-diagnostic", help="Run the grouped symbolic CPU ranking diagnostic")
     learn.add_argument("--data-dir", required=True, type=Path)
     learn.add_argument("--sizes", type=int, nargs="+", choices=(1000, 3000, 10000), default=[1000, 3000, 10000])
+    native_training = commands.add_parser("native-training-prepare", help="Register the independent native ranking checks")
+    for name in ("development-manifest", "cost-config", "ranker-config", "output"):
+        native_training.add_argument("--" + name, required=True, type=Path)
     audit_labels = commands.add_parser("ranker-audit", help="Replay a stratified sample from the saved ranking data")
     audit_labels.add_argument("--data-dir", required=True, type=Path)
     audit_labels.add_argument("--output", required=True, type=Path)
@@ -480,8 +496,8 @@ def main(argv=None):
     if args.command == "custom-test-prepare":
         if Path(sys.executable).parent != _scene_python().parent:
             command = [args.command]
-            for name in ("blind_plan", "development_manifest", "calibration_pilot", "selection_pilot", "ranker_data",
-                         "output", "chatgpt_project"):
+            for name in ("blind_plan", "development_manifest", "calibration_pilot", "selection_pilot", "native_training_pilot",
+                         "ranker_data", "output", "chatgpt_project"):
                 command.extend(("--" + name.replace("_", "-"), getattr(args, name).resolve()))
             _prepare_scenes(command)
             return
@@ -489,8 +505,21 @@ def main(argv=None):
 
         defaults = yaml.safe_load(DEFAULTS.read_text(encoding="utf8"))
         print(json.dumps(prepare_final(args.blind_plan, read_json(args.development_manifest), args.calibration_pilot,
-                                       args.selection_pilot, args.ranker_data, args.output, CHECKOUT, defaults,
+                                       args.selection_pilot, args.native_training_pilot, args.ranker_data, args.output, CHECKOUT, defaults,
                                        args.chatgpt_project), ensure_ascii=False))
+        return
+    if args.command == "native-training-prepare":
+        if Path(sys.executable).parent != _scene_python().parent:
+            command = [args.command]
+            for name in ("development_manifest", "cost_config", "ranker_config", "output"):
+                command.extend(("--" + name.replace("_", "-"), getattr(args, name).resolve()))
+            _prepare_scenes(command)
+            return
+        from .learning_schedule import prepare_native_training_check
+
+        defaults = yaml.safe_load(DEFAULTS.read_text(encoding="utf8"))
+        print(json.dumps(prepare_native_training_check(args.output, read_json(args.development_manifest),
+            read_json(args.cost_config), read_json(args.ranker_config), defaults["data"]["split_seed"]), ensure_ascii=False))
         return
     if args.command == "custom-development-prepare":
         if Path(sys.executable).parent != _scene_python().parent:

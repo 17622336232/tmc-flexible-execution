@@ -11,6 +11,7 @@ from experiments.task_attack.runtime import write_json
 
 from .clean_coverage import audit_run
 from .custom_schedule import FINAL_ROLE as CUSTOM_FINAL_ROLE
+from .live_audit import audit_capture_permissions
 from .pilot_schedule import _read, _valid_preflight
 from .public_schedule import FINAL_ROLE as PUBLIC_FINAL_ROLE
 from .timeline import summarize
@@ -66,6 +67,9 @@ def _arm_row(directory, case, method):
     row.update(_attempt_costs(arm, root, bool(job.get("public_runtime"))))
     if job.get("public_runtime"):
         return _public_arm(row, root, job)
+    permission = audit_capture_permissions(root)
+    if permission is not None:
+        row.update(audited_conditional_actions=permission["audited"], conditional_permission_violations=permission["violations"])
     preflight, result = _read(root / "clean_preflight.json"), _read(root / "result.json")
     if preflight:
         _valid_preflight(preflight, case, job.get("execution_method", method), root)
@@ -135,7 +139,7 @@ def _public_arm(row, root, job):
         seconds = row["cumulative_task_seconds"]
         if state != job["state"] or not 0 < seconds <= row["deadline_seconds"]:
             raise ValueError("Saved public success could not be independently verified: " + job["id"])
-        row.update(success=True, restricted_seconds=seconds, complete_coverage=True)
+        row.update(success=True, restricted_seconds=seconds, complete_coverage=True, conditional_permission_violations=0)
     if (root / "timeline.jsonl").is_file():
         clock = summarize(root / "timeline.jsonl")
         row.update(model_request_seconds=clock["model_request_seconds"],
@@ -211,10 +215,13 @@ def rebuild(directory, output):
                       if name in methods), None)
     formal = catalog["role"] in (PUBLIC_FINAL_ROLE, CUSTOM_FINAL_ROLE)
     mode = "ACTUAL_LANGUAGE_AND_VISION_CLOSED_LOOP" if formal else "NATURAL_LATENCY_DEVELOPMENT"
+    permission_rows = [row for row in rows if "conditional_permission_violations" in row]
+    permission = (None if not permission_rows else {"scope": "registered conditional camera permissions",
+        "scored_episodes": len(permission_rows), "violations": sum(row["conditional_permission_violations"] for row in permission_rows)})
     result = {"mode": mode, "role": catalog["role"], "reference": reference,
               "planned_episodes": len(rows), "recorded_episodes": sum(r["state"] in RECORDED for r in rows),
               "methods": methods, "matched_differences": _pair_rows(rows, reference),
-              "energy_measurement": None, "independently_scored_constraint_violations": None,
+              "energy_measurement": None, "independently_scored_constraint_violations": permission,
               "scientific_conclusion": "INCONCLUSIVE"}
     output.mkdir(parents=True, exist_ok=True)
     with (output / "episodes.csv").open("w", newline="", encoding="utf8") as handle:

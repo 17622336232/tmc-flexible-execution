@@ -1,10 +1,46 @@
 import unittest
 
 from experiments.flexible_execution.clean_coverage import score_coverage
+from experiments.flexible_execution.custom_evaluation import score_program
+from experiments.flexible_execution.material_schema import canonical_record
 from experiments.flexible_execution.requirement_program import check_submission, parse
+from experiments.task_attack.evaluate import evaluate
+from experiments.task_attack.records import keep_observation
 
 
 class RequirementProgramTests(unittest.TestCase):
+    def test_each_typed_fact_keeps_its_source_photo(self):
+        schema = {"cracked": "flag", "temperature": "number"}
+        original = {"object_id": "EQ-01", "evidence_image_id": "probe_0001",
+                    "facts": {"是否有裂纹": "正面未见裂纹", "温度": "86℃"}}
+        second = {"object_id": "EQ-01", "evidence_image_id": "onboard_0002", "facts": {"是否有裂纹": "有"}}
+        temperature = canonical_record(schema, original)
+        cracked = canonical_record(schema, second)
+        self.assertEqual(temperature["facts"], {"temperature": 86})
+        self.assertEqual(cracked["facts"], {"cracked": True})
+        records = keep_observation([temperature], cracked)
+        self.assertEqual(records, [temperature, cracked])
+
+        task = "Report the crack status and temperature of devices above 80 degrees."
+        draft = {"scope": {"mode": "all", "description": "all devices"}, "fields": schema,
+                 "filter": {"op": "gt", "field": "temperature", "right": {"literal": 80}},
+                 "extreme": None, "report": ["cracked", "temperature"]}
+        program = parse(draft, task)
+        devices = [{"identity": "EQ-01", "cracked": True, "temperature": 86}]
+        report = {"outcome": "accepted", "records": records}
+        self.assertIsNone(check_submission(program, report, records))
+        truth = {"task": task, "devices": devices, "oracle_requirement_program": draft,
+                 "score_spec": {"required": ["cracked", "temperature"], "greater": {"temperature": 80}}}
+        self.assertTrue(score_program(truth, report)["correct"])
+        self.assertTrue(evaluate(truth, report, merge_fragments=True)["correct"])
+        self.assertFalse(evaluate(truth, report)["correct"])
+
+        conflict = {**cracked, "facts": {"cracked": False}}
+        conflicting_report = {**report, "records": records + [conflict]}
+        self.assertIsNotNone(check_submission(program, conflicting_report, records))
+        self.assertFalse(score_program(truth, conflicting_report)["correct"])
+        self.assertFalse(evaluate(truth, conflicting_report, merge_fragments=True)["correct"])
+
     def test_custom_or_needs_evidence_for_rejected_subjects(self):
         instruction = "Report cracked devices or devices above 80 degrees."
         fields = {"cracked": "flag", "temperature": "number"}

@@ -4,9 +4,10 @@ import operator
 import re
 from dataclasses import dataclass
 from decimal import Decimal
-from math import isfinite
 
-from experiments.task_attack.records import facts, object_id
+from experiments.task_attack.records import aggregate_facts
+
+from .material_schema import INSPECTION_FIELDS, value_matches as _value
 
 
 COMPARISONS = {"eq": operator.eq, "ne": operator.ne, "lt": operator.lt, "le": operator.le,
@@ -14,9 +15,6 @@ COMPARISONS = {"eq": operator.eq, "ne": operator.ne, "lt": operator.lt, "le": op
 TYPES = {"flag", "count", "number", "label"}
 FIELD_NAME = re.compile(r"[a-z][a-z0-9_]{0,63}")
 NUMBER_TEXT = re.compile(r"(?<![0-9.])[-+]?[0-9]+(?:\.[0-9]+)?(?![0-9]|\.[0-9])")
-INSPECTION_FIELDS = {"cracked": "flag", "temperature": "number", "box_count": "count", "order_count": "count",
-                     "color": "label", "vehicle_present": "flag", "restricted": "flag", "blocked": "flag",
-                     "extinguisher_present": "flag"}
 
 COMPILE = """Compile only the authorized inspection requirements. Return compact
 JSON with exactly these keys:
@@ -36,16 +34,6 @@ ties. Every referenced field must be declared. Report identity is implicit.
 For the simulator, use the provided `supported_fields` names and their types.
 Do not invent observations, permission, object identities or task outcomes.
 """
-
-
-def _value(kind, value):
-    if kind == "flag":
-        return type(value) is bool
-    if kind == "count":
-        return type(value) is int and value >= 0
-    if kind == "number":
-        return type(value) is int or (type(value) is float and isfinite(value))
-    return isinstance(value, str) and bool(value.strip())
 
 
 def _mentions_number(text, number):
@@ -203,21 +191,17 @@ def compile_task(client, instruction):
 
 def check_submission(program, report, collected):
     """Check the report after the shared visual verifier has confirmed its scope."""
-    rows = {}
-    for record in collected + report["records"]:
-        identity = object_id(record)
-        observed = rows.setdefault(identity, {})
-        for field, value in facts(record).items():
-            if field in program.fields:
-                if field in observed and observed[field] != value:
-                    return f"现有证据对 {identity} 的 {field} 记录不一致"
-                observed[field] = value
+    rows, conflicts = aggregate_facts(collected + report["records"])
+    for identity, field in conflicts:
+        if field in program.fields:
+            return f"现有证据对 {identity} 的 {field} 记录不一致"
     result = program.evaluate(rows, scope_confirmed=True)
     if not result["complete"]:
         return "证据还不足以判定这些对象：" + "、".join(result["unresolved"])
     expected = {row["object_id"]: row["facts"] for row in result["findings"]}
-    submitted = {object_id(row): {key: value for key, value in facts(row).items() if key in program.report}
-                 for row in report["records"]}
-    if len(submitted) != len(report["records"]) or submitted != expected:
+    reported, _ = aggregate_facts(report["records"])
+    submitted = {identity: {key: value for key, value in row.items() if key in program.report}
+                 for identity, row in reported.items()}
+    if submitted != expected:
         return "报告和由现有证据算出的任务结果不一致，请重新检查条件、范围和并列结果"
     return None

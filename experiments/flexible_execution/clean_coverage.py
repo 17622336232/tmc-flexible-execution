@@ -2,13 +2,15 @@
 
 import json
 from collections import defaultdict
+from functools import partial
 from hashlib import sha256
 
 from experiments.task_attack.evaluate import _equal, _legacy_spec, evaluate
-from experiments.task_attack.records import facts, object_id
+from experiments.task_attack.records import adapt_decision_records, facts, object_id
 from experiments.task_attack.tasks import object_facts
 
 from .live_planning import EARLY_GRANT, LATE_GRANT
+from .material_schema import INSPECTION_FIELDS, canonical_record
 
 
 def _required_fields(spec):
@@ -30,11 +32,20 @@ def _verified_calls(task, registered_frames, calls):
             continue
         names = [item["image_id"] for item in payload.get("recent_images", [])] + [current]
         hashes = [registered_frames.get(name) for name in names]
-        if (payload.get("authorized_task") != task or any(value is None for value in hashes)
-                or hashes != call.get("image_sha256") or current in successful):
+        schema = payload.get("report_fact_types")
+        if schema is not None and (not isinstance(schema, dict) or
+                                   any(field not in INSPECTION_FIELDS or INSPECTION_FIELDS[field] != kind
+                                       for field, kind in schema.items())):
             rejected.append(current)
             continue
-        successful[current] = call["output"], set(names)
+        if (payload.get("authorized_task") != task or any(value is None for value in hashes)
+                or hashes != call.get("image_sha256") or current in successful
+                or not isinstance(call["output"], dict)):
+            rejected.append(current)
+            continue
+        raw = call["output"]
+        adapted = adapt_decision_records(raw, partial(canonical_record, schema)) if schema is not None else raw
+        successful[current] = raw, adapted, set(names), schema is not None
     for current in rejected:
         successful.pop(current, None)
     return successful, sorted(set(rejected))
@@ -64,13 +75,18 @@ def score_coverage(truth, report, frames, model_calls, decisions):
     calls, rejected_calls = _verified_calls(truth["task"], frames, model_calls)
     supports = {name: defaultdict(set) for name in scope}
     rejected_records = []
+    merge_fragments = False
 
     for step in decisions:
         current = step.get("image_id")
         decision = step.get("decision", {})
         match = calls.get(current)
-        if step.get("late_not_executed") or match is None or match[0] != decision:
+        if step.get("late_not_executed") or match is None:
             continue
+        raw, adapted, supplied_frames, typed = match
+        if raw != step.get("raw_model_decision", decision) or adapted != decision:
+            continue
+        merge_fragments |= typed
         rows = list(decision.get("records", []))
         if decision.get("action", {}).get("type") == "submit":
             rows.extend(decision.get("report", {}).get("records", []))
@@ -80,7 +96,7 @@ def score_coverage(truth, report, frames, model_calls, decisions):
                 continue
             name = by_label[label.strip().casefold()]
             source = row.get("evidence_image_id")
-            if source not in match[1]:
+            if source not in supplied_frames:
                 rejected_records.append({"step": step.get("step"), "object": name, "frame": source})
                 continue
             for key, value in facts(row).items():
@@ -89,7 +105,7 @@ def score_coverage(truth, report, frames, model_calls, decisions):
 
     missing = {name: sorted(fields - set(evidence)) for name, evidence in supports.items() if fields - set(evidence)}
     if program is None:
-        verdict = evaluate(truth, report)
+        verdict = evaluate(truth, report, merge_fragments=merge_fragments)
     else:
         factual_observations = {name: {key: scope[name][key] for key in evidence} for name, evidence in supports.items()}
         checked = program.evaluate(factual_observations, scope_confirmed=bool(scope))

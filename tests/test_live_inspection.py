@@ -1,5 +1,5 @@
 import unittest
-from dataclasses import replace
+from dataclasses import asdict, replace
 from hashlib import sha256
 from io import BytesIO
 import json
@@ -15,9 +15,11 @@ from experiments.flexible_execution.adapters.live_inspection import _verify
 from experiments.flexible_execution.evidence import Frame
 from experiments.flexible_execution.executor import Snapshot, permitted_observation
 from experiments.flexible_execution.gpt_vision import JUDGE, LOCATE, Material, OUTCOMES, VisibleTarget
+from experiments.flexible_execution.live_audit import audit_capture_permissions
 from experiments.flexible_execution.live_planning import Costs, check_branchwise, checked, permission_for, select
 from experiments.flexible_execution.task_ir import Condition, QuerySpec, Requirement, Skill, TaskContract
 from experiments.flexible_execution.timeline import Timeline, summarize
+from experiments.task_attack.runtime import write_json
 
 
 GRANT = "采集规则：允许在判读结果返回前采集以下材料：identity。"
@@ -120,6 +122,21 @@ class LiveInspectionTests(unittest.TestCase):
         self.assertEqual({b["outcomes"]["check"] for b in branches}, set(OUTCOMES))
         self.assertTrue(all(b["terminal"] == "handoff" and b["latest_finish"] < task.deadline for b in branches))
 
+    def test_permission_audit_distinguishes_actions_before_and_after_the_bound_reply(self):
+        with TemporaryDirectory() as temp:
+            episode = Path(temp)
+            robot = episode / "private/robot"
+            task = _task(permission_for("If cracked, report the ID.", MATERIAL))
+            write_json(robot / "conditional_contract.json", {"task": asdict(task)})
+            trace = Timeline(robot / "timeline.jsonl")
+            trace.event("action_started", 1, candidate="view")
+            trace.event("query_applied", 2, binding={"query_id": "check"}, outcome="positive")
+            trace.event("action_started", 3, candidate="view")
+            audit = audit_capture_permissions(episode)
+            self.assertEqual(audit["audited"], 2)
+            self.assertEqual(audit["violations"], 1)
+            self.assertEqual([row["permitted"] for row in audit["actions"]], [False, True])
+
     def test_candidate_forecast_does_not_treat_projected_time_as_a_late_reply(self):
         task = _task(permission_for(GRANT, MATERIAL))
         task = replace(task, queries=(replace(task.queries[0], estimated_ready=5.),),
@@ -164,6 +181,15 @@ class LiveInspectionTests(unittest.TestCase):
         reader.draft = dict(Stub.draft, source_role="other")
         rejected, _ = _verify(reader, "Read the asset identity", requirement, MATERIAL, origin, target, photo, 2., 9.)
         self.assertIsNone(rejected)
+
+        presence = Requirement("device:extinguisher_present", "device", "extinguisher_present")
+        material = Material("extinguisher_present", ("negative",), "Is the mounting region empty?", None)
+        reader.draft = dict(Stub.draft, field=presence.field, value=False, source_role="other")
+        evidence, _ = _verify(reader, "Read the extinguisher mounting area", presence, material, origin, target, photo, 2., 9.)
+        self.assertEqual(evidence.value, "false")
+        reader.draft["value"] = None
+        unknown, _ = _verify(reader, "Read the extinguisher mounting area", presence, material, origin, target, photo, 2., 9.)
+        self.assertIsNone(unknown)
 
     def test_conditional_photo_reaches_original_agent_and_complete_report_check(self):
         photographed = Event()

@@ -173,11 +173,12 @@ def _heldout_layout(row, output, development_assets, used_seeds, split_seed):
     return case
 
 
-def prepare_final(blind, development, calibration, selection, diagnostic, output, checkout, defaults, auth_project):
+def prepare_final(blind, development, calibration, selection, native_training, diagnostic, output, checkout, defaults,
+                  auth_project):
     """Freeze the custom protocol before generating any held-out scene or starting inference."""
     from .candidate_ranking import RANKED_METHODS
     from .control import _runtime_inputs, verified_cohort
-    from .learning_schedule import build_config
+    from .learning_schedule import ROLE as RANKER_ROLE, build_config
     from .pilot_schedule import VISUAL_ROLES
 
     data = defaults["data"]
@@ -185,7 +186,10 @@ def prepare_final(blind, development, calibration, selection, diagnostic, output
                                                  data["development_selection_instances"])
     calibrated, calibration_evidence = verified_cohort("timing_calibration", calibration, VISUAL_ROLES["calibration"],
                                                         data["development_calibration_instances"])
-    if any(catalog["layout_manifest_sha256"] != _hash(development) for catalog in (chosen, calibrated)):
+    native_catalog, native_evidence = verified_cohort("native_training_check", native_training, RANKER_ROLE, 2)
+    if (native_catalog.get("data_role") != "INDEPENDENT_NATIVE_TRAINING_CHECK"
+            or native_catalog["development_manifest_sha256"] != _hash(development)
+            or any(catalog["layout_manifest_sha256"] != _hash(development) for catalog in (chosen, calibrated))):
         raise ValueError("The development evidence was generated from different visual groups")
     prepare(blind, defaults, development)
     assigned = read_json(blind / "split_manifest.json")
@@ -218,9 +222,10 @@ def prepare_final(blind, development, calibration, selection, diagnostic, output
     inputs = _runtime_inputs(checkout, {**template, "cases": signature_cases}, auth_project.resolve(), (11674, 11675))
     lock = {key: inputs[key] for key in ("model", "reasoning_effort", "request_limit", "source_sha256", "environment_sha256")}
     frozen = {**lock, "schema": 1, "role": FINAL_ROLE, "blind_assignment_sha256": _hash(assigned),
-              "selection": selection_evidence, "calibration": calibration_evidence, "methods": list(methods),
+              "selection": selection_evidence, "calibration": calibration_evidence, "native_training": native_evidence,
+              "methods": list(methods),
               "ranker_bindings": bind, "cost_config_sha256": _hash(cost), "metrics": defaults["evaluation"],
-              "asset_replacement": "ordered independent seeds; reject exact development texture-group overlap",
+              "asset_replacement": "ordered independent seeds; reject exact training or development texture-group overlap",
               "mode": data["main_evaluation_mode"]}
     lock_path = output / "frozen_evaluation.json"
     if lock_path.is_file():
@@ -232,7 +237,9 @@ def prepare_final(blind, development, calibration, selection, diagnostic, output
     _save_locked(output / "calibrated_costs.json", cost)
 
     cases = []
-    forbidden = {row["asset_group_sha256"] for row in development["cases"]}
+    known = [*development["cases"], *native_catalog["cases"]]
+    forbidden = {row["asset_group_sha256"] for row in known}
+    known_layouts = {row["layout_group_sha256"] for row in known}
     used = set()
     for row in assigned["cases"]:
         if disk_usage(output).free < minimum_free:
@@ -240,7 +247,8 @@ def prepare_final(blind, development, calibration, selection, diagnostic, output
         case = _heldout_layout(row, output, forbidden, used, data["split_seed"])
         case["order"] = Random(_hash([row["id"], data["split_seed"], "method-order"])).sample(methods, len(methods))
         cases.append(case)
-    if len({case["physical_layout_sha256"] for case in cases}) != len(cases):
+    layouts = {case["physical_layout_sha256"] for case in cases}
+    if len(layouts) != len(cases) or layouts & known_layouts:
         raise ValueError("The custom test shares a physical layout across base cases")
     catalog = {**template, "cases": cases, "frozen_evaluation": str(lock_path), "frozen_evaluation_sha256": _hash(frozen)}
     _save_locked(output / "pilot_manifest.json", catalog)

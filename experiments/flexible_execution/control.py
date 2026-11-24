@@ -122,6 +122,9 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
         stage_sources += (RANKING_SOURCE,)
     if typed:
         stage_sources += ("experiments/flexible_execution/requirement_program.py",)
+    value_schema = "experiments/flexible_execution/material_schema.py"
+    if conditional and (checkout / value_schema).is_file():
+        stage_sources += (value_schema,)
     if any(case.get("study_task_sha256") for case in catalog.get("cases", ())):
         stage_sources += ("experiments/flexible_execution/custom_evaluation.py",)
     if any(case.get("layout_seed") is not None for case in catalog.get("cases", ())):
@@ -541,14 +544,20 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
     if existing:
         if not resume:
             raise ValueError("Use --resume for the locked pilot")
-        if {k: v for k, v in existing.items() if k != "code_git_commit"} != protocol:
-            checkout = _locked_source(existing, protocol, checkout, control, catalog, auth_project, ports)
-        protocol = existing
+        frozen = existing
     else:
-        protocol["code_git_commit"] = subprocess.check_output(["git", "rev-parse", "HEAD"],
-                                                             cwd=checkout, text=True).strip()
-        if freeze and freeze["source_sha256"] != protocol["source_sha256"]:
+        revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=checkout, text=True).strip()
+        frozen = {**protocol, "code_git_commit": revision}
+        if freeze and freeze["source_sha256"] != frozen["source_sha256"]:
             raise ValueError("The first custom test launch must use the frozen source")
+    if frozen.get("source_sha256"):
+        # Run the worker from the verified snapshot even when the development
+        # tree is currently identical. Later edits cannot race worker startup.
+        checkout = _locked_source(frozen, protocol, checkout, control, catalog, auth_project, ports)
+    elif {key: value for key, value in frozen.items() if key != "code_git_commit"} != protocol:
+        raise ValueError("The existing pilot protocol does not match the current inputs")
+    protocol = frozen
+    if not existing:
         write_json(lock, protocol)
     if freeze and freeze["source_sha256"] != protocol["source_sha256"]:
         raise ValueError("The custom test launch differs from the frozen source")

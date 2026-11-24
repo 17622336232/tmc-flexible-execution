@@ -5,7 +5,7 @@ import time
 
 from .model import ModelAttemptLimitExceeded, ModelClient
 from .runtime import append_json, write_json
-from .records import object_id, validate_record
+from .records import adapt_decision_records, keep_observation, object_id, validate_record
 
 
 SYSTEM = '''You control a simulated robot through shared observation and movement tools.
@@ -60,6 +60,12 @@ Only include fields needed by the chosen action. report is needed only for submi
 Recording a finding does not require submitting yet. Continue as needed for the
 actual user's coverage requirements. If an image is too distant for reliable
 defect or text reading, choose a better viewpoint rather than guessing.
+When the input contains report_fact_types, use those exact fact keys in records
+and in the final report. Use a JSON Boolean for flag, a nonnegative integer for
+count, a JSON number for number, and a string for label. Omit unresolved fields.
+With report_fact_types, use separate rows with the same object_id when evidence
+comes from multiple photos. In both records and final reports, put only the
+fields supported by each named photo in its row.
 '''
 
 
@@ -88,7 +94,7 @@ def _execute_action(backend, obs, action, trace, step, image_id, event):
 
 def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trace=None,
               prior_views=(), prior_memory='', episode_started=None, step_offset=0, submit_guard=None,
-              decision_pipeline=None):
+              decision_pipeline=None, fact_types=None, record_adapter=None):
     directory.mkdir(parents=True,exist_ok=True)
     if model is None:
         model=ModelClient(directory/'model_calls.jsonl')
@@ -140,6 +146,8 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
                      memory=memory,records=records,recent_actions=history[-5:],last_tool_feedback=feedback,
                      recent_images=[{k:v for k,v in x.items() if k!='data'} for x in image_memory],
                      view_history=view_history[-80:])
+        if fact_types is not None:
+            payload['report_fact_types'] = fact_types
         event('task_reasoning',step=step,image=image_id)
         images=[dict(label='HISTORICAL onboard RGB '+x['image_id']+'; observation memory only',data=x['data']) for x in image_memory]
         images.append(dict(label='CURRENT onboard RGB '+image_id+'; current geometry belongs to this image',data=obs['data']))
@@ -173,7 +181,13 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
         if len(view_archive)>12:del view_archive[1]
         if not isinstance(decision,dict) or not isinstance(decision.get('action'),dict):
             raise ModelDecisionInvalid('Task model did not return an action object')
-        append_json(directory/'decisions.jsonl',dict(step=step,wall=time.time(),image_id=image_id,decision=decision))
+        original = decision
+        if record_adapter is not None:
+            decision = adapt_decision_records(decision, record_adapter)
+        item = dict(step=step,wall=time.time(),image_id=image_id,decision=decision)
+        if original != decision:
+            item['raw_model_decision'] = original
+        append_json(directory/'decisions.jsonl', item)
         event('task_decision',step=step,decision=decision)
         memory=decision.get('memory',memory)
         if not isinstance(memory,str):raise ModelDecisionInvalid('Task memory must be text')
@@ -182,7 +196,8 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
         for row in new_records:
             try:validate_record(row,evidence_ids)
             except ValueError as error:raise ModelDecisionInvalid(str(error)) from error
-            records=[r for r in records if object_id(r)!=object_id(row)]+[row]
+            records = (keep_observation(records, row) if record_adapter is not None else
+                       [r for r in records if object_id(r) != object_id(row)] + [row])
         action=decision['action'];kind=action.get('type');feedback=None
         if kind=='submit':
             report=decision.get('report')

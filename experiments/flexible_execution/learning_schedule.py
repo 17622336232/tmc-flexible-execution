@@ -58,3 +58,48 @@ def prepare_ranker_pilot(directory, base, calibration, diagnostic):
             write_json(target, value)
     registered_config(directory, catalog)
     return catalog
+
+
+def prepare_native_training_check(directory, development, calibration, rankers, split_seed):
+    """Reserve separate real layouts for checking symbolic ranking labels and costs."""
+    from .development_inputs import _reuse_or_build, scene_fingerprint
+
+    directory = directory.resolve()
+    forbidden = {row["asset_group_sha256"] for row in development["cases"]}
+    layouts = {row["layout_group_sha256"] for row in development["cases"]}
+    methods = ("conditional-async", "conditional-a", *RANKED_METHODS)
+    cases = []
+    for number, equipment in enumerate((2, 4), 1):
+        identifier = f"native-training-{number:03d}"
+        root = directory / "registered-inputs" / identifier
+        rng = Random(_hash([split_seed, identifier]))
+        layout = 2_510_000 + number
+        for seed in rng.sample(range(2_530_000, 2_540_000), 12):
+            case = {"id": identifier, "family": "cracks", "domain": "equipment", "seed": seed,
+                    "layout_seed": layout, "equipment_count": equipment, "source_profile": "independent",
+                    "backend": "cpu", "episode_timeout_seconds": 480,
+                    "collection_clause": "采集规则：允许在判读结果返回前采集以下材料：identity。"}
+            inputs = _reuse_or_build(case, root / str(seed))
+            if inputs["asset_group_sha256"] not in forbidden and inputs["layout_group_sha256"] not in layouts:
+                break
+        else:
+            raise ValueError("No independent native training check could be assigned")
+        forbidden.add(inputs["asset_group_sha256"])
+        layouts.add(inputs["layout_group_sha256"])
+        cases.append({**case, "group_id": identifier, "collection_rule": case["collection_clause"],
+                      "asset_group_sha256": inputs["asset_group_sha256"], "layout_group_sha256": inputs["layout_group_sha256"],
+                      "scene_fingerprint": scene_fingerprint(inputs), "handoff_at_observation": True,
+                      "order": rng.sample(methods, len(methods))})
+    manifest = {"schema": 1, "role": ROLE, "data_role": "INDEPENDENT_NATIVE_TRAINING_CHECK", "intended_pairs": len(cases),
+                "development_manifest_sha256": _hash(development), "ranker_config_sha256": _hash(rankers),
+                "cost_config_sha256": _hash(calibration), "cases": cases}
+    for filename, value in (("calibrated_costs.json", calibration), ("calibrated_rankers.json", rankers),
+                            ("pilot_manifest.json", manifest)):
+        path = directory / filename
+        if path.is_file() and read_json(path) != value:
+            raise ValueError("The native training verification cohort is already frozen")
+        if not path.is_file():
+            write_json(path, value)
+    registered_config(directory, manifest)
+    return {"output": str(directory), "cases": len(cases), "jobs": sum(len(row["order"]) for row in cases),
+            "data_role": manifest["data_role"]}

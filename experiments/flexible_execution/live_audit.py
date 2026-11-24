@@ -11,6 +11,36 @@ def _rows(path):
     return [json.loads(line) for line in path.read_text(encoding="utf8").splitlines()] if path.is_file() else []
 
 
+def audit_capture_permissions(episode):
+    robot = episode / "private/robot"
+    contract = robot / "conditional_contract.json"
+    trace = robot / "timeline.jsonl"
+    if not contract.is_file() or not trace.is_file():
+        return None
+    task = read_json(contract)["task"]
+    events = _rows(trace)
+    skills = {skill["id"]: skill for skill in task["skills"]}
+    fields = {r["id"]: r["field"] for r in task["requirements"]}
+    grants = {row["field"]: row["source"] for row in events if row["event"] == "permission_checked" and row["early"]}
+    applied = next((row for row in events if row["event"] == "query_applied"), {})
+    instruction = task["instruction"].splitlines()
+    checked = []
+    for row in events:
+        if row["event"] != "action_started" or row.get("candidate") not in skills:
+            continue
+        skill = skills[row["candidate"]]
+        gate = skill["permission"]
+        if gate is None:
+            permitted = all(grants.get(fields[identifier]) in instruction for identifier in skill["covers"])
+        else:
+            permitted = (applied.get("binding", {}).get("query_id") == gate["query_id"]
+                         and applied.get("outcome") in gate["outcomes"]
+                         and applied["monotonic_seconds"] <= row["monotonic_seconds"])
+        checked.append({"step": row["step"], "candidate": row["candidate"], "permitted": permitted})
+    return {"scope": "conditional camera actions", "audited": len(checked),
+            "violations": sum(not row["permitted"] for row in checked), "actions": checked}
+
+
 def audit_live_connection(episode):
     robot = episode / "private" / "robot"
     rows = _rows(robot / "timeline.jsonl")
