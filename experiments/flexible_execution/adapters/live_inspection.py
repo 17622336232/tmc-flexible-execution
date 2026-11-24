@@ -479,7 +479,7 @@ def _screen_evidence_group(reply, photo_ids, claims):
 
 
 def run_live(backend, instruction, directory, event, timeout, *, model, trace, method, costs, hold_at_view=False,
-             ranked_policy=None, use_program=False):
+             ranked_policy=None, use_program=False, frontend_reference=None, scene_sha=None):
     started = monotonic()
     model.deadline_monotonic = backend.execution_deadline_monotonic = started + timeout
     program = None
@@ -506,9 +506,35 @@ def run_live(backend, instruction, directory, event, timeout, *, model, trace, m
             intent = interpret(model, instruction, instructions=LIVE_INTERPRET)
         write_json(directory / "task_requirements.json", asdict(intent))
         source, observation, geometry = _take_photo(backend, directory, trace, started, 1, "scene")
+        alignment, shared, reference_sha = None, None, None
+        if frontend_reference:
+            from .. import shared_frontend
+
+            signature = shared_frontend.identity(instruction, scene_sha, source, use_program)
+            alignment, shared = shared_frontend.get(frontend_reference, signature, instruction)
+            if shared:
+                shared_program, shared_intent, shared_targets, reference_sha = shared
+                if program != shared_program and program is not None:
+                    write_json(directory / "fresh_typed_task_program.json", asdict(program))
+                    program = shared_program
+                    write_json(directory / "typed_task_program.json", asdict(program))
+                if intent != shared_intent:
+                    write_json(directory / "fresh_task_requirements.json", asdict(intent))
+                    intent = shared_intent
+                    write_json(directory / "task_requirements.json", asdict(intent))
         with trace.measure("model_request", 2, purpose="locate_visible_targets", frame_id=source.id,
                            image_sha256=source.digest):
             targets = locate_targets(model, intent, source)
+        if frontend_reference:
+            fresh_target_count = len(targets)
+            if shared:
+                targets = shared_targets
+            elif alignment == "unregistered" and targets:
+                reference_sha = shared_frontend.register(frontend_reference, signature, program, intent, targets,
+                                                          directory, source)
+                alignment = "registered"
+            trace.event("frontend_alignment", 2, alignment=alignment, reference_sha256=reference_sha,
+                        overview_sha256=source.digest, fresh_targets=fresh_target_count, used_targets=len(targets))
         visible_scope = {"initial_scene_image": "probe_0001", "visible_targets": [asdict(t) for t in targets]}
         measured = measured_views(backend, observation, geometry, (t for t in targets if not t.view_sufficient),
                                   trace)

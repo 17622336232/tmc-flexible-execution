@@ -166,6 +166,8 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
         stage_sources += ("experiments/flexible_execution/custom_evaluation.py",)
     if any(case.get("archive_external_rgb") is False for case in catalog.get("cases", ())):
         stage_sources += ("experiments/flexible_execution/storage.py",)
+    if any(case.get("shared_frontend") for case in catalog.get("cases", ())):
+        stage_sources += ("experiments/flexible_execution/shared_frontend.py",)
     if any(case.get("layout_seed") is not None for case in catalog.get("cases", ())):
         stage_sources += ("experiments/task_attack_operator/scene.py", "experiments/task_attack_recessed/scene.py",
                           "experiments/task_attack_value/scene.py", "experiments/flexible_execution/development_inputs.py")
@@ -521,6 +523,8 @@ def _gazebo_command(job, directory, catalog, auth_project, episode, remaining, l
         command.extend(("--layout-seed", str(case["layout_seed"])))
     if case.get("scene_fingerprint"):
         command.extend(("--scene-fingerprint", case["scene_fingerprint"]))
+    if case.get("shared_frontend"):
+        command.extend(("--frontend-reference", str(directory / case["id"] / "shared_frontend.json")))
     if case.get("study_task_sha256"):
         study = Path(case["study_task_file"])
         if _hash(_read(study)) != case["study_task_sha256"]:
@@ -588,6 +592,7 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
                 or freeze["ranker_bindings"] != catalog["ranker_bindings"]
                 or freeze["cost_config_sha256"] != catalog["cost_config_sha256"]
                 or any(case.get("archive_external_rgb", True) != freeze.get("archive_external_rgb", True)
+                       or case.get("shared_frontend", False) != freeze.get("shared_frontend", False)
                        for case in catalog["cases"])):
             raise ValueError("The custom test inputs or execution code differ from the frozen evaluation")
     lock = directory / "run_protocol.json"

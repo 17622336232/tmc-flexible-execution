@@ -246,17 +246,23 @@ class LiveInspectionTests(unittest.TestCase):
             calls = 0
             wall_seconds = 0.
             external_error = None
-            purposes = []
+
+            def __init__(self, variant):
+                self.variant = variant
+                self.purposes = []
 
             def request(self, system, payload, images):
                 self.calls += 1
                 self.purposes.append(system)
                 if system == live_inspection.LIVE_INTERPRET:
-                    return {"status": "supported", "object_scope": "all local devices", "question": "Cracked?",
+                    question = "Fresh description of the same question?" if self.variant else "Cracked?"
+                    return {"status": "supported", "object_scope": "all local devices", "question": question,
                             "materials": [{"field": "identity", "needed_when": ["positive"],
                                            "question": "Read ID", "permission_quote": GRANT}]}
                 if system == LOCATE:
-                    return {"targets": [{"description": "a marked device", "bbox": [.1, .1, .5, .7],
+                    assert payload["question"] == "Cracked?"
+                    description = "fresh target description" if self.variant else "a marked device"
+                    return {"targets": [{"description": description, "bbox": [.1, .1, .5, .7],
                                          "view_sufficient": True}]}
                 if system == JUDGE:
                     if not photographed.wait(1):
@@ -275,14 +281,25 @@ class LiveInspectionTests(unittest.TestCase):
 
         costs = Costs(4., 7., .2, .5, .1, 5., "offline-diagnostic")
         with TemporaryDirectory() as temp:
-            directory = Path(temp)
-            model = Model()
-            with patch.object(live_inspection, "_candidates", return_value=iter([(second, {"method": "test"})])):
-                report, metrics = live_inspection.run_live(Backend(), "Cracked devices need IDs.\n" + GRANT,
-                    directory, lambda *_args, **_fields: None, 20., model=model,
-                    trace=Timeline(directory / "events.jsonl"), method="conditional-a", costs=costs)
-            self.assertTrue(metrics["conditional_query_bound"])
-            self.assertEqual(metrics["conditional_materials"], 1)
-            self.assertEqual(report["outcome"], "accepted")
-            self.assertIn(live_inspection.ACCEPT_TASK, model.purposes)
-            self.assertEqual(len(summarize(directory / "events.jsonl")["intervals"]["search"]), 1)
+            root = Path(temp)
+            reference = root / "shared-front-end.json"
+            for name, variant in (("registered", False), ("matched", True)):
+                photographed.clear()
+                directory = root / name
+                model = Model(variant)
+                with patch.object(live_inspection, "_candidates", return_value=iter([(second, {"method": "test"})])):
+                    report, metrics = live_inspection.run_live(Backend(), "Cracked devices need IDs.\n" + GRANT,
+                        directory, lambda *_args, **_fields: None, 20., model=model,
+                        trace=Timeline(directory / "events.jsonl"), method="conditional-a", costs=costs,
+                        frontend_reference=reference, scene_sha="same-scene")
+                self.assertTrue(metrics["conditional_query_bound"])
+                self.assertEqual(metrics["conditional_materials"], 1)
+                self.assertEqual(report["outcome"], "accepted")
+                self.assertIn(live_inspection.ACCEPT_TASK, model.purposes)
+                self.assertEqual(model.purposes.count(LOCATE), 1)
+                self.assertEqual(len(summarize(directory / "events.jsonl")["intervals"]["search"]), 1)
+                result = json.loads((directory / "conditional_result.json").read_text())
+                self.assertEqual(result["visible_targets"][0]["description"], "a marked device")
+                events = [json.loads(line) for line in (directory / "events.jsonl").read_text().splitlines()]
+                alignment, = [row for row in events if row["event"] == "frontend_alignment"]
+                self.assertEqual(alignment["alignment"], name)

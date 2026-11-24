@@ -89,6 +89,10 @@ def _bbox(raw):
 
 def interpret(client, instruction, *, instructions=INTERPRET):
     draft = client.request(instructions, {"authorized_task": instruction}, [])
+    return parse_intent(draft, instruction)
+
+
+def parse_intent(draft, instruction):
     if (not isinstance(draft, dict) or draft.get("status") != "supported"
             or set(draft) != {"status", "object_scope", "question", "materials"}):
         raise ValueError("The inspection is outside the initial structured task interface")
@@ -121,6 +125,10 @@ def locate_targets(client, task, frame):
                                    "onboard_image_id": frame.id}, [
         {"label": "CURRENT onboard RGB " + frame.id, "data": frame.payload},
     ])
+    return parse_targets(draft)
+
+
+def parse_targets(draft):
     if not isinstance(draft, dict) or set(draft) != {"targets"} or not isinstance(draft["targets"], list):
         raise ValueError("Visible targets must be an array from the supplied photo")
     targets = []

@@ -72,6 +72,7 @@ def main(argv=None):
     parser.add_argument("--ranker-config", type=Path, help="Frozen candidate scoring and check budget")
     parser.add_argument("--compile-task-program", action="store_true", help="Check a typed task program at submission")
     parser.add_argument("--study-task", type=Path, help="Registered custom task with a private scoring contract")
+    parser.add_argument("--frontend-reference", type=Path, help="Shared front-end reference for this registered case")
     parser.add_argument("--onboard-evidence-only", action="store_true",
                         help="Archive onboard task evidence and leave the spectator video out of the recording")
     rules = parser.add_mutually_exclusive_group()
@@ -95,6 +96,8 @@ def main(argv=None):
     if args.scene_fingerprint and (args.layout_seed is None or len(args.scene_fingerprint) != 64
                                    or any(char not in "0123456789abcdef" for char in args.scene_fingerprint)):
         parser.error("A scene fingerprint requires a registered layout and SHA-256 digest")
+    if args.frontend_reference and not (conditional and args.scene_fingerprint):
+        parser.error("A front-end reference needs a registered conditional scene")
     study_task = None
     if args.study_task:
         from ..requirement_program import parse
@@ -148,6 +151,8 @@ def main(argv=None):
                      request_budget=budget.summary())
     if args.onboard_evidence_only:
         preflight["archive_external_rgb"] = False
+    if args.frontend_reference:
+        preflight["shared_frontend"] = True
     if args.layout_seed is not None:
         preflight["layout_seed"] = args.layout_seed
     if args.collection_rule:
@@ -189,7 +194,8 @@ def main(argv=None):
         execution = {"serial": run_agent, "async-probe": run_probe}.get(args.method)
         if conditional:
             execution = partial(run_live, method=args.method, costs=costs, hold_at_view=args.handoff_at_observation,
-                                ranked_policy=profile, use_program=args.compile_task_program)
+                                ranked_policy=profile, use_program=args.compile_task_program,
+                                frontend_reference=args.frontend_reference, scene_sha=args.scene_fingerprint)
             if clause:
                 original_hash = sha256(task.encode("utf8")).hexdigest()
                 task = task + "\n" + clause

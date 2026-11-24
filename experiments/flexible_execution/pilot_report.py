@@ -93,6 +93,7 @@ def _arm_row(directory, case, method, binding=None):
         event_counts = Counter(event["event"] for event in events)
         search = next((event for event in events if event["event"] == "candidate_search_summary"), None)
         selected = next((event for event in events if event["event"] == "candidate_selected"), None)
+        aligned = next((event for event in events if event["event"] == "frontend_alignment"), None)
         typed_guard = [event["accepted"] for event in events if event["event"] == "typed_task_acceptance"]
         row.update(model_request_seconds=clock["model_request_seconds"],
                    model_action_overlap_seconds=clock["model_action_overlap_seconds"],
@@ -109,9 +110,15 @@ def _arm_row(directory, case, method, binding=None):
         if search and "ranker" in search:
             row.update(ranked_candidates=search["generated"], ranked_candidates_verified=search["checked"],
                        ranking_stop_reason=search["stop_reason"], checkpoint_sha256=search["checkpoint"])
+            if search.get("candidate_prefixes_sha256"):
+                row["candidate_prefixes_sha256"] = search["candidate_prefixes_sha256"]
         if search and selected:
             row.update(selected_candidate=selected["candidate"], selected_forecast_seconds=selected["expected_finish"],
                        baseline_forecast_seconds=search["baseline_finish"])
+        if aligned:
+            row.update(frontend_alignment=aligned["alignment"],
+                       frontend_reference_sha256=aligned["reference_sha256"],
+                       frontend_fresh_targets=aligned["fresh_targets"], frontend_used_targets=aligned["used_targets"])
         if typed_guard:
             row.update(typed_submission_checks=len(typed_guard), typed_submission_accepted=typed_guard[-1])
     if result and result.get("execution_completed") and (root / "clean_coverage.json").is_file():
@@ -230,17 +237,23 @@ def _paired_ranking(rows):
             if any(group != {None} and group != seeds for group in (targets, references)):
                 raise ValueError("Ranking comparison does not have matching declared training seeds")
             pairs = []
+            observed_pools = shared_pools = 0
             for arms in by_case.values():
                 matches = [(arms.get((cap, target, seed if seed in targets else None)),
                             arms.get((cap, reference, seed if seed in references else None))) for seed in seeds]
                 if any(row is None or row["state"] not in RECORDED for pair in matches for row in pair):
                     continue
+                if all(row.get("candidate_prefixes_sha256") for pair in matches for row in pair):
+                    observed_pools += 1
+                    shared_pools += all(a["candidate_prefixes_sha256"] == b["candidate_prefixes_sha256"]
+                                        for a, b in matches)
                 pairs.append({"group": matches[0][0]["group"],
                     "success_difference": mean(int(a["success"]) - int(b["success"]) for a, b in matches),
                     "restricted_seconds_difference": mean(a["restricted_seconds"] - b["restricted_seconds"]
                                                           for a, b in matches)})
             output.append({"target": target, "reference": reference, "check_cap": cap, "seed_pairs_per_case": len(seeds),
-                           "planned_cases": len(by_case), **_paired_summary(pairs)})
+                           "planned_cases": len(by_case), "cases_with_comparable_pool_fingerprints": observed_pools,
+                           "cases_with_identical_ranker_inputs": shared_pools, **_paired_summary(pairs)})
     return output
 
 
@@ -273,6 +286,8 @@ def _method_summary(rows):
                            "wrong_completion_claims": sum(row.get("wrong_completion_claim", False) for row in valid),
                            "failure_types": dict(Counter(row.get("failure_reason") or row["state"]
                                                         for row in valid if not row["success"])),
+                           "frontend_alignment_counts": dict(Counter(row["frontend_alignment"] for row in valid
+                                                                     if "frontend_alignment" in row)),
                            "statuses": {state: sum(row["state"] == state for row in cases)
                                         for state in sorted({row["state"] for row in cases})},
                            "mean_restricted_seconds": mean(row["restricted_seconds"] for row in valid) if valid else None}

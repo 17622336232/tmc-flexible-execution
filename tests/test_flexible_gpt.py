@@ -9,6 +9,7 @@ from experiments.flexible_execution.adapters.gpt_probe import run_paired, run_pr
 from experiments.flexible_execution.adapters.viewpoints import measured_views
 from experiments.flexible_execution.evidence import Frame
 from experiments.flexible_execution.gpt_vision import VisibleTarget, frozen_prompt, interpret, judge, locate_targets
+from experiments.flexible_execution import shared_frontend
 from experiments.flexible_execution.timeline import Timeline, summarize
 from experiments.task_attack.agent import run_agent
 
@@ -64,6 +65,27 @@ class CameraDouble:
 
 
 class ExistingGPTTests(unittest.TestCase):
+    def test_shared_frontend_requires_identical_vision_and_authorized_inputs(self):
+        frame = Frame("capture-1", "scene", 1, 0., b"one picture", "simulated_onboard_rgb")
+        second = Frame("capture-2", "scene", 1, 1., b"one picture", "simulated_onboard_rgb")
+        changed = Frame("capture-3", "scene", 1, 1., b"another picture", "simulated_onboard_rgb")
+        intent = interpret(ModelDouble(lambda *_: DRAFT), INSTRUCTION)
+        targets = locate_targets(ModelDouble(lambda *_: VISIBLE), intent, frame)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            reference = root / "shared.json"
+            key = shared_frontend.identity(INSTRUCTION, "scene-a", frame, False)
+            self.assertEqual(shared_frontend.get(reference, key, INSTRUCTION), ("unregistered", None))
+            fingerprint = shared_frontend.register(reference, key, None, intent, targets, root, frame)
+            matched = shared_frontend.identity(INSTRUCTION, "scene-a", second, False)
+            self.assertEqual(shared_frontend.get(reference, matched, INSTRUCTION),
+                             ("matched", (None, intent, targets, fingerprint)))
+            unmatched = shared_frontend.identity(INSTRUCTION, "scene-a", changed, False)
+            self.assertEqual(shared_frontend.get(reference, unmatched, INSTRUCTION), ("different_overview", None))
+            wrong_scene = shared_frontend.identity(INSTRUCTION, "scene-b", second, False)
+            with self.assertRaisesRegex(ValueError, "different authorized inputs"):
+                shared_frontend.get(reference, wrong_scene, INSTRUCTION)
+
     def test_reading_required_on_positive_does_not_gain_early_permission(self):
         def request(_index, data, images):
             self.assertEqual(data, {"authorized_task": INSTRUCTION})

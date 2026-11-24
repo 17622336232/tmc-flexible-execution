@@ -330,6 +330,11 @@ def _continue_stage(output_root, directory, defaults, args, launch_limit):
     train_status = pilot_status(native_training)
     if train_status["recorded_pairs"] < train_status["planned_pairs"]:
         return run_batch(native_training)
+    native_fixed_pools = pilots / "reports" / "native-training-fixed-pools-completed.json"
+    if not native_fixed_pools.is_file():
+        from .ranker_replay import replay
+
+        replay(native_training, native_fixed_pools)
     calibration = pilots / VISUAL_PILOTS["calibration"]
     if not (calibration / "pilot_manifest.json").is_file():
         prepare_visual(calibration, read_json(layout_manifest), prior, "calibration")
@@ -464,6 +469,9 @@ def main(argv=None):
     audit_labels = commands.add_parser("ranker-audit", help="Replay a stratified sample from the saved ranking data")
     audit_labels.add_argument("--data-dir", required=True, type=Path)
     audit_labels.add_argument("--output", required=True, type=Path)
+    replay_ranker = commands.add_parser("ranker-native-replay", help="Compare rankings from identical observed candidate pools")
+    replay_ranker.add_argument("--pilot-dir", required=True, type=Path)
+    replay_ranker.add_argument("--output", required=True, type=Path)
     plan = commands.add_parser("pilot-prepare", help="Write the frozen 48-case development schedule locally")
     plan.add_argument("--pilot-dir", required=True, type=Path)
     plan.add_argument("--episode-timeout", type=float, default=480)
@@ -598,6 +606,13 @@ def main(argv=None):
         return
     if args.command == "ranker-configurations":
         print(json.dumps(prepare_configurations(args.output, args.data_dir), ensure_ascii=False, indent=2))
+        return
+    if args.command == "ranker-native-replay":
+        from .ranker_replay import replay
+
+        result = replay(args.pilot_dir, args.output)
+        print(json.dumps({key: value for key, value in result.items() if key not in {"snapshots", "skipped"}},
+                         ensure_ascii=False, indent=2))
         return
     if args.command == "pilot-report":
         from .pilot_report import rebuild

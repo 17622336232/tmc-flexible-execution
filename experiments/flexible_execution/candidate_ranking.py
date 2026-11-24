@@ -145,22 +145,32 @@ def _prefixes(task, state, skills, maximum_length, maximum_generated, deadline):
     return candidates
 
 
-def select_ranked(task, state, check, log, *, ranker, check_cap, budget_ms, max_prepare,
-                  minimum_net_gain=None, generated_cap=256):
-    start = monotonic()
-    deadline = start + budget_ms / 1000
+def candidate_prefixes(task, state, max_prepare, generated_cap, deadline):
     worlds = tuple(task.worlds(state.results))
     needed = {requirement.id for requirement in task.requirements
               if not state.supports(requirement) and any(requirement.applies(world) for world in worlds)}
     eligible = tuple(skill for skill in task.skills if needed.intersection(skill.covers))
+    return _prefixes(task, state, eligible, max_prepare, generated_cap, deadline)
+
+
+def select_ranked(task, state, check, log, *, ranker, check_cap, budget_ms, max_prepare,
+                  minimum_net_gain=None, generated_cap=256, fixed_prefixes=None):
+    start = monotonic()
+    deadline = start + budget_ms / 1000
+    worlds = tuple(task.worlds(state.results))
+    prefixes = (candidate_prefixes(task, state, max_prepare, generated_cap, deadline)
+                if fixed_prefixes is None else fixed_prefixes)
     ranked = []
-    for prefix in _prefixes(task, state, eligible, max_prepare, generated_cap, deadline):
+    inputs = []
+    for prefix in prefixes:
         if monotonic() >= deadline:
             break
         row = features(task, state, prefix)
         score = -row[1] if ranker is None else ranker.score(row)
         key = tuple(action.skill.id for action in prefix)
+        inputs.append((key, row))
         ranked.append((score, key, prefix))
+    pool_digest = sha256(json.dumps(inputs, separators=(",", ":")).encode("utf8")).hexdigest()
     ranked.sort(key=lambda entry: (-entry[0], entry[1]))
     readiness = ready_times(task, state)
     baseline = sum(forecast_async(task, state, world, readiness) for world in worlds) / len(worlds)
@@ -187,6 +197,7 @@ def select_ranked(task, state, check, log, *, ranker, check_cap, budget_ms, max_
             best = proof
     log("candidate_search_summary", baseline_finish=baseline, generated=len(ranked), checked=checked,
         check_seconds=check_seconds, wall_seconds=monotonic() - start, stop_reason=stop,
+        candidate_prefixes_sha256=pool_digest,
         ranker="travel_cost" if ranker is None else ranker.objective,
         checkpoint=None if ranker is None else ranker.digest)
     return best
