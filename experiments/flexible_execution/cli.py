@@ -13,7 +13,7 @@ from .control import DEFAULT_AUTH_PROJECT, control_status, is_live, pilot_run
 from .learning_schedule import prepare_ranker_pilot
 from .live_audit import audit_live_connection
 from .live_calibration import calibrate
-from .pilot_schedule import prepare as prepare_pilot, prepare_conditional, status as pilot_status
+from .pilot_schedule import prepare as prepare_pilot, prepare_conditional, prepare_typed, status as pilot_status
 from .runner import manifest, read_json, reproduce, run
 
 
@@ -120,6 +120,7 @@ def status(directory, defaults):
     live = control_status(directory.parent / "control")
     pilot_manifest = directory.parent / "natural-pilot" / "pilot_manifest.json"
     ranker_pilot = pilot_manifest.parent / "learned-order-v1"
+    typed_pilot = pilot_manifest.parent / "typed-vision-v1"
     public = _public_visual(directory.parent)
     online_public = [job for job in public if job["state"] == "RUNNING"]
     return {
@@ -131,6 +132,7 @@ def status(directory, defaults):
         "conditional_development": _conditional_results(pilot_manifest.parent),
         "ranker_diagnostic": _ranker_diagnostic(directory.parent),
         "ranker_live_development": pilot_status(ranker_pilot) if (ranker_pilot / "pilot_manifest.json").is_file() else None,
+        "typed_vision_development": pilot_status(typed_pilot) if (typed_pilot / "pilot_manifest.json").is_file() else None,
         "public_visual_validation": public,
         "run_directory": str(directory),
         "local_diagnostics": {"completed": completed, "planned": planned, "summary": stats},
@@ -232,9 +234,16 @@ def _continue(output_root, directory, defaults, args):
     ranked_status = pilot_status(ranked)
     if ranked_status["recorded_pairs"] < ranked_status["planned_pairs"]:
         return run_batch(ranked)
+    typed = pilots / "typed-vision-v1"
+    if not (typed / "pilot_manifest.json").is_file():
+        prepare_typed(typed, read_json(pilots / "pilot_manifest.json"), read_json(comparison / "calibrated_costs.json"))
+    typed_status = pilot_status(typed)
+    if typed_status["recorded_pairs"] < typed_status["planned_pairs"]:
+        return run_batch(typed)
     return {"execution_status": "READY", "stage": "evaluation-development",
             "scientific_conclusion": "INCONCLUSIVE", "run_directory": str(directory), "development": development,
-            "ranker_development": ranked_status, "public_visual_validation": _public_visual(output_root),
+            "ranker_development": ranked_status, "typed_vision_development": typed_status,
+            "public_visual_validation": _public_visual(output_root),
             "next_action": "Finish visual development data and protocol checks before the held-out test"}
 
 
@@ -245,9 +254,17 @@ def main(argv=None):
     clean.add_argument("--episode-dir", required=True, type=Path)
     live = commands.add_parser("audit-live", help="Recheck a real conditional action, photo and report handoff")
     live.add_argument("--episode-dir", required=True, type=Path)
+    public = commands.add_parser("audit-public", help="Recheck public-camera evidence and actual model requests")
+    public.add_argument("--episode-dir", required=True, type=Path)
+    public_plan = commands.add_parser("public-plan", help="Assign blinded ProcTHOR test houses and episode slots")
+    public_plan.add_argument("--test-archive", required=True, type=Path)
+    public_plan.add_argument("--output", required=True, type=Path)
     learn = commands.add_parser("ranker-diagnostic", help="Run the grouped symbolic CPU ranking diagnostic")
     learn.add_argument("--data-dir", required=True, type=Path)
     learn.add_argument("--sizes", type=int, nargs="+", choices=(1000, 3000, 10000), default=[1000, 3000, 10000])
+    audit_labels = commands.add_parser("ranker-audit", help="Replay a stratified sample from the saved ranking data")
+    audit_labels.add_argument("--data-dir", required=True, type=Path)
+    audit_labels.add_argument("--output", required=True, type=Path)
     plan = commands.add_parser("pilot-prepare", help="Write the frozen 48-case development schedule locally")
     plan.add_argument("--pilot-dir", required=True, type=Path)
     plan.add_argument("--episode-timeout", type=float, default=480)
@@ -270,12 +287,28 @@ def main(argv=None):
         if name == "continue":
             _online_args(command)
     args = parser.parse_args(argv)
+    if args.command == "audit-public":
+        from .public_audit import audit
+
+        print(json.dumps(audit(args.episode_dir), ensure_ascii=False, indent=2))
+        return
+    if args.command == "public-plan":
+        from .public_schedule import prepare
+
+        defaults = yaml.safe_load(DEFAULTS.read_text(encoding="utf8"))
+        print(json.dumps(prepare(args.test_archive, args.output, defaults), ensure_ascii=False, indent=2))
+        return
     if args.command == "ranker-diagnostic":
         from .ranker_train import experiments
         defaults = yaml.safe_load(DEFAULTS.read_text(encoding="utf8"))
         result = experiments(args.data_dir, args.sizes, defaults["data"]["split_seed"])
         print(json.dumps({"mode": result["mode"], "status": result["status"],
                           "runs": len(result["run_rows"]), "output": str(args.data_dir)}, ensure_ascii=False))
+        return
+    if args.command == "ranker-audit":
+        from .ranker_audit import audit
+
+        print(json.dumps(audit(args.data_dir, args.output), ensure_ascii=False, indent=2))
         return
     if args.command == "pilot-report":
         from .pilot_report import rebuild

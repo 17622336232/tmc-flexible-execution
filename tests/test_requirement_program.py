@@ -1,6 +1,6 @@
 import unittest
 
-from experiments.flexible_execution.requirement_program import parse
+from experiments.flexible_execution.requirement_program import check_submission, parse
 
 
 class RequirementProgramTests(unittest.TestCase):
@@ -26,6 +26,9 @@ class RequirementProgramTests(unittest.TestCase):
         rows = program.evaluate({"A": {"count": 4}, "B": {"count": 2}, "C": {"count": 2}}, scope_confirmed=True)
         self.assertTrue(rows["complete"])
         self.assertEqual([item["object_id"] for item in rows["findings"]], ["B", "C"])
+        observations = [{"object_id": key, "facts": {"count": value}} for key, value in (("A", 4), ("B", 2), ("C", 2))]
+        self.assertIsNotNone(check_submission(program, {"records": observations[1:2]}, observations))
+        self.assertIsNone(check_submission(program, {"records": observations[1:]}, observations))
 
     def test_reference_count_must_match_user_text(self):
         draft = {"scope": {"mode": "target", "description": "WH-02", "identity": "WH-02"},

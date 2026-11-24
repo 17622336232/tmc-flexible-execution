@@ -6,12 +6,17 @@ from dataclasses import dataclass
 from decimal import Decimal
 from math import isfinite
 
+from experiments.task_attack.records import facts, object_id
+
 
 COMPARISONS = {"eq": operator.eq, "ne": operator.ne, "lt": operator.lt, "le": operator.le,
                "gt": operator.gt, "ge": operator.ge}
 TYPES = {"flag", "count", "number", "label"}
 FIELD_NAME = re.compile(r"[a-z][a-z0-9_]{0,63}")
 NUMBER_TEXT = re.compile(r"(?<![0-9.])[-+]?[0-9]+(?:\.[0-9]+)?(?![0-9]|\.[0-9])")
+INSPECTION_FIELDS = {"cracked": "flag", "temperature": "number", "box_count": "count", "order_count": "count",
+                     "color": "label", "vehicle_present": "flag", "restricted": "flag", "blocked": "flag",
+                     "extinguisher_present": "flag"}
 
 COMPILE = """Compile only the authorized inspection requirements. Return compact
 JSON with exactly these keys:
@@ -28,6 +33,7 @@ If different objects have different values explicitly prescribed by the task,
 use {"by_identity":{"literal_id":{"value":2,"quote":"exact clause from task"}}}.
 For a minimum or maximum, use {"op":"min|max","field":"field_name"}; keep all
 ties. Every referenced field must be declared. Report identity is implicit.
+For the simulator, use the provided `supported_fields` names and their types.
 Do not invent observations, permission, object identities or task outcomes.
 """
 
@@ -188,4 +194,30 @@ def parse(draft, instruction):
 
 
 def compile_task(client, instruction):
-    return parse(client.request(COMPILE, {"authorized_task": instruction}, []), instruction)
+    program = parse(client.request(COMPILE, {"authorized_task": instruction, "supported_fields": INSPECTION_FIELDS}, []),
+                    instruction)
+    if any(INSPECTION_FIELDS.get(field) != kind for field, kind in program.fields.items()):
+        raise ValueError("The program declared a field that the inspection platform does not observe")
+    return program
+
+
+def check_submission(program, report, collected):
+    """Check the report after the shared visual verifier has confirmed its scope."""
+    rows = {}
+    for record in collected + report["records"]:
+        identity = object_id(record)
+        observed = rows.setdefault(identity, {})
+        for field, value in facts(record).items():
+            if field in program.fields:
+                if field in observed and observed[field] != value:
+                    return f"现有证据对 {identity} 的 {field} 记录不一致"
+                observed[field] = value
+    result = program.evaluate(rows, scope_confirmed=True)
+    if not result["complete"]:
+        return "证据还不足以判定这些对象：" + "、".join(result["unresolved"])
+    expected = {row["object_id"]: row["facts"] for row in result["findings"]}
+    submitted = {object_id(row): {key: value for key, value in facts(row).items() if key in program.report}
+                 for row in report["records"]}
+    if len(submitted) != len(report["records"]) or submitted != expected:
+        return "报告和由现有证据算出的任务结果不一致，请重新检查条件、范围和并列结果"
+    return None

@@ -67,6 +67,7 @@ def main(argv=None):
     parser.add_argument("--request-ledger", type=Path, help="Persistent request ledger for this logical job")
     parser.add_argument("--cost-config", type=Path, help="Calibrated design input for the conditional methods")
     parser.add_argument("--ranker-config", type=Path, help="Frozen candidate scoring and check budget")
+    parser.add_argument("--compile-task-program", action="store_true", help="Check a typed task program at submission")
     parser.add_argument("--early-fields", help="Shared controlled-language grant for this development instance")
     parser.add_argument("--handoff-at-observation", action="store_true",
                         help="Allow a shared handoff at the acquired view with time reserved to revisit")
@@ -79,7 +80,8 @@ def main(argv=None):
     if not isfinite(planned) or planned < args.episode_timeout:
         parser.error("The logical job duration must cover the attempt duration")
     conditional = args.method in CONDITIONAL_MODES
-    if conditional != bool(args.cost_config) or ((args.early_fields or args.handoff_at_observation) and not conditional):
+    if conditional != bool(args.cost_config) or (
+            (args.early_fields or args.handoff_at_observation or args.compile_task_program) and not conditional):
         parser.error("Conditional methods require a cost file and own the optional development grant")
     if (args.method in RANKED_METHODS) != bool(args.ranker_config):
         parser.error("Ranking methods require the registered ranking profile")
@@ -117,6 +119,8 @@ def main(argv=None):
     if conditional:
         preflight.update(early_fields=early_fields, calibration_id=costs.calibration_id,
                          handoff_at_observation=args.handoff_at_observation)
+    if args.compile_task_program:
+        preflight["typed_task_program"] = True
     if ranking:
         preflight.update(ranker_config_sha256=_hash(ranking), ranker_policy=ranking["policies"][args.method])
     ready = (preflight["signed_in"] and preflight["plan_usage_enabled"] and preflight["model_in_catalog"]
@@ -133,7 +137,7 @@ def main(argv=None):
         execution = {"serial": run_agent, "async-probe": run_probe}.get(args.method)
         if conditional:
             execution = partial(run_live, method=args.method, costs=costs, hold_at_view=args.handoff_at_observation,
-                                ranked_policy=profile)
+                                ranked_policy=profile, use_program=args.compile_task_program)
             if clause:
                 original_hash = sha256(task.encode("utf8")).hexdigest()
                 task = task + "\n" + clause

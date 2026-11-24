@@ -1,6 +1,8 @@
 import unittest
 from dataclasses import replace
+from hashlib import sha256
 from io import BytesIO
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import Event
@@ -32,6 +34,29 @@ def _task(rule):
 
 
 class LiveInspectionTests(unittest.TestCase):
+    def test_complete_report_checks_all_five_photos_within_transport_limit(self):
+        requested = []
+
+        class Model:
+            def request(self, prompt, payload, photos):
+                requested.append((len(photos), len(payload.get("verified_observations", []))))
+                if prompt == live_inspection.ACCEPT_EVIDENCE_GROUP:
+                    return {"issues": [], "observations": payload["claims"]}
+                return {"issues": []}
+
+        with TemporaryDirectory() as temporary:
+            folder = Path(temporary)
+            records = []
+            for number in range(1, 6):
+                tag = f"probe_{number:04d}"
+                data = ("camera " + tag).encode("utf8")
+                (folder / (tag + ".jpg")).write_bytes(data)
+                (folder / (tag + ".json")).write_text(json.dumps({"image_id": tag, "sha256": sha256(data).hexdigest()}))
+                records.append({"object_id": f"EQ-{number:02d}", "evidence_image_id": tag, "facts": {"cracked": True}})
+            guard = live_inspection.submission_guard("Inspect the row", folder, Model(), Timeline(folder / "time.jsonl"), {})
+            self.assertIsNone(guard({"outcome": "accepted", "records": records}, [], 7))
+        self.assertEqual(requested, [(4, 0), (1, 0), (0, 5)])
+
     def test_permission_needs_explicit_semantics_for_this_material(self):
         self.assertTrue(permission_for("If cracked, report ID.\n" + GRANT, MATERIAL).early)
         self.assertFalse(permission_for("Do not collect early, even when quoted: " + GRANT, MATERIAL).early)

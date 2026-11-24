@@ -82,11 +82,24 @@ python3 -m experiments.flexible_execution.cli pilot-report \
 ```bash
 python3 -m experiments.flexible_execution.cli ranker-diagnostic \
   --data-dir outputs/ranker-diagnostic-v1 --sizes 1000 3000 10000
+python3 -m experiments.flexible_execution.cli ranker-audit \
+  --data-dir outputs/ranker-diagnostic-v1 --output outputs/ranker-diagnostic-v1/training_audit.json
 python3 -m experiments.flexible_execution.cli pilot-run \
   --pilot-dir outputs/natural-pilot/learned-order-v1 --resume --max-jobs 4
 ```
 
 公开验证入口在 `experiments.flexible_execution.public_task`。AI2-THOR 固定在 5.0.0，从官方 ProcTHOR 验证集加载房屋。相机通过软件 OpenGL 取得初始和侧向图像。模型收到任务文字和执行过程中拍到的 RGB。独立评分用姿态和实例分割核对完整报告。公开房间是本研究的派生任务，正式测试取官方测试房屋，验证房用于调试。 [ProcTHOR 官方数据](https://github.com/allenai/procthor-10k/tree/439193522244720b86d8c81cde2e51e3a4d150cf)
+
+```bash
+python3 -m experiments.flexible_execution.cli audit-public \
+  --episode-dir outputs/public-visual/closed-loop-attempt-002
+python3 -m experiments.flexible_execution.cli public-plan \
+  --test-archive outputs/public-visual/procthor/test.jsonl.gz --output outputs/public-visual/test-plan
+```
+
+`public-plan` 校验压缩包并按固定哈希抽取正式房号。每房四项任务，准备时无需读取房屋内容。最多四种方法，共 800 个待冻结协议的作业位。
+
+TimelyLLM 的作者代码在 CPU 上复算了随附无人机样本中 532 个任务的 1313 段执行时长，逐项与作者总时长一致。原服务调度还需 CUDA 与其固定运行时，默认触发轨迹未随这个公开快照提供。该复算只用于核对分段和计时口径。 [作者代码](https://github.com/Neawhen/TimelyLLM/tree/669f2490a112a7415fe06e902e1ea82da02a3342)
 
 ## 参考工作的数据和训练方式
 

@@ -13,6 +13,7 @@ from .runner import _hash
 
 
 PAIRED_MODES = {"paired-serial": "ACTUAL_GPT_SHARED_SERIAL", "paired-async": "ACTUAL_GPT_SHARED_ASYNC"}
+TYPED_ROLE = "TYPED_VISION_DEVELOPMENT"
 
 
 def prepare(directory, defaults, episode_timeout):
@@ -77,6 +78,25 @@ def prepare_conditional(directory, base, calibration, *, connection_only=False, 
     return catalog
 
 
+def prepare_typed(directory, base, calibration):
+    cases = []
+    for index, family in enumerate(("locate_boxes", "thermal_minimum"), 1):
+        cases.append({"id": f"program-{index:03d}", "family": family, "domain": SCENES[family],
+                      "seed": 3104120 + index, "equipment_count": 2, "source_profile": "single", "backend": "cpu",
+                      "episode_timeout_seconds": 480, "typed_task_program": True, "order": ["conditional-serial"]})
+    catalog = {"schema": 1, "role": TYPED_ROLE, "split_seed": base["split_seed"], "parent_schedule_sha256": _hash(base),
+               "cost_config_sha256": _hash(calibration), "intended_pairs": len(cases), "cases": cases}
+    directory.mkdir(parents=True, exist_ok=True)
+    for filename, value in (("calibrated_costs.json", calibration), ("pilot_manifest.json", catalog)):
+        path = directory / filename
+        stored = _read(path)
+        if stored is not None and stored != value:
+            raise ValueError("The typed inspection schedule is already frozen at another configuration")
+        if stored is None:
+            write_json(path, value)
+    return catalog
+
+
 def _arm(directory, case, method):
     base = directory / case["id"] / method
     job = _read(base / "job.json")
@@ -108,6 +128,7 @@ def _valid_preflight(preflight, case, method, directory):
     if (preflight.get("mode") != mode or any(preflight.get(key) != case[key] for key in keys)
             or preflight.get("early_fields", []) != case.get("early_fields", [])
             or preflight.get("handoff_at_observation", False) != case.get("handoff_at_observation", False)
+            or preflight.get("typed_task_program", False) != case.get("typed_task_program", False)
             or planned != case["episode_timeout_seconds"] or not isinstance(budget, (int, float))
             or not 0 < budget <= planned):
         raise ValueError("Run does not match the frozen case and method: " + str(directory))

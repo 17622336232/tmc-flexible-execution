@@ -18,7 +18,7 @@ from experiments.task_attack.runtime import write_json
 from .clean_coverage import audit_run
 from .learning_schedule import ROLE as RANKER_ROLE, registered_config
 from .live_planning import CONDITIONAL_MODES
-from .pilot_schedule import PAIRED_MODES, _read, _valid_preflight
+from .pilot_schedule import PAIRED_MODES, TYPED_ROLE, _read, _valid_preflight
 from .request_budget import RequestBudget
 from .runner import _hash
 
@@ -100,10 +100,13 @@ def simulator_running(control):
 def _runtime_inputs(checkout, catalog, auth_project, ports):
     sources = []
     ranked = catalog.get("role") == RANKER_ROLE
-    conditional = ranked or catalog.get("role") == "CONDITIONAL_CONNECTION_DEVELOPMENT"
+    typed = catalog.get("role") == TYPED_ROLE
+    conditional = ranked or typed or catalog.get("role") == "CONDITIONAL_CONNECTION_DEVELOPMENT"
     stage_sources = CONDITIONAL_SOURCES if conditional else ()
     if ranked or (conditional and (checkout / RANKING_SOURCE).is_file()):
         stage_sources += (RANKING_SOURCE,)
+    if typed:
+        stage_sources += ("experiments/flexible_execution/requirement_program.py",)
     for label in RUN_SOURCES + stage_sources:
         source = checkout / label
         if source.is_dir():
@@ -117,8 +120,15 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
     system_paths = [Path("/etc/os-release"), Path("/opt/ros/noetic/setup.bash"),
                     legacy / "sim_ws/devel/setup.bash", legacy / "sim_ws/devel/lib/vla_sim/vla_traj_server",
                     legacy / "sim_ws/devel/lib/vla_sim/vla_cloud_bridge", legacy / ".venv/pyvenv.cfg"]
-    return {"version": 4 if ranked else (3 if conditional else 2),
-            "stage": "ranked-development" if ranked else ("conditional-development" if conditional else "matched-baselines"),
+    if typed:
+        version, stage = 5, "typed-vision-development"
+    elif ranked:
+        version, stage = 4, "ranked-development"
+    elif conditional:
+        version, stage = 3, "conditional-development"
+    else:
+        version, stage = 2, "matched-baselines"
+    return {"version": version, "stage": stage,
             "catalog_sha256": _hash(catalog),
             "model": MODEL, "reasoning_effort": EFFORT, "request_limit": REQUEST_LIMIT,
             "max_infra_attempts": MAX_ATTEMPTS, "startup_cleanup_seconds": STARTUP_CLEANUP_SECONDS,
@@ -449,6 +459,8 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
                 command.extend(("--early-fields", ",".join(next_case["early_fields"])))
             if next_case.get("handoff_at_observation"):
                 command.append("--handoff-at-observation")
+            if next_case.get("typed_task_program"):
+                command.append("--compile-task-program")
         if catalog.get("role") == RANKER_ROLE:
             registered_config(directory, catalog)
             command.extend(("--ranker-config", str(directory / "calibrated_rankers.json")))

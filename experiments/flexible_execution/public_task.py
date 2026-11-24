@@ -17,6 +17,7 @@ from .evidence import Frame, Observation, accept
 from .executor import Snapshot, permitted_observation
 from .gpt_vision import OUTCOMES, Material
 from .live_planning import NEW_METHODS, permission_for, select
+from .public_audit import save_segmentation
 from .public_visual import _house, camera_jpeg, open_controller, source_record
 from .queries import AsyncQueryWorker, QueryBook
 from .request_budget import RequestBudget
@@ -134,6 +135,7 @@ class Room:
             event = self.controller.step(action=action)
             if not event.metadata["lastActionSuccess"] or not _same_pose(self.initial_pose, event.metadata["agent"], expected):
                 raise RuntimeError("An approved camera turn did not reach its contracted pose")
+        self.trace.event("camera_heading_checked", action, pose=event.metadata["agent"])
         return event
 
 
@@ -223,6 +225,9 @@ async def _inspect(case, room, client, method, deadline):
     write_json(room.output / "report.json", report)
     front_truth = _truth(room.events[front.id], case.expected.primary)
     side_truth = None if side is None else _truth(room.events[side.id], case.expected.secondary)
+    save_segmentation(room.output, front.id, room.events[front.id], case.expected.primary, MIN_OBJECT_PIXELS)
+    if side is not None:
+        save_segmentation(room.output, side.id, room.events[side.id], case.expected.secondary, MIN_OBJECT_PIXELS)
     result = verify(case, intent, report, front, side, front_truth, side_truth,
                     _same_pose(room.initial_pose, room.controller.last_event.metadata["agent"]))
     result.update(early_preparation_selected=early_dispatched, parsed=asdict(intent))
