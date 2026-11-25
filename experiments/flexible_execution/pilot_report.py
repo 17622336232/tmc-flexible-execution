@@ -41,8 +41,14 @@ def _attempt_costs(arm, final, public, *, allow_final_truncated=False):
              "interrupted_raw_log_tails": 0}
     dispatch_times = []
     cpu_times = []
-    for root in _attempt_roots(arm, final):
+    task_windows = []
+    roots = _attempt_roots(arm, final)
+    for root in roots:
         allow_truncated = root != final or allow_final_truncated
+        clock = _read(root / "job_clock.json") or {}
+        started, elapsed = clock.get("started_wall"), clock.get("elapsed_seconds")
+        if all(isinstance(value, (int, float)) and isfinite(value) and value >= 0 for value in (started, elapsed)):
+            task_windows.append((started, started + elapsed))
         cpu = _read(root.parent / "worker_cpu.json")
         if cpu is not None:
             seconds = (cpu["user_seconds"], cpu["system_seconds"])
@@ -66,6 +72,10 @@ def _attempt_costs(arm, final, public, *, allow_final_truncated=False):
             costs["unclosed_timing_intervals"] += len(clock["unfinished_intervals"])
             for kind in ("action", "observation", "search"):
                 costs[f"total_{kind}_seconds"] += sum(item["seconds"] for item in clock["intervals"].get(kind, []))
+    gaps = [after[0] - before[1] for before, after in zip(task_windows, task_windows[1:])]
+    if len(task_windows) == len(roots) and all(gap >= 0 for gap in gaps):
+        costs.update(task_elapsed_including_recovery_seconds=task_windows[-1][1] - task_windows[0][0],
+                     task_recovery_gap_seconds=sum(gaps))
     return {**costs, "attempts_with_worker_cpu": len(cpu_times),
             "total_local_worker_cpu_seconds": sum(cpu_times) if cpu_times else None,
             "first_request_wall_time": min(dispatch_times, default=None),
@@ -331,6 +341,8 @@ def _method_summary(rows):
                            "interrupted_raw_log_tails": sum(row.get("interrupted_raw_log_tails", 0) for row in valid),
                            "worker_cpu_measured_episodes": sum(row.get("total_local_worker_cpu_seconds") is not None
                                                                for row in valid),
+                           "task_clock_measured_episodes": sum("task_elapsed_including_recovery_seconds" in row
+                                                               for row in valid),
                            "failure_types": dict(Counter(_failure_category(row) for row in valid if not row["success"])),
                            "frontend_alignment_counts": dict(Counter(row["frontend_alignment"] for row in valid
                                                                      if "frontend_alignment" in row)),
@@ -338,7 +350,8 @@ def _method_summary(rows):
                                         for state in sorted({row["state"] for row in cases})},
                            "mean_restricted_seconds": mean(row["restricted_seconds"] for row in valid) if valid else None}
         for field in ("actual_dispatches", "total_model_transport_wall_seconds", "total_action_seconds",
-                      "total_observation_seconds", "total_search_seconds", "total_local_worker_cpu_seconds"):
+                      "total_observation_seconds", "total_search_seconds", "total_local_worker_cpu_seconds",
+                      "task_elapsed_including_recovery_seconds", "task_recovery_gap_seconds"):
             measures = [row[field] for row in valid if row.get(field) is not None]
             methods[method]["mean_" + field] = mean(measures) if measures else None
     return methods

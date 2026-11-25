@@ -6,13 +6,14 @@ import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import yaml
 
 from .audit import capture
 from .clean_coverage import audit_run
-from .control import DEFAULT_AUTH_PROJECT, control_status, is_live, pilot_run
+from .control import DEFAULT_AUTH_PROJECT, MAX_ATTEMPTS, control_status, is_live, pilot_run
 from .learning_schedule import prepare_configurations, prepare_ranker_pilot
 from .live_audit import audit_live_connection
 from .live_calibration import calibrate, calibrate_visual
@@ -225,6 +226,9 @@ def _continue_stage(output_root, directory, defaults, args, launch_limit):
         if args.resume and state.get("pilot_directory") and any(job.get("arm") for job in active):
             return run_batch(Path(state["pilot_directory"]))
         return state, 0
+    if (args.resume and state["execution_status"] in {"INFRA_ERROR", "EXITED_NEEDS_RECOVERY"}
+            and state.get("pilot_directory") and (state.get("current_job") or {}).get("arm")):
+        return run_batch(Path(state["pilot_directory"]))
     if state["execution_status"] == "BLOCKED_EXTERNAL" and not args.retry_external:
         return state, 0
     active_public = [row for row in _public_visual(output_root) if row["state"] == "RUNNING"]
@@ -413,9 +417,18 @@ def _continue(output_root, directory, defaults, args):
             batches.append({"stage": result["stage"], **result["last_batch"]})
             remaining -= launched
         current = result.get("current_job") or {}
-        if (not launched or result.get("active_jobs") or current.get("state") in
-                {"INFRA_ERROR", "BLOCKED_EXTERNAL", "CANCELLED_BY_USER"}):
+        state = current.get("state")
+        if not launched or result.get("active_jobs") or state in {"BLOCKED_EXTERNAL", "CANCELLED_BY_USER"}:
             break
+        if state == "INFRA_ERROR":
+            error = (current.get("result") or {}).get("error") or {}
+            temporary = error.get("code") in {"server_is_overloaded", "network_error", "stream_incomplete", "timeout"}
+            if not (remaining and args.resume and temporary and 1 <= current["attempt"] < MAX_ATTEMPTS):
+                break
+            # The supervisor enforces the same task budget for the next attempt.
+            delay = 15 * current["attempt"]
+            batches[-1]["service_retry_backoff_seconds"] = delay
+            time.sleep(delay)
     return {**result, "project_batches": batches, "remaining_launch_allowance": remaining}
 
 
