@@ -107,9 +107,10 @@ def _arm_row(directory, case, method, binding=None):
                          ("conditional_materials", "active_conditional_materials"),
                          ("typed_task_program_compiled", "typed_program_compiled")):
         row[name] = (result or {}).get("robot_metrics", {}).get(earned)
-    row["legacy_outcome"] = (result or {}).get("score", {}).get("outcome")
+    original_score = (result or {}).get("score") or {}
+    row["legacy_outcome"] = original_score.get("outcome")
     row["failure_reason"] = (job.get("result") or {}).get("reason")
-    row["legacy_wrong_accepted"] = (result or {}).get("score", {}).get("wrong_accepted")
+    row["legacy_wrong_accepted"] = original_score.get("wrong_accepted")
     timing = root / "private/robot/timeline.jsonl"
     if timing.is_file():
         clock = summarize(timing, allow_truncated=allow_truncated)
@@ -153,6 +154,11 @@ def _arm_row(directory, case, method, binding=None):
         row["complete_coverage"] = coverage["complete"]
         row["missing_objects"] = len(coverage["missing_fields_by_object"])
         row["required_objects"] = coverage["audited_objects"]
+        if original_score.get("score_version") == 5 and row["legacy_outcome"] in ("correct", "wrong_accepted"):
+            recheck = audit_run(root, recheck_legacy_fragments=True)
+            bound = recheck["report_matches_bound_submission"]
+            row.update(legacy_fragment_recheck_complete=recheck["complete"], legacy_fragment_submission_bound=bound,
+                       legacy_fragment_recheck_verified_change=not coverage["complete"] and recheck["complete"] and bound)
         if not coverage["complete"] and row["failure_reason"] is None:
             if row["typed_program_compiled"] is False:
                 row["failure_reason"] = "task_program_parse"
@@ -381,6 +387,16 @@ def rebuild(directory, output):
               "scientific_conclusion": "INCONCLUSIVE"}
     if catalog.get("data_role") == "INDEPENDENT_NATIVE_TRAINING_CHECK":
         result["real_trajectory_forecast_checks"] = _native_forecast_check(rows)
+    fragment_rechecks = [row for row in rows if "legacy_fragment_recheck_complete" in row]
+    if fragment_rechecks:
+        result["legacy_fragment_recheck"] = {
+            "scope": "completed reports scored with legacy version 5",
+            "episodes": len(fragment_rechecks),
+            "original_complete": sum(row["complete_coverage"] for row in fragment_rechecks),
+            "complete_with_fragment_merging": sum(row["legacy_fragment_recheck_complete"] for row in fragment_rechecks),
+            "verified_changes": [{"case": row["case"], "method": row["method"], "artifact_dir": row["artifact_dir"]}
+                                 for row in fragment_rechecks if row["legacy_fragment_recheck_verified_change"]],
+        }
     strata = {}
     for row in rows:
         if row["stratum"]:

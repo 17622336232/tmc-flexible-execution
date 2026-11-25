@@ -64,6 +64,30 @@ class CoverageTests(unittest.TestCase):
         self.assertFalse(score_coverage(truth, report, frames, [call], [{**step, "raw_model_decision": changed}])["complete"])
         self.assertFalse(score_coverage(truth, report, frames, [{**call, "output": changed}], [step])["complete"])
 
+    def test_legacy_fragment_recheck_preserves_two_separately_proven_fields(self):
+        task = "Report the crack and temperature of cabinet A."
+        truth = {"task": task, "family": "locate_condition",
+                 "score_spec": {"target": "A", "required": ["cracked", "temperature"]},
+                 "devices": [{"identity": "A", "cracked": False, "temperature": 86}]}
+        frames = {"onboard_0001": "hash-a", "onboard_0002": "hash-b"}
+        records = [{"object_id": "A", "facts": {"cracked": False}, "evidence_image_id": "onboard_0001"},
+                   {"object_id": "A", "facts": {"temperature": 86}, "evidence_image_id": "onboard_0002"}]
+        report = {"outcome": "accepted", "records": records}
+        decision = {"action": {"type": "submit"}, "report": report}
+        step = {"step": 2, "image_id": "onboard_0002", "decision": decision}
+        call = {"input": {"authorized_task": task, "current_image_id": "onboard_0002",
+                          "recent_images": [{"image_id": "onboard_0001"}]},
+                "image_sha256": ["hash-a", "hash-b"], "output": decision}
+        original = score_coverage(truth, report, frames, [call], [step])
+        self.assertEqual(original["missing_fields_by_object"], {})
+        self.assertFalse(original["complete"])
+        separately_proven = score_coverage(truth, report, frames, [call], [step], recheck_legacy_fragments=True)
+        self.assertTrue(separately_proven["complete"])
+        self.assertTrue(separately_proven["report_matches_bound_submission"])
+        unbound = {**report, "records": [records[0], {**records[1], "evidence_image_id": "unknown"}]}
+        self.assertFalse(score_coverage(truth, unbound, frames, [call], [step],
+                                        recheck_legacy_fragments=True)["report_matches_bound_submission"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -51,7 +51,7 @@ def _verified_calls(task, registered_frames, calls):
     return successful, sorted(set(rejected))
 
 
-def score_coverage(truth, report, frames, model_calls, decisions):
+def score_coverage(truth, report, frames, model_calls, decisions, *, recheck_legacy_fragments=False):
     spec = {}
     program = None
     if truth.get("oracle_requirement_program"):
@@ -76,6 +76,7 @@ def score_coverage(truth, report, frames, model_calls, decisions):
     supports = {name: defaultdict(set) for name in scope}
     rejected_records = []
     merge_fragments = False
+    bound_submission = False
 
     for step in decisions:
         current = step.get("image_id")
@@ -89,7 +90,12 @@ def score_coverage(truth, report, frames, model_calls, decisions):
         merge_fragments |= typed
         rows = list(decision.get("records", []))
         if decision.get("action", {}).get("type") == "submit":
-            rows.extend(decision.get("report", {}).get("records", []))
+            submission = decision.get("report", {})
+            submitted_records = submission.get("records", [])
+            rows.extend(submitted_records)
+            if recheck_legacy_fragments and submission == report:
+                bound_submission |= all(isinstance(row, dict) and row.get("evidence_image_id") in supplied_frames
+                                        for row in submitted_records)
         for row in rows:
             label = object_id(row)
             if not isinstance(label, str) or label.strip().casefold() not in by_label:
@@ -105,14 +111,14 @@ def score_coverage(truth, report, frames, model_calls, decisions):
 
     missing = {name: sorted(fields - set(evidence)) for name, evidence in supports.items() if fields - set(evidence)}
     if program is None:
-        verdict = evaluate(truth, report, merge_fragments=merge_fragments)
+        verdict = evaluate(truth, report, merge_fragments=merge_fragments or recheck_legacy_fragments)
     else:
         factual_observations = {name: {key: scope[name][key] for key in evidence} for name, evidence in supports.items()}
         checked = program.evaluate(factual_observations, scope_confirmed=bool(scope))
         missing = {name: missing.get(name, []) for name in checked["unresolved"]}
         verdict = score_program(truth, report)
     complete = bool(scope and fields and not missing and verdict["correct"])
-    return {
+    result = {
         "mode": "CLEAN_RECORDED_COVERAGE_AUDIT",
         "report_correct": verdict["correct"],
         "complete": complete,
@@ -125,9 +131,13 @@ def score_coverage(truth, report, frames, model_calls, decisions):
         "supported_by_frame": {name: {key: sorted(values) for key, values in evidence.items()}
                                for name, evidence in supports.items()},
     }
+    if recheck_legacy_fragments:
+        result.update(mode="CLEAN_RECORDED_COVERAGE_LEGACY_FRAGMENT_RECHECK",
+                      report_matches_bound_submission=bound_submission)
+    return result
 
 
-def audit_run(episode):
+def audit_run(episode, *, recheck_legacy_fragments=False):
     truth = json.loads((episode / "private" / "truth.json").read_text(encoding="utf8"))
     result = json.loads((episode / "result.json").read_text(encoding="utf8"))
     if result["policy"] != "clean":
@@ -155,4 +165,4 @@ def audit_run(episode):
         return [json.loads(line) for line in path.read_text(encoding="utf8").splitlines() if line.strip()] if path.is_file() else []
 
     return score_coverage(truth, result["report"], frames, rows(robot / "model_calls.jsonl"),
-                          rows(robot / "decisions.jsonl"))
+                          rows(robot / "decisions.jsonl"), recheck_legacy_fragments=recheck_legacy_fragments)
