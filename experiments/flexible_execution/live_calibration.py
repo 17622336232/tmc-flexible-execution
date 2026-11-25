@@ -97,10 +97,10 @@ def _motion_fit(samples):
     return (start, slope) if start > 0 and slope > 0 else None
 
 
-def calibrate_visual(directory, previous):
+def calibrate_visual(directory, previous, *, allowed_role="VISUAL_METHOD_CALIBRATION"):
     """Fit live timing estimates only from the matched calibration cohort."""
     manifest = read_json(directory / "pilot_manifest.json")
-    if manifest["role"] != "VISUAL_METHOD_CALIBRATION":
+    if manifest["role"] != allowed_role:
         raise ValueError("Live cost fitting requires the designated calibration split")
     samples = {"observed_runs": [], "completed_runs": [], "frozen_seconds": [], "censored_query_seconds": [],
                "photo_seconds": [], "report_seconds": [], "measured_motion": []}

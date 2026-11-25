@@ -164,11 +164,12 @@ def _safe_pose(backend, pose):
     return True
 
 
-def _worlds(instruction, intent, target, first_pose, views, started, timeout, costs, log, hold_at_view):
+def _worlds(instruction, intent, target, first_pose, views, started, timeout, costs, log, hold_at_view,
+            query_id="initial-visual-judgment"):
     submitted = monotonic() - started
     release = min(timeout, submitted + costs.frozen_query_ceiling_seconds)
     expected = min(release, submitted + costs.frozen_query_seconds)
-    spec = QuerySpec("initial-visual-judgment", target.id, OUTCOMES, expected, release)
+    spec = QuerySpec(query_id, target.id, OUTCOMES, expected, release)
     requirements = {r.field: r for r in intent.requirements_for(target.id, spec.id)}
     materials = {}
     for material in intent.materials:
@@ -204,21 +205,23 @@ def _worlds(instruction, intent, target, first_pose, views, started, timeout, co
 
 
 async def _inspect(backend, directory, trace, client, started, task, spec, poses, materials, source, first,
-                   first_target, reused, question, independent, method, hold_at_view, ranked_policy):
+                   first_target, reused, question, independent, method, hold_at_view, ranked_policy, *,
+                   step_base=3, continuous=False):
     elapsed = lambda: monotonic() - started
     loop = asyncio.get_running_loop()
-    log = lambda event, **fields: trace.event(event, 3, **fields)
+    log = lambda event, **fields: trace.event(event, step_base, **fields)
     final_deadline = started + task.deadline
     client.deadline_monotonic = started + spec.latest_ready
     sent_before = client.calls
 
     def infer(payload, prompt):
-        with trace.measure("model_request", 3, purpose="judge_frozen_photo", frame_id=first.id,
+        with trace.measure("model_request", step_base, purpose="judge_frozen_photo", frame_id=first.id,
                            image_sha256=first.digest):
             return judge(client, payload, prompt)
 
-    steps = 3
+    steps = step_base
     photos = []
+    captured = {}
     attempts = {}
     book = QueryBook()
     worker = AsyncQueryWorker(infer)
@@ -250,6 +253,7 @@ async def _inspect(backend, directory, trace, client, started, task, spec, poses
         log("candidate_executed", candidate=name, frame_id=observed[0].id, image_id="probe_%04d" % steps,
             frame_sha256=observed[0].digest, finished_before_reply=not future.done(),
             pose=observed[1]["position"], ros_stamp=observed[1]["ros_stamp"])
+        captured[target_id] = observed
         return observed
 
     try:
@@ -257,8 +261,12 @@ async def _inspect(backend, directory, trace, client, started, task, spec, poses
             await asyncio.sleep(.015)
         if not future.done():
             state = Snapshot(elapsed(), location, {}, {}, {})
-            with trace.measure("search", 3, policy=method):
+            with trace.measure("search", step_base, policy=method):
                 choice = select(task, state, method, log, ranked_policy=ranked_policy)
+            if continuous:
+                log("pending_strategy", query=spec.id, policy=method,
+                    selection=[action.skill.id for action in choice.prepare] if choice else [],
+                    has_independent_candidate=bool(independent))
             if (choice and not future.done()
                     and continuation_check(method)(task, replace(state, at=elapsed()), choice.prepare)[0]):
                 for action in choice.prepare:
@@ -277,6 +285,8 @@ async def _inspect(backend, directory, trace, client, started, task, spec, poses
                 if (elapsed() + task.report_seconds < task.deadline
                         and _safe_pose(backend, poses[task.terminal])):
                     await capture("independent", "ordinary-inspection:" + other.id, goal, other.id)
+        elif continuous:
+            log("pending_strategy", query=spec.id, policy=method, selection=[], reason="reply_already_arrived")
         reply = await asyncio.wait_for(asyncio.shield(future), max(0., spec.latest_ready - elapsed()))
         at = elapsed()
         if at > spec.latest_ready or not book.accept(reply, at):
@@ -366,11 +376,14 @@ async def _inspect(backend, directory, trace, client, started, task, spec, poses
                 log("continuation_rejected", reason=str(error)[:280])
     log("continuation_checked", arrived=common, selected=bool(choice), acquired=list(evidence),
         originally_required=list(choice.required_evidence) if choice else [], independent_pose=next_pose)
-    return {"outcome": outcome, "query_bound": bool(known), "evidence": evidence, "step": steps,
-            "common_handoff": common, "spec": spec, "required": task.requirements}
+    result = {"outcome": outcome, "query_bound": bool(known), "evidence": evidence, "step": steps,
+              "common_handoff": common, "spec": spec, "required": task.requirements}
+    if continuous:
+        result["captured"] = captured
+    return result
 
 
-def submission_guard(task_text, directory, model, trace, conditional_summary):
+def submission_guard(task_text, directory, model, trace, conditional_summary, *, cache_verified=False):
     checked_submissions = {}
     checked_groups = {}
 
@@ -410,6 +423,8 @@ def submission_guard(task_text, directory, model, trace, conditional_summary):
             payload["initial_scope"] = scope
         fingerprint = sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf8")).hexdigest()
         if fingerprint in checked_submissions:
+            if cache_verified:
+                trace.event("acceptance_cache_hit", step, input_sha256=fingerprint)
             return checked_submissions[fingerprint]
         outcome = None
         if len(ids) <= 4:
@@ -450,6 +465,8 @@ def submission_guard(task_text, directory, model, trace, conditional_summary):
             reason = (" ".join(issues)[:300] if valid else "The independent checker did not return concrete issues")
             checked_submissions[fingerprint] = reason
             return reason
+        if cache_verified:
+            checked_submissions[fingerprint] = None
         return None
     return validate
 
@@ -479,7 +496,13 @@ def _screen_evidence_group(reply, photo_ids, claims):
 
 
 def run_live(backend, instruction, directory, event, timeout, *, model, trace, method, costs, hold_at_view=False,
-             ranked_policy=None, use_program=False, frontend_reference=None, scene_sha=None):
+             ranked_policy=None, use_program=False, frontend_reference=None, scene_sha=None, protocol_v2=False):
+    if protocol_v2:
+        from .v2_execution import run
+
+        return run(backend, instruction, directory, event, timeout, model=model, trace=trace, method=method,
+                   costs=costs, hold_at_view=hold_at_view, ranked_policy=ranked_policy,
+                   frontend_reference=frontend_reference, scene_sha=scene_sha)
     started = monotonic()
     model.deadline_monotonic = backend.execution_deadline_monotonic = started + timeout
     program = None

@@ -48,15 +48,30 @@ def _verified_judgment(events, calls, frames):
 def audit_capture_permissions(episode, *, allow_truncated=False):
     robot = episode / "private/robot"
     contract = robot / "conditional_contract.json"
+    v2_contracts = sorted(robot.glob("conditional_contract_[0-9][0-9][0-9][0-9].json"))
     trace = robot / "timeline.jsonl"
-    if not contract.is_file() or not trace.is_file():
+    if not (contract.is_file() or v2_contracts) or not trace.is_file():
         return None
-    task = read_json(contract)["task"]
     events = _rows(trace, allow_truncated=allow_truncated)
+    calls = _rows(robot / "model_calls.jsonl", allow_truncated=allow_truncated)
+    frames = _camera_frames(robot)
+    if v2_contracts:
+        boundaries = [int(path.stem.rsplit("_", 1)[1]) for path in v2_contracts] + [float("inf")]
+        checked = []
+        for index, path in enumerate(v2_contracts):
+            group = [r for r in events if isinstance(r.get("step"), int)
+                     and boundaries[index] <= r["step"] < boundaries[index + 1]]
+            checked.extend(_permission_actions(read_json(path)["task"], group, calls, frames))
+    else:
+        checked = _permission_actions(read_json(contract)["task"], events, calls, frames)
+    return {"scope": "conditional camera actions", "audited": len(checked),
+            "violations": sum(not row["permitted"] for row in checked), "actions": checked}
+
+
+def _permission_actions(task, events, calls, frames):
     skills = {skill["id"]: skill for skill in task["skills"]}
     requirements = {r["id"]: r for r in task["requirements"]}
-    calls = _rows(robot / "model_calls.jsonl", allow_truncated=allow_truncated)
-    applied, _ = _verified_judgment(events, calls, _camera_frames(robot))
+    applied, _ = _verified_judgment(events, calls, frames)
     grants = {}
     checked = []
     for row in events:
@@ -84,8 +99,7 @@ def audit_capture_permissions(episode, *, allow_truncated=False):
                                and applied["monotonic_seconds"] <= row["monotonic_seconds"])
         permitted = bool(allowed) and all(allowed)
         checked.append({"step": row["step"], "candidate": row["candidate"], "permitted": permitted})
-    return {"scope": "conditional camera actions", "audited": len(checked),
-            "violations": sum(not row["permitted"] for row in checked), "actions": checked}
+    return checked
 
 
 def audit_live_connection(episode):

@@ -150,7 +150,8 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
     sources = []
     ranked = catalog.get("role") == RANKER_ROLE
     custom_final = catalog.get("role") == CUSTOM_FINAL_ROLE
-    typed = catalog.get("role") == TYPED_ROLE or custom_final
+    v2 = catalog.get("protocol_version") == "protocol-v2"
+    typed = catalog.get("role") == TYPED_ROLE or custom_final or (v2 and not catalog.get("runtime"))
     visual = catalog.get("role") in VISUAL_ROLES.values()
     public = catalog.get("role") in (PUBLIC_VALIDATION_ROLE, PUBLIC_FINAL_ROLE)
     stream = catalog.get("role") == STREAM_ROLE
@@ -160,6 +161,9 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
         stage_sources += (RANKING_SOURCE,)
     if typed:
         stage_sources += ("experiments/flexible_execution/requirement_program.py",)
+    if v2 and typed:
+        stage_sources += ("experiments/flexible_execution/adapters/v2_execution.py",
+                          "experiments/flexible_execution/shared_frontend.py")
     value_schema = "experiments/flexible_execution/material_schema.py"
     if conditional and (checkout / value_schema).is_file():
         stage_sources += (value_schema,)
@@ -204,6 +208,8 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
             raise ValueError("A registered public simulator input is missing")
         version, stage = ((9, "public-visual-final") if catalog["role"] == PUBLIC_FINAL_ROLE
                           else (7, "public-visual-development"))
+    elif v2:
+        version, stage = 11, catalog["role"].lower().replace("_", "-")
     elif visual:
         version, stage = 6, catalog["role"].lower().replace("_", "-")
     elif stream:
@@ -261,6 +267,8 @@ def plans(directory, protocol, catalog):
                    "ranker_config_sha256": catalog.get("ranker_config_sha256") if execution_method in ONLINE_RANKED_METHODS else None,
                    "reasoning_effort": protocol["reasoning_effort"], "state": "PENDING", "attempt": 0,
                    "arm": str(directory / case["id"] / method)}
+            if catalog.get("protocol_version") == "protocol-v2":
+                job.update(protocol_version="protocol-v2", evidence_level=catalog["evidence_level"])
             if binding:
                 job.update(execution_method=execution_method, ranker_file=binding["ranker_file"],
                            training_seed=binding["seed"], ranker_config_sha256=binding["sha256"],
@@ -541,6 +549,8 @@ def _gazebo_command(job, directory, catalog, auth_project, episode, remaining, l
         command.extend(("--study-task", str(study)))
     if method in CONDITIONAL_MODES:
         command.extend(("--cost-config", str(directory / "calibrated_costs.json")))
+        if catalog.get("protocol_version") == "protocol-v2":
+            command.append("--protocol-v2")
         if case.get("early_fields"):
             command.extend(("--early-fields", ",".join(case["early_fields"])))
         if case.get("collection_rule"):
@@ -558,17 +568,19 @@ def _gazebo_command(job, directory, catalog, auth_project, episode, remaining, l
 
 
 def pilot_run(directory, control, checkout, *, resume, max_jobs, auth_project=DEFAULT_AUTH_PROJECT,
-              unlock_external=False, minimum_free_disk_gb=0):
+              unlock_external=False, minimum_free_disk_gb=0, lease_control=None):
     directory, control, auth_project = directory.resolve(), control.resolve(), auth_project.resolve()
     if max_jobs < 1:
         raise ValueError("Choose a positive maximum batch size")
     control.mkdir(parents=True, exist_ok=True)
-    with (control / ".simulator.lock").open("a") as lease:
+    with ((lease_control or control) / ".simulator.lock").open("a") as lease:
         try:
             fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             return {**control_status(control), "worker_owned_by_another_batch": True}
         running = control_status(control)
+        if lease_control and control_status(lease_control)["active_jobs"]:
+            return {**running, "worker_owned_by_another_batch": True}
         if running["active_jobs"] and running.get("pilot_directory") != str(directory):
             return {**running, "worker_owned_by_another_batch": True}
         return _run_locked(directory, control, checkout, resume, max_jobs, auth_project, unlock_external,
@@ -593,6 +605,9 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
             raise ValueError("The held-out public evaluation does not match its frozen inputs")
     ports = (11674, 11675)
     protocol = _runtime_inputs(checkout, catalog, auth_project, ports)
+    if catalog.get("role") == PUBLIC_FINAL_ROLE and catalog.get("protocol_version") == "protocol-v2":
+        if any(freeze[key] != protocol[key] for key in ("model", "reasoning_effort", "request_limit", "environment_sha256")):
+            raise ValueError("Registered public service or runtime changed after evaluation freeze")
     freeze = None
     if catalog.get("role") == CUSTOM_FINAL_ROLE:
         freeze = _read(Path(catalog["frozen_evaluation"]))
@@ -613,6 +628,9 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
     else:
         revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=checkout, text=True).strip()
         frozen = {**protocol, "code_git_commit": revision}
+        if catalog.get("role") == PUBLIC_FINAL_ROLE and catalog.get("protocol_version") == "protocol-v2":
+            if _read(Path(catalog["frozen_evaluation"]))["source_sha256"] != frozen["source_sha256"]:
+                raise ValueError("The first public v2 launch must use the frozen evaluation source")
         if freeze and freeze["source_sha256"] != frozen["source_sha256"]:
             raise ValueError("The first custom test launch must use the frozen source")
     if frozen.get("source_sha256"):

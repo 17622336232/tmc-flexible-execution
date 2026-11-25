@@ -1,5 +1,22 @@
 # 巡检执行调整实验
 
+## v2 提速协议
+
+在仓库根目录用下列命令重算旧日志并查看或恢复新版。新版开发使用单个仿真实例，三处开发场景共 12 个回合，每个回合最多 24 次真实发送。
+
+```bash
+python3 -m experiments.flexible_execution.cli acceleration-audit --out outputs/acceleration-v2
+python3 -m experiments.flexible_execution.cli replay-run --protocol protocol-v2 --resume
+python3 -m experiments.flexible_execution.cli status --profile local5060 --protocol protocol-v2
+python3 -m experiments.flexible_execution.cli continue --profile local5060 --protocol protocol-v2 --resume --max-jobs 12
+```
+
+共同前端用一次调用生成任务程序和条件材料要求。受控开发参照只有原图、任务、场景、模型和提示均匹配才可用。自然在线各臂独立初始化。可绑定的多个目标分别进入等待调度，完整任务交付继续走独立照片核对和原始评分。通用控制器仍使用真实模型处理综合动作和报告。
+
+正式候选由原盲池按登记种子抽取。自建三层各 24 实例、每例五种方法。公开 24 房每房一个派生任务、每例四种方法，公开 OURS 运行单候选 A。总计 456 臂，预先指定 PLANNER 为主对照。配对主指标把未完成回合按原协议时限计入。
+
+旧第 42 组仍在原协议的暂停位置。v2 初始审计、固定候选复算和独立评测产物在 `outputs/acceleration-v2`。
+
 当前分支实施 TMC 1.1 协议的本地启动。运行目录包含源代码校验、任务盘点、资源记录、每回合事件、独立重评分和断点状态。
 
 ## 本地机制诊断

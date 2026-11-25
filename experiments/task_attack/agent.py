@@ -5,7 +5,7 @@ import time
 
 from .model import ModelAttemptLimitExceeded, ModelClient
 from .runtime import append_json, write_json
-from .records import adapt_decision_records, keep_observation, object_id, validate_record
+from .records import adapt_decision_records, facts, keep_observation, object_id, validate_record
 
 
 SYSTEM = '''You control a simulated robot through shared observation and movement tools.
@@ -94,7 +94,7 @@ def _execute_action(backend, obs, action, trace, step, image_id, event):
 
 def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trace=None,
               prior_views=(), prior_memory='', episode_started=None, step_offset=0, submit_guard=None,
-              decision_pipeline=None, fact_types=None, record_adapter=None):
+              decision_pipeline=None, fact_types=None, record_adapter=None, evidence_journal=False):
     directory.mkdir(parents=True,exist_ok=True)
     if model is None:
         model=ModelClient(directory/'model_calls.jsonl')
@@ -102,6 +102,12 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
     memory=prior_memory;records=[];history=[];step=step_offset
     view_archive=list(prior_views)
     evidence_ids={item['image_id'] for item in view_archive}
+    evidence_hashes = {item['image_id']: hashlib.sha256(item['data']).hexdigest() for item in view_archive}
+    instructions = SYSTEM
+    if evidence_journal:
+        instructions += ("\nUse the bound visual judgments and evidence memory before requesting a new view. "
+                         "Keep complementary fields from earlier photos. Avoid repeating an already settled reading. "
+                         "Use short memory and evidence notes. Unknown or unreadable facts stay unresolved.")
     model.deadline_monotonic=started+timeout
     backend.execution_deadline_monotonic=started+timeout
     feedback=None
@@ -123,6 +129,7 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
         (directory/(image_id+'.jpg')).write_bytes(obs['data']);evidence_ids.add(image_id)
         meta={k:v for k,v in obs.items() if k!='data'}
         meta.update(image_id=image_id,sha256=hashlib.sha256(obs['data']).hexdigest())
+        evidence_hashes[image_id] = meta['sha256']
         write_json(directory/(image_id+'.json'),meta)
         view_history.append(dict(image_id=image_id,position=obs['position'],yaw=obs['yaw'],capture_ros=obs['ros_stamp']))
         image_memory=[]
@@ -155,11 +162,12 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
             return _execute_action(backend, obs, action, trace, step, image_id, event)
 
         early_feedback = None
+        calls_before_decision = model.calls if evidence_journal else None
         try:
             if decision_pipeline is None:
                 with (trace.measure('model_request',step,image_id=image_id,image_sha256=meta['sha256'])
                       if trace else nullcontext()):
-                    decision=model.request(SYSTEM,payload,images)
+                    decision=model.request(instructions,payload,images)
             else:
                 decision, early_feedback = decision_pipeline(model, payload, images, execute=execute, trace=trace,
                                                              step=step, image_sha256=meta['sha256'])
@@ -196,6 +204,25 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
         for row in new_records:
             try:validate_record(row,evidence_ids)
             except ValueError as error:raise ModelDecisionInvalid(str(error)) from error
+            if evidence_journal:
+                source = row['evidence_image_id']
+                supplied = {image_id, *(item['image_id'] for item in image_memory)}
+                if source not in supplied and row not in records:
+                    event('evidence_rejected', step=step, reason='new_claim_without_its_photo', image_id=source)
+                    continue
+                observed = {field: value for field, value in facts(row).items() if value is not None}
+                if not observed:
+                    continue
+                row = {**row, 'facts': observed}
+                for field, value in observed.items():
+                    append_json(directory / 'evidence_ledger.jsonl', {
+                        'step': step, 'object': object_id(row), 'field': field, 'value': value,
+                        'photo': source, 'image_sha256': evidence_hashes[source], 'query_step': step,
+                        'transport_attempt_range': [calls_before_decision + 1, model.calls],
+                        'prompt_sha256': hashlib.sha256(instructions.encode()).hexdigest()
+                        if decision_pipeline is None else None,
+                        'observed_at': time.monotonic() - started, 'scope': 'static_development_scene',
+                        'status': 'observed_pending_submission_verification'})
             records = (keep_observation(records, row) if record_adapter is not None else
                        [r for r in records if object_id(r) != object_id(row)] + [row])
         action=decision['action'];kind=action.get('type');feedback=None
@@ -223,6 +250,9 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
                     event('submission_rejected',step=step,feedback=feedback)
                     history.append(dict(action=action,feedback=feedback))
                     continue
+                if evidence_journal and report['outcome'] == 'accepted':
+                    append_json(directory / 'evidence_ledger.jsonl', {
+                        'step': step, 'status': 'online_submission_verified', 'records': report['records']})
             write_json(directory/'report.json',report)
             if trace is not None:
                 trace.event('report_written',step,image_id=image_id,outcome=report['outcome'])

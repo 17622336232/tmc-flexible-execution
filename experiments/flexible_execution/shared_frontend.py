@@ -30,7 +30,7 @@ def get(path, key, instruction):
     if key["overview_sha256"] != original["overview_sha256"]:
         return "different_overview", None
     program = parse(content["program"], instruction) if key["typed"] else None
-    intent = parse_intent(content["intent"], instruction)
+    intent = parse_intent(content["intent"], instruction) if content["intent"] is not None else None
     targets = parse_targets({"targets": content["targets"]})
     return "matched", (program, intent, targets, record["sha256"])
 
@@ -39,7 +39,7 @@ def register(path, key, program, intent, targets, episode, photo):
     if path.exists():
         raise ValueError("The matched front-end reference is already registered")
     content = {"schema": 1, "input": key, "program": asdict(program) if program else None,
-               "intent": {"status": "supported", **asdict(intent)},
+               "intent": {"status": "supported", **asdict(intent)} if intent else None,
                "targets": [{name: value for name, value in asdict(target).items() if name != "id"} for target in targets],
                "source": {"episode": str(episode), "overview_frame_id": photo.id}}
     digest = _hash(content)

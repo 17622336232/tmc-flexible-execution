@@ -263,6 +263,29 @@ def _pair_rows(rows, reference):
     return {method: _paired_summary(differences) for method, differences in reports.items()}
 
 
+def _registered_primary(rows, ours, reference):
+    matches = {}
+    for row in rows:
+        if row["state"] in RECORDED and row["method"] in (ours, reference):
+            matches.setdefault(row["case"], {})[row["method"]] = row
+    groups = {}
+    for cases in matches.values():
+        if {ours, reference} <= cases.keys():
+            candidate, baseline = cases[ours], cases[reference]
+            groups.setdefault(candidate["group"], []).append(candidate["restricted_seconds"] - baseline["restricted_seconds"])
+    differences = [mean(group) for group in groups.values()]
+    p_value = None
+    if len(differences) >= 2:
+        rng = Random(1729)
+        observed = abs(sum(differences))
+        trials = 20000
+        exceed = sum(abs(sum(value if rng.getrandbits(1) else -value for value in differences)) >= observed
+                     for _ in range(trials))
+        p_value = (exceed + 1) / (trials + 1)
+    return {"method": ours, "reference": reference, "metric": "deadline_restricted_complete_task_seconds",
+            "independent_groups": len(differences), "p_two_sided_sign_flip": p_value, "alpha": .05}
+
+
 def _paired_ranking(rows):
     by_case, planned = {}, {}
     for row in rows:
@@ -355,6 +378,8 @@ def _method_summary(rows):
                       "task_elapsed_including_recovery_seconds", "task_recovery_gap_seconds"):
             measures = [row[field] for row in valid if row.get(field) is not None]
             methods[method]["mean_" + field] = mean(measures) if measures else None
+        successes = [row["restricted_seconds"] for row in valid if row["success"]]
+        methods[method]["mean_seconds_given_success"] = mean(successes) if successes else None
     return methods
 
 
@@ -429,8 +454,8 @@ def rebuild(directory, output, *, coverage_object=None, coverage_domain=None):
     rows = [_arm_row(directory, case, method, bindings.get(method))
             for case in catalog["cases"] for method in case["order"]]
     methods = _method_summary(rows)
-    reference = next((name for name in ("conditional-async", "paired-async", "conditional-rank-heuristic")
-                      if name in methods), None)
+    reference = catalog.get("primary_reference") or next((name for name in (
+        "conditional-async", "paired-async", "conditional-rank-heuristic") if name in methods), None)
     formal = catalog["role"] in (PUBLIC_FINAL_ROLE, CUSTOM_FINAL_ROLE)
     mode = "ACTUAL_LANGUAGE_AND_VISION_CLOSED_LOOP" if formal else "NATURAL_LATENCY_DEVELOPMENT"
     permission_rows = [row for row in rows if "conditional_permission_violations" in row]
@@ -447,6 +472,9 @@ def rebuild(directory, output, *, coverage_object=None, coverage_domain=None):
               "scientific_conclusion": "INCONCLUSIVE"}
     if coverage_object is not None:
         result["object_coverage_audit"] = _object_coverage(rows, coverage_object, coverage_domain)
+    if formal and catalog.get("protocol_version") == "protocol-v2":
+        result["protocol_version"] = "protocol-v2"
+        result["registered_primary_inference"] = _registered_primary(rows, catalog["ours_method"], reference)
     if catalog.get("data_role") == "INDEPENDENT_NATIVE_TRAINING_CHECK":
         result["real_trajectory_forecast_checks"] = _native_forecast_check(rows)
     fragment_rechecks = [row for row in rows if "legacy_fragment_recheck_complete" in row]

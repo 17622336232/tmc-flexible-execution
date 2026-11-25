@@ -1,6 +1,7 @@
 """Compare ordering from fixed candidate pools derived from real camera inputs."""
 
 from pathlib import Path
+from time import process_time
 
 from experiments.task_attack.runtime import write_json
 
@@ -26,7 +27,7 @@ def _contract(raw):
                            "travel": tuple(tuple(row) for row in raw["travel"])})
 
 
-def replay(directory, output):
+def replay(directory, output, *, configurations=None):
     from .control import TASK_TERMINAL
 
     catalog = read_json(directory / "pilot_manifest.json")
@@ -36,7 +37,9 @@ def replay(directory, output):
     if protocol["catalog_sha256"] != _hash(catalog):
         raise ValueError("Native trajectory inputs differ from the runtime protocol")
     config = registered_config(directory, catalog)
-    policies = {name: RankedPolicy.load(row, name) for name, row in config["policies"].items()}
+    configurations = configurations or {"recorded": config}
+    policies = {(label, name): RankedPolicy.load(row, name) for label, settings in configurations.items()
+                for name, row in settings["policies"].items()}
     rows, skipped = [], []
     for case in catalog["cases"]:
         for method in case["order"]:
@@ -62,17 +65,20 @@ def replay(directory, output):
             state = Snapshot(binding["submitted_at"], task.start, {}, {}, {})
             pool = candidate_prefixes(task, state, 3, 256, float("inf"))
             methods = {}
-            for name, policy in policies.items():
+            for (label, name), policy in policies.items():
                 stats = {}
 
                 def record(event, **fields):
                     if event == "candidate_search_summary":
                         stats.update(fields)
 
+                started_cpu = process_time()
                 decision = select_ranked(task, state, checked, record, ranker=policy.ranker,
                                          check_cap=policy.check_cap, budget_ms=1000, max_prepare=3,
                                          minimum_net_gain=policy.minimum_net_gain, fixed_prefixes=pool)
-                methods[name] = {**stats,
+                identifier = name if label == "recorded" else label + "/" + name
+                methods[identifier] = {**stats,
+                    "process_cpu_seconds": process_time() - started_cpu,
                     "selected": [action.skill.id for action in decision.prepare] if decision else [],
                     "predicted_finish_seconds": decision.expected_finish if decision else stats["baseline_finish"]}
             if len({row["candidate_prefixes_sha256"] for row in methods.values()}) != 1:
@@ -82,6 +88,7 @@ def replay(directory, output):
                          "pending_at_seconds": state.at, "fixed_candidates": len(pool), "methods": methods})
     output.parent.mkdir(parents=True, exist_ok=True)
     result = {"mode": "OFFLINE_FIXED_POOLS_FROM_ACTUAL_VISUAL_FRONTENDS", "actual_model_requests": 0,
+              "evidence_level": "DECISION_REPLAY",
               "new_vision_observations": 0, "source_snapshots": len(rows),
               "catalog_sha256": protocol["catalog_sha256"], "runtime_protocol_sha256": _hash(protocol),
               "independent_case_groups": len({row["group"] for row in rows}), "snapshots": rows, "skipped": skipped}

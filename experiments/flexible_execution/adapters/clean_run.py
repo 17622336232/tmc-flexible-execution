@@ -71,6 +71,7 @@ def main(argv=None):
     parser.add_argument("--cost-config", type=Path, help="Calibrated design input for the conditional methods")
     parser.add_argument("--ranker-config", type=Path, help="Frozen candidate scoring and check budget")
     parser.add_argument("--compile-task-program", action="store_true", help="Check a typed task program at submission")
+    parser.add_argument("--protocol-v2", action="store_true", help="Use the common v2 inspection loop")
     parser.add_argument("--study-task", type=Path, help="Registered custom task with a private scoring contract")
     parser.add_argument("--frontend-reference", type=Path, help="Shared front-end reference for this registered case")
     parser.add_argument("--onboard-evidence-only", action="store_true",
@@ -90,7 +91,8 @@ def main(argv=None):
         parser.error("The logical job duration must cover the attempt duration")
     conditional = args.method in CONDITIONAL_MODES
     if conditional != bool(args.cost_config) or (
-            (args.early_fields or args.collection_rule or args.handoff_at_observation or args.compile_task_program)
+            (args.early_fields or args.collection_rule or args.handoff_at_observation or args.compile_task_program
+             or args.protocol_v2)
             and not conditional):
         parser.error("Conditional methods require a cost file and own the optional development grant")
     if args.scene_fingerprint and (args.layout_seed is None or len(args.scene_fingerprint) != 64
@@ -166,6 +168,9 @@ def main(argv=None):
                          handoff_at_observation=args.handoff_at_observation)
     if args.compile_task_program:
         preflight["typed_task_program"] = True
+    if args.protocol_v2:
+        preflight.update(protocol_version="protocol-v2", evidence_level=(
+            "TRACE_SUPPORTED" if args.frontend_reference else "NATURAL_ONLINE"))
     if ranking:
         preflight.update(ranker_config_sha256=_hash(ranking), ranker_policy=ranking["policies"][args.method])
     ready = (preflight["signed_in"] and preflight["plan_usage_enabled"] and preflight["model_in_catalog"]
@@ -195,7 +200,8 @@ def main(argv=None):
         if conditional:
             execution = partial(run_live, method=args.method, costs=costs, hold_at_view=args.handoff_at_observation,
                                 ranked_policy=profile, use_program=args.compile_task_program,
-                                frontend_reference=args.frontend_reference, scene_sha=args.scene_fingerprint)
+                                frontend_reference=args.frontend_reference, scene_sha=args.scene_fingerprint,
+                                protocol_v2=args.protocol_v2)
             if clause:
                 original_hash = sha256(task.encode("utf8")).hexdigest()
                 task = task + "\n" + clause
