@@ -7,6 +7,7 @@ from pathlib import Path
 from random import Random
 from statistics import fmean, mean
 
+from experiments.task_attack.records import object_id
 from experiments.task_attack.runtime import write_json
 
 from .candidate_ranking import RANKED_METHODS, RETRIEVAL_METHOD
@@ -374,7 +375,53 @@ def _family_summary(rows):
     return summary
 
 
-def rebuild(directory, output):
+def _object_coverage(rows, target, domain):
+    label = target.strip().casefold()
+    if not label:
+        raise ValueError("Provide a nonempty object ID for the coverage audit")
+    selected = [row for row in rows if domain is None or row["domain"] == domain]
+    recorded = [row for row in selected if row["state"] in RECORDED]
+    audited = 0
+    relevant = []
+    for row in recorded:
+        if not row.get("artifact_dir"):
+            continue
+        root = Path(row["artifact_dir"])
+        coverage = _read(root / "clean_coverage.json")
+        if not coverage:
+            continue
+        audited += 1
+        name = next((key for key in coverage["supported_by_frame"] if key.casefold() == label), None)
+        if name is None:
+            continue
+        decisions = root / "private/robot/decisions.jsonl"
+        count = None
+        if decisions.is_file():
+            trace, _ = read_trace_rows(decisions, allow_truncated=row["state"] == "TIMEOUT")
+            count = 0
+            for step in trace:
+                if step.get("late_not_executed"):
+                    continue
+                decision = step.get("decision") or {}
+                report = decision.get("report") or {}
+                records = list(decision.get("records", [])) + list(report.get("records", []))
+                count += sum(isinstance(key, str) and key.strip().casefold() == label
+                             for key in map(object_id, records))
+        relevant.append({"case": row["case"], "method": row["method"], "missing_fields":
+                         coverage["missing_fields_by_object"].get(name, []), "model_records": count,
+                         "records_without_bound_frame": sum(item["object"] == name
+                                                            for item in coverage["records_without_supplied_frame"])})
+    missing = [item for item in relevant if item["missing_fields"]]
+    return {"object": target.strip(), "domain": domain, "planned_episodes": len(selected),
+            "recorded_episodes": len(recorded), "audited_episodes": audited, "episodes_requiring_object": len(relevant),
+            "episodes_missing_evidence": len(missing),
+            "missing_without_model_record": sum(item["model_records"] == 0 for item in missing),
+            "missing_without_decision_log": sum(item["model_records"] is None for item in missing),
+            "missing_with_unbound_record": sum(item["records_without_bound_frame"] > 0 for item in missing),
+            "episodes": relevant}
+
+
+def rebuild(directory, output, *, coverage_object=None, coverage_domain=None):
     catalog = _read(directory / "pilot_manifest.json")
     if not catalog or not catalog["cases"]:
         raise ValueError("A frozen nonempty pilot manifest is required")
@@ -398,6 +445,8 @@ def rebuild(directory, output):
               "paired_ranking_comparisons": _paired_ranking(rows),
               "energy_measurement": None, "independently_scored_constraint_violations": permission,
               "scientific_conclusion": "INCONCLUSIVE"}
+    if coverage_object is not None:
+        result["object_coverage_audit"] = _object_coverage(rows, coverage_object, coverage_domain)
     if catalog.get("data_role") == "INDEPENDENT_NATIVE_TRAINING_CHECK":
         result["real_trajectory_forecast_checks"] = _native_forecast_check(rows)
     fragment_rechecks = [row for row in rows if "legacy_fragment_recheck_complete" in row]

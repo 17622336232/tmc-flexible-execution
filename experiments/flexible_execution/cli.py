@@ -493,6 +493,8 @@ def main(argv=None):
     report = commands.add_parser("pilot-report", help="Rebuild episode and paired results from raw files")
     report.add_argument("--pilot-dir", required=True, type=Path)
     report.add_argument("--output", required=True, type=Path)
+    report.add_argument("--coverage-object", help="Audit missing evidence for a registered object ID")
+    report.add_argument("--coverage-domain", help="Limit the object audit to a task domain")
     batch = commands.add_parser("pilot-run", help="Run the next bounded batch from the locked pilot schedule")
     batch.add_argument("--pilot-dir", required=True, type=Path)
     batch.add_argument("--control-dir", type=Path, default=CHECKOUT / "outputs/control")
@@ -629,8 +631,12 @@ def main(argv=None):
         return
     if args.command == "pilot-report":
         from .pilot_report import rebuild
+
+        if args.coverage_domain and args.coverage_object is None:
+            parser.error("--coverage-domain requires --coverage-object")
         try:
-            result = rebuild(args.pilot_dir, args.output)
+            result = rebuild(args.pilot_dir, args.output, coverage_object=args.coverage_object,
+                             coverage_domain=args.coverage_domain)
         except (OSError, ValueError, KeyError) as error:
             parser.exit(1, f"{error}\n")
         print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
