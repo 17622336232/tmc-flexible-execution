@@ -1,10 +1,21 @@
-"""Draw timing and candidate-check figures from recorded visual evidence."""
+"""Draw timing, candidate-check and paired-result figures from visual evidence."""
 
 import argparse
 import json
 from pathlib import Path
 
 from .live_audit import _camera_frames, _verified_judgment, audit_live_connection
+
+
+METHOD_LABELS = {"paired-serial": "Serial", "paired-async": "Async", "conditional-serial": "Serial",
+                 "conditional-async": "Async", "conditional-a": "A", "conditional-prefetch": "Prefetch",
+                 "conditional-planner": "Planner", "conditional-stream": "Stream",
+                 "conditional-stream-buffered": "Buffered stream", "conditional-rank-ordinary": "Ordinary ranking",
+                 "conditional-rank-b1": "B1", "conditional-rank-c": "C", "conditional-rank-heuristic": "Heuristic",
+                 "conditional-rank-retrieval": "Retrieval"}
+COHORT_LABELS = {"LEGACY_TASK_DEVELOPMENT_PAIR_SCHEDULE": "UAV development", "CONDITIONAL_RANKER_DEVELOPMENT": "Ranking development",
+                 "CUSTOM_VISUAL_MATCHED_HELDOUT": "UAV held-out evaluation", "PUBLIC_VISUAL_MATCHED_DEVELOPMENT": "ProcTHOR validation",
+                 "PUBLIC_VISUAL_MATCHED_HELDOUT": "ProcTHOR held-out evaluation"}
 
 
 def _rows(path):
@@ -119,18 +130,63 @@ def draw_ranking_replay(report, output):
     plt.close(figure)
 
 
+def draw_paired_results(report, output):
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    data = json.loads(report.read_text(encoding="utf8"))
+    pairs = list(data["matched_differences"].items())
+    if not pairs:
+        raise ValueError("A paired result figure needs at least one recorded comparison")
+    figure, axes = plt.subplots(1, 2, sharey=True, figsize=(8.6, max(3.1, 1.6 + .43 * len(pairs))))
+    metrics = (("success_difference", "Completion difference (percentage points)", 100),
+               ("restricted_seconds_difference", "Time difference (seconds)", 1))
+    for axis, (field, caption, scale) in zip(axes, metrics):
+        axis.axvline(0, color="#777F87", linewidth=.9, linestyle="--")
+        for index, (_, comparison) in enumerate(pairs):
+            measure = comparison[field]
+            interval = measure["cluster_bootstrap_95"]
+            if interval is not None:
+                axis.hlines(index, interval[0] * scale, interval[1] * scale, color="#335D83", linewidth=2)
+            axis.plot(measure["mean"] * scale, index, "o", color="#335D83", markersize=5)
+        axis.set_xlabel(caption)
+        axis.grid(axis="x", alpha=.17)
+        axis.set_axisbelow(True)
+        for boundary in ("top", "right", "left"):
+            axis.spines[boundary].set_visible(False)
+    axes[0].set_yticks(range(len(pairs)))
+    axes[0].set_yticklabels([f"{METHOD_LABELS.get(method, method)}  (n={row['independent_groups']})"
+                                for method, row in pairs])
+    axes[0].set_ylim(len(pairs) - .5, -.5)
+    cohort = COHORT_LABELS.get(data.get("role"), "Paired results")
+    reference = METHOD_LABELS.get(data["reference"], data["reference"])
+    figure.suptitle(f"{cohort} · compared with {reference}", fontweight="bold")
+    figure.text(.5, .035, "Lines show 95% paired intervals. Failed runs contribute their registered time limit.",
+                ha="center", fontsize=9, color="#46505B")
+    figure.tight_layout(rect=(0, .09, 1, .93))
+    output.parent.mkdir(parents=True, exist_ok=True)
+    figure.savefig(output, dpi=180, bbox_inches="tight")
+    plt.close(figure)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--uav-episode", type=Path)
     source.add_argument("--fixed-pools", type=Path)
+    source.add_argument("--paired-summary", type=Path)
     parser.add_argument("--public-episode", type=Path)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
-    if args.fixed_pools:
+    if args.fixed_pools or args.paired_summary:
         if args.public_episode:
             parser.error("--public-episode is only used with --uav-episode")
-        draw_ranking_replay(args.fixed_pools, args.output)
+        if args.fixed_pools:
+            draw_ranking_replay(args.fixed_pools, args.output)
+        else:
+            draw_paired_results(args.paired_summary, args.output)
         return
     if not args.public_episode:
         parser.error("--uav-episode also requires --public-episode")

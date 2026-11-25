@@ -83,6 +83,14 @@ python3 -m experiments.flexible_execution.cli pilot-report \
 
 受限时间沿用协议登记的累计尝试时钟。尝试时钟齐全时，逐臂表也报告从第一次接收任务到末次退出的总历时，并列出尝试间隔。
 
+从已重算的汇总绘制整项成功率差和受限时长差。图中每行标注独立来源组数，线段为按来源组重采样的 95% 区间。受限时长按登记时限计入失败回合。
+
+```bash
+python3 -m experiments.flexible_execution.evidence_figure \
+  --paired-summary outputs/natural-pilot/reports/base/summary.json \
+  --output outputs/figures/base-paired.png
+```
+
 在线候选先通过廉价的许可和路线准入。普通成功标签模型和完整代价标签模型使用同一候选及特征，排序以后才逐项检查共同后续。C 在同一个检查上限下按预测净收益提前停止。动作派发前仍用当前状态复查许可、可达性和预留时间。符号训练、实际可见状态回放和在线视觉对照分别记账。
 
 检索组从与 B1 完全相同的训练子集取七个最近的候选，以标准化结构特征为距离，用这些经程序验证的符号标签的平均收益排序。取样、归一化和索引文件都在运行前锁定。检索、启发式、普通监督、B1 和 C 共用候选池、检查器和时钟预算。
