@@ -338,6 +338,23 @@ def _method_summary(rows):
     return methods
 
 
+def _family_summary(rows):
+    families = {}
+    for row in rows:
+        families.setdefault(row["family"], []).append(row)
+    summary = {}
+    for family, cases in families.items():
+        recorded = [row for row in cases if row["state"] in RECORDED]
+        planned_counts = Counter(row["case"] for row in cases)
+        recorded_counts = Counter(row["case"] for row in recorded)
+        summary[family] = {"planned_cases": len(planned_counts),
+                           "recorded_cases": sum(recorded_counts[case] == count for case, count in planned_counts.items()),
+                           "planned_episodes": len(cases), "recorded_episodes": len(recorded),
+                           "successes": sum(row["success"] for row in recorded),
+                           "failure_types": dict(Counter(_failure_category(row) for row in recorded if not row["success"]))}
+    return summary
+
+
 def rebuild(directory, output):
     catalog = _read(directory / "pilot_manifest.json")
     if not catalog or not catalog["cases"]:
@@ -358,7 +375,7 @@ def rebuild(directory, output):
         "violations": sum(row["conditional_permission_violations"] for row in permission_rows)})
     result = {"mode": mode, "role": catalog["role"], "reference": reference,
               "planned_episodes": len(rows), "recorded_episodes": sum(r["state"] in RECORDED for r in rows),
-              "methods": methods, "matched_differences": _pair_rows(rows, reference),
+              "methods": methods, "families": _family_summary(rows), "matched_differences": _pair_rows(rows, reference),
               "paired_ranking_comparisons": _paired_ranking(rows),
               "energy_measurement": None, "independently_scored_constraint_violations": permission,
               "scientific_conclusion": "INCONCLUSIVE"}
