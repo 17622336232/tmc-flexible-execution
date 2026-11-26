@@ -358,6 +358,11 @@ def _charge(root):
     return min(clock["allowance_seconds"], elapsed)
 
 
+def _unsupported_interface(error):
+    return (isinstance(error, dict) and error.get("type") == "ValueError"
+            and error.get("message") == "The inspection is outside the initial structured task interface")
+
+
 def _outcome(root, job, returncode, stop=None):
     if job.get("public_runtime"):
         from .public_audit import registered_outcome
@@ -400,10 +405,18 @@ def _outcome(root, job, returncode, stop=None):
         deadline = job["case"]["episode_timeout_seconds"] - job.get("charged_seconds", 0.)
         if charge and charge >= deadline:
             return "TIMEOUT", {"reason": "episode deadline", "charged_seconds": charge}
-        if errors and (errors[-1].get("type") == "ModelDecisionInvalid" or errors[-1].get("code") in {
+        latest = errors[-1] if errors else {}
+        call = calls[-1] if calls else {}
+        draft = call.get("output")
+        branch = draft.get("conditional") if isinstance(draft, dict) else None
+        unsupported = (job.get("natural_continuous") and _unsupported_interface(latest)
+                       and isinstance(branch, dict) and branch.get("status") == "unsupported"
+                       and "supported_fields" in (call.get("input") or {}) and "logical_job_attempt" in call
+                       and (call.get("model"), call.get("reasoning_effort")) == (job["model"], job["reasoning_effort"]))
+        if unsupported or latest.get("type") == "ModelDecisionInvalid" or latest.get("code") in {
             "invalid_json", "invalid_output", "unsupported_output", "inconsistent_output", "incomplete_output",
-        }):
-            return "FINISHED_TASK_FAILURE", {"reason": "model response rejected", "error": errors[-1],
+        }:
+            return "FINISHED_TASK_FAILURE", {"reason": "model response rejected", "error": latest,
                                               "charged_seconds": charge}
         return "INFRA_ERROR", {"reason": "runner exited without a verifiable episode", "returncode": returncode,
                                "error": (result or {}).get("error"), "charged_seconds": charge}
@@ -520,7 +533,9 @@ def _reconcile_continuous_retry(control, job):
                 continue
             status, detail = _natural_outcome(previous, previous["state"], previous.get("result") or {})
             if not detail.get("task_interruption"):
-                continue
+                if not _unsupported_interface(detail.get("error")):
+                    continue
+                status, detail = "FINISHED_TASK_FAILURE", {**detail, "reason": "model response rejected"}
             correction = {"state": status, "artifact_dir": previous["artifact_dir"],
                           "returncode": previous.get("returncode"),
                           "result": {**detail, "continuous_source_attempt": previous["attempt"]}}
@@ -550,6 +565,9 @@ def _verify_terminal(job):
     observed, recomputed = _natural_outcome(job, observed, recomputed)
     if observed != job["state"]:
         raise ValueError("Saved result no longer verifies for " + job["id"] + ": " + str(root))
+    if source_attempt is not None and (detail.get("reason"), detail.get("error")) != (
+            recomputed.get("reason"), recomputed.get("error")):
+        raise ValueError("Saved correction differs from its original attempt")
     for key in ("external_interruption", "task_interruption"):
         if detail.get(key) != recomputed.get(key):
             raise ValueError("Saved continuous interruption differs from its original attempt")

@@ -58,6 +58,20 @@ class SupervisorTest(unittest.TestCase):
             self.assertTrue(ledger.read_text(encoding="utf8").startswith(original))
         self.assertEqual(control._natural_outcome({}, "INFRA_ERROR", failed), ("INFRA_ERROR", failed))
 
+    def test_formal_explicit_unsupported_compilation_is_a_task_failure(self):
+        error = {"type": "ValueError", "message": "The inspection is outside the initial structured task interface"}
+        returned = {"input": {"supported_fields": {"cracked": "flag"}}, "logical_job_attempt": 1,
+                    "output": {"conditional": {"status": "unsupported"}}, "model": "locked", "reasoning_effort": "max"}
+        job = {"natural_continuous": True, "model": "locked", "reasoning_effort": "max",
+               "case": {"episode_timeout_seconds": 480}}
+        with patch.object(control, "_evidence", return_value=(None, {"error": error})), \
+                patch.object(control, "_charge", return_value=113.), patch.object(control, "_logs") as calls:
+            calls.return_value = [returned]
+            outcome, detail = control._outcome(Path("episode"), job, 1)
+            self.assertEqual((outcome, detail["reason"]), ("FINISHED_TASK_FAILURE", "model response rejected"))
+            calls.return_value = [{**returned, "output": {"conditional": {"status": "supported"}}}]
+            self.assertEqual(control._outcome(Path("episode"), job, 1)[0], "INFRA_ERROR")
+
     def test_diagnostics_archive_is_lossless_and_can_resume_with_another_log(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
