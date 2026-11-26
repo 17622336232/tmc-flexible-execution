@@ -1,4 +1,4 @@
-"""Rebuild optimization diagnostics and the final paired effect figure."""
+"""Rebuild optimization diagnostics and the final evaluation figures."""
 
 import argparse
 import json
@@ -10,6 +10,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
+from matplotlib.ticker import PercentFormatter
 
 
 COLORS = {"baseline": "#65758a", "revised": "#147b80"}
@@ -132,6 +133,45 @@ def _paired(reports, output):
     _export(figure, output / "formal-paired-effect.png")
 
 
+def _formal_outcomes(reports, output):
+    if not reports:
+        return
+    outcomes = (("FINISHED_VALID", "Complete task", "#147b80"),
+                ("FINISHED_TASK_FAILURE", "Task failure", "#a05728"),
+                ("TIMEOUT", "Deadline expired", "#65758a"))
+    figure, axes = plt.subplots(1, len(reports), squeeze=False, figsize=(5.6 * len(reports), 3.7))
+    for axis, (title, report) in zip(axes[0], reports):
+        methods = [(label, report["methods"][method]) for method, label in zip(METHODS, NAMES)
+                   if method in report["methods"]]
+        for index, (label, result) in enumerate(methods):
+            total = result["recorded"]
+            if total == 0 or total != sum(result["statuses"].get(state, 0) for state, _, _ in outcomes):
+                raise ValueError(f"Unexpected outcome totals for {title}, {label}")
+            left = 0.
+            for state, _, color in outcomes:
+                count = result["statuses"].get(state, 0)
+                share = count / total
+                axis.barh(index, share, left=left, height=.6, color=color)
+                if share >= .08:
+                    axis.text(left + share / 2, index, str(count), color="white", ha="center", va="center")
+                left += share
+        axis.set_yticks(range(len(methods)))
+        axis.set_yticklabels([f"{label} ({result['recorded']})" for label, result in methods])
+        axis.invert_yaxis()
+        axis.set_xlim(0, 1)
+        axis.set_xticks([0, .25, .5, .75, 1])
+        axis.xaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=0))
+        axis.set_xlabel("Share of recorded episodes")
+        axis.set_title(title, loc="left")
+        axis.grid(axis="x", alpha=.18)
+        axis.set_axisbelow(True)
+    figure.suptitle("Independently scored task outcomes", x=.115, ha="left")
+    figure.legend(handles=[Patch(facecolor=color, label=label) for _, label, color in outcomes],
+                  loc="lower center", ncol=len(outcomes), frameon=False)
+    figure.subplots_adjust(left=.145, bottom=.25, top=.78, wspace=.42)
+    _export(figure, output / "formal-outcomes.png")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--outputs", type=Path, default=Path("outputs"))
@@ -145,7 +185,14 @@ def main():
     _development_overview(revised, _read(base / "development/pilot_manifest.json"), output)
     items = ((name, base / "reports" / directory / "summary.json") for name, directory in
              (("Custom confirmation", "custom-final"), ("Public validation", "public-final")))
-    _paired([(name, _read(path)) for name, path in items if path.is_file()], output)
+    reports = []
+    for name, path in items:
+        if path.is_file():
+            report = _read(path)
+            if report["recorded_episodes"] == report["planned_episodes"]:
+                reports.append((name, report))
+    _paired(reports, output)
+    _formal_outcomes(reports, output)
 
 
 if __name__ == "__main__":
