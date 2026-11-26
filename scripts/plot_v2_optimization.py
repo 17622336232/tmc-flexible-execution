@@ -8,6 +8,8 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 
 
 COLORS = {"baseline": "#65758a", "revised": "#147b80"}
@@ -70,6 +72,45 @@ def _development(old, new, output):
     _export(figure, output / "scene-001-development.png")
 
 
+def _development_overview(data, catalog, output):
+    cases = catalog["cases"]
+    rows = {(row["case"], row["method"]): row for row in data["rows"]}
+    ymax = 1.08 * max(case["episode_timeout_seconds"] for case in cases)
+    figure, axes = plt.subplots(1, len(cases), sharey=True, squeeze=False, figsize=(12, 4.2))
+    for axis, case in zip(axes[0], cases):
+        methods = [method for method in METHODS if method in case["order"]]
+        deadline = case["episode_timeout_seconds"]
+        for index, method in enumerate(methods):
+            row = rows.get((case["id"], method))
+            if row is None:
+                axis.text(index, 14, "pending", ha="center", fontsize=8, color=COLORS["baseline"])
+                continue
+            passed = row["state"] == "FINISHED_VALID"
+            axis.bar(index, row["seconds"] if passed else deadline, width=.65,
+                     color=COLORS["revised"] if passed else "#eef0f2", edgecolor=COLORS["baseline"],
+                     hatch=None if passed else "////", linewidth=.6)
+            if not passed:
+                axis.scatter(index, row["seconds"], color="#bb6429", marker="D", s=24, zorder=3)
+        axis.set_xticks(range(len(methods)))
+        axis.set_xticklabels([NAMES[METHODS.index(method)] for method in methods], rotation=28, ha="right")
+        axis.set_xlim(-.55, len(methods) - .45)
+        axis.set_ylim(0, ymax)
+        axis.set_title(f"{case['id'].split('-')[-1]}  {case['family'].replace('_', ' ')}", loc="left")
+        axis.grid(axis="y", alpha=.18)
+        axis.set_axisbelow(True)
+    axes[0][0].set_ylabel("Deadline-restricted complete-task cost (s)")
+    figure.suptitle(f"Revised v2 development   {data['recorded_episodes']}/{data['registered_episodes']} recorded",
+                    x=.08, ha="left")
+    figure.legend(handles=[Patch(facecolor=COLORS["revised"], label="Complete task"),
+                          Patch(facecolor="#eef0f2", edgecolor=COLORS["baseline"], hatch="////",
+                                label="Unsuccessful at deadline cost"),
+                          Line2D([], [], linestyle="none", marker="D", color="#bb6429", markersize=5,
+                                 label="Actual active task time on failure")],
+                  loc="lower center", ncol=3, frameon=False)
+    figure.subplots_adjust(bottom=.27, top=.81, wspace=.13)
+    _export(figure, output / "development-overview.png")
+
+
 def _paired(reports, output):
     rows = []
     for name, data in reports:
@@ -99,8 +140,9 @@ def main():
     output = base / "figures"
     output.mkdir(parents=True, exist_ok=True)
     _request_costs(_read(base / "audit/current_v2_timeline.json"), output)
-    _development(_read(args.outputs / "acceleration-v2/development_results.json"),
-                 _read(base / "development_results.json"), output)
+    revised = _read(base / "development_results.json")
+    _development(_read(args.outputs / "acceleration-v2/development_results.json"), revised, output)
+    _development_overview(revised, _read(base / "development/pilot_manifest.json"), output)
     items = ((name, base / "reports" / directory / "summary.json") for name, directory in
              (("Custom confirmation", "custom-final"), ("Public validation", "public-final")))
     _paired([(name, _read(path)) for name, path in items if path.is_file()], output)

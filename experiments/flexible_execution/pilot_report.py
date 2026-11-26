@@ -102,6 +102,9 @@ def _mechanism(root, events, report, allow_truncated):
                  if row["event"] == "action_finished" and row.get("ok") is True}
     taken = []
     early_branches, moves_before, captures_before, used = 0, 0, 0, 0
+    conditions = Counter({key: 0 for key in ("verified_judgments", "early_allowed_predicted_gain", "early_allowed_no_witnessed_gain",
+                                             "confirmation_required", "reply_already_arrived",
+                                             "revealed_collection_after_early_motion")})
     query_steps = sorted({row["step"] for row in events if row["event"] == "query_submitted"})
     for index, step in enumerate(query_steps):
         matching = [row for row in events if row["step"] == step]
@@ -109,11 +112,26 @@ def _mechanism(root, events, report, allow_truncated):
         sent, returned = request.get("dispatched_monotonic_seconds"), request.get("return_monotonic_seconds")
         if sent is None or returned is None:
             continue
+        conditions["verified_judgments"] += 1
+        grants = [row for row in matching if row["event"] == "permission_checked" and row.get("source")]
+        if any(row["early"] for row in grants):
+            baseline = next((row.get("baseline_finish") for row in matching
+                             if row["event"] == "candidate_search_summary"), None)
+            conditions["early_allowed_predicted_gain"] += baseline is not None and any(
+                row["event"] == "candidate_selected" and row["expected_finish"] < baseline for row in matching)
+            conditions["early_allowed_no_witnessed_gain"] += any(
+                row["event"] == "candidate_rejected" and row.get("reason") == "no witnessed cost improvement"
+                for row in matching)
+        conditions["confirmation_required"] += any(not row["early"] and row["after"] == ["positive"] for row in grants)
+        conditions["reply_already_arrived"] += any(row["event"] == "pending_strategy" and
+                                                   row.get("reason") == "reply_already_arrived" for row in matching)
         upper = query_steps[index + 1] if index + 1 < len(query_steps) else float("inf")
         while_pending = [row for row in events if row["event"] == "action_started"
                          and step <= row["step"] < upper and (row["step"], row.get("candidate")) in permitted
                          and sent <= row["monotonic_seconds"] < returned]
         early_branches += len(while_pending)
+        conditions["revealed_collection_after_early_motion"] += bool(while_pending) and any(
+            row["event"] == "revealed_branch_collection" and row["monotonic_seconds"] >= returned for row in matching)
         for action in while_pending:
             finished = completed.get((action["step"], action["candidate"]))
             moves_before += finished is not None and action["monotonic_seconds"] <= finished < returned
@@ -132,6 +150,7 @@ def _mechanism(root, events, report, allow_truncated):
             "conditional_photos_completed_before_bound_reply": captures_before,
             "conditional_early_materials_used_in_report": used,
             "conditional_early_materials_without_report_use": len(taken) - used,
+            **{f"judgment_condition_{name}": count for name, count in conditions.items()},
             "first_action_from_first_logged_event_seconds": min(starts) - events[0]["monotonic_seconds"]
             if starts else None,
             "independent_scoring_seconds": scored["end_monotonic"] - scored["start_monotonic"] if scored else None}
@@ -485,6 +504,13 @@ def _method_summary(rows):
                           "conditional_photos_completed_before_bound_reply", "conditional_early_materials_used_in_report",
                           "conditional_early_materials_without_report_use"):
                 methods[method][field] = sum(row[field] for row in mechanism)
+        condition_counts = Counter()
+        condition_prefix = "judgment_condition_"
+        for row in mechanism:
+            condition_counts.update({key[len(condition_prefix):]: value for key, value in row.items()
+                                     if key.startswith(condition_prefix)})
+        if condition_counts:
+            methods[method]["native_judgment_conditions"] = dict(condition_counts)
         successes = [row["restricted_seconds"] for row in valid if row["success"]]
         methods[method]["mean_seconds_given_success"] = mean(successes) if successes else None
     return methods
