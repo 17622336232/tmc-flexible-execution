@@ -507,6 +507,10 @@ def _finish(control, job, stop=None, returncode=None):
 
 
 def _natural_outcome(job, status, detail):
+    error = detail.get("error")
+    if (status == "INFRA_ERROR" and isinstance(error, dict) and error.get("status") == 503
+            and error.get("code") == "subscription_sharing_user_unavailable"):
+        status, detail = "BLOCKED_EXTERNAL", {**detail, "reason": error}
     if not job.get("natural_continuous") or not (detail.get("charged_seconds") or detail.get("logged_dispatches")):
         return status, detail
     if status == "BLOCKED_EXTERNAL":
@@ -532,7 +536,7 @@ def _reconcile_continuous_retry(control, job):
                     or previous.get("state") != "INFRA_ERROR" or not previous.get("finished_at")):
                 continue
             status, detail = _natural_outcome(previous, previous["state"], previous.get("result") or {})
-            if not detail.get("task_interruption"):
+            if not (detail.get("task_interruption") or detail.get("external_interruption")):
                 if not _unsupported_interface(detail.get("error")):
                     continue
                 status, detail = "FINISHED_TASK_FAILURE", {**detail, "reason": "model response rejected"}
@@ -787,7 +791,11 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
             job = _finish(control, job, _wait_running(job, refresh))
             if (job.get("result") or {}).get("external_interruption"):
                 return hold_after_interruption(job)
+        prior_state = job["state"]
         job = _reconcile_continuous_retry(control, job)
+        if (prior_state != job["state"] and (job.get("result") or {}).get("external_interruption")
+                and not unlock_external):
+            return hold_after_interruption(job)
         if job["state"] in TASK_TERMINAL:
             _verify_terminal(job)
             continue

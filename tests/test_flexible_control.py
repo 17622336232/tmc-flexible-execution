@@ -28,6 +28,16 @@ class SupervisorTest(unittest.TestCase):
         self.assertEqual(control._natural_outcome(formal, "BLOCKED_EXTERNAL", before_task),
                          ("BLOCKED_EXTERNAL", before_task))
 
+    def test_temporary_subscription_context_error_uses_external_hold(self):
+        error = {"type": "TransportError", "code": "subscription_sharing_user_unavailable", "status": 503}
+        formal = {"natural_continuous": True}
+        status, detail = control._natural_outcome(formal, "INFRA_ERROR", {"error": error, "charged_seconds": 223.75})
+        self.assertEqual(status, "FINISHED_TASK_FAILURE")
+        self.assertEqual(detail["external_interruption"], error)
+        self.assertEqual(detail["charged_seconds"], 223.75)
+        status, detail = control._natural_outcome(formal, "INFRA_ERROR", {"error": error, "charged_seconds": 0.})
+        self.assertEqual((status, detail["reason"]), ("BLOCKED_EXTERNAL", error))
+
     def test_reconcile_formal_timeout_keeps_original_attempt_and_retry_costs(self):
         reason = {"type": "TransportError", "code": "timeout"}
         failed = {"error": reason, "charged_seconds": 240.5, "returncode": 1}

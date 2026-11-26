@@ -1,20 +1,20 @@
 # TMC 实验进度
 
-**2026-11-27 06:53 UTC+8。开发 12/12，正式 130/456。custom-scene-021 conditional-async 第 1 次尝试，PID 2501271。**
+**2026-11-27 07:34 UTC+8。开发 12/12，正式 135/456。custom-scene-024 conditional-a 第 1 次尝试，PID 2522840。**
 
-- 正式名单与原盲选 ID 一致。自建 130/360，公开 0/96，附加回合登记 0。正式冻结使用 evidence-handoff-r1、gpt-6.1-terra、max 和每回合 24 次请求上限。
-- 正式已结束回合通过 5、任务失败 39、超时 86。
-- 正式实际运行提交 d144b9c。已观察到正式发送 1451 次，已结束正式尝试的控制账本墙钟 914.5 分钟。
+- 正式名单与原盲选 ID 一致。自建 135/360，公开 0/96，附加回合登记 0。正式冻结使用 evidence-handoff-r1、gpt-6.1-terra、max 和每回合 24 次请求上限。
+- 正式已结束回合通过 5、任务失败 41、超时 89。
+- 正式实际运行提交 d144b9c。已观察到正式发送 1506 次，已结束正式尝试的控制账本墙钟 948.5 分钟。
 - 开发 1 通过、2 任务失败、9 超时，全部尝试共 145 次真实发送，worker 活跃 92.9 分钟。开发独立许可审计发现 0 个违规。首 A 的证据交接已在真实发送与独立评分中复核。
 - 旧 v2 保留 5/12 终态。P0 重建 7 次启动、65 次实际发送，审计无额外模型请求。旧排程继续保持暂停。
 - 开发作业共 12 个槽位已对照旧版和修订版。旧版 65 次与接续 76 次合计 141/288。第一轮修复 69/144，第二轮未启用。详见 outputs/protocol-v2-optimization/development-report/execution_crosswalk.csv。
 - 正式全部回合活跃工时中位情景 49.8 小时。套餐可用时间和真实日历工期尚未确定。开发图、原始审计和成本表见 outputs/protocol-v2-optimization/。
-- 按已结束的 130 个自建回合和 4 间旧公开验证房估算。若余下自建回合耗时相近，剩余约 27.9 小时活跃工时。其他分层和正式公开房间的实际工期继续按分层更新。
+- 按已结束的 135 个自建回合和 4 间旧公开验证房估算。若余下自建回合耗时相近，剩余约 27.3 小时活跃工时。其他分层和正式公开房间的实际工期继续按分层更新。
 - 首个正式场景五臂均已记账，通过 0、任务失败 1、超时 4，共 49 次发送，批次墙钟 37.5 分钟。
 - 第二场景流式回合在原尝试的 240.5 秒处因服务超时中断，按原期限记失败。两次尝试合计 278.2 秒、3 次发送。修复依据原始尝试复核，88 项本地测试通过。
-- 正式前 130 个自建回合共核对 1451/1451 次调用和图像账本。联合编译 166 次，其中 55 次传输超时。耗时分解见 outputs/protocol-v2-optimization/formal-progress/request-role-summary.json。
-- 已复核 86 个到期回合的最后一秒，其中 85 个仍有真实模型调用。逐次计量见 outputs/protocol-v2-optimization/formal-progress/deadline-request-windows.csv。
-- 正式逐回合表已复核 130 条，26 个完整场景配对。见 outputs/protocol-v2-optimization/formal-progress/。
+- 正式前 135 个自建回合共核对 1506/1506 次调用和图像账本。联合编译 171 次，其中 55 次传输超时。耗时分解见 outputs/protocol-v2-optimization/formal-progress/request-role-summary.json。
+- 已复核 89 个到期回合的最后一秒，其中 88 个仍有真实模型调用。逐次计量见 outputs/protocol-v2-optimization/formal-progress/deadline-request-windows.csv。
+- 正式逐回合表已复核 135 条，27 个完整场景配对。见 outputs/protocol-v2-optimization/formal-progress/。
 - 18:07 发现总控退出，复核并接收第六场景预取保存的原始超时结果，任务计时 480 秒，13 次发送。控制账本关闭比最后原始结果落盘约晚 35 秒。正式连续任务时间取原始计时。
 - 第七场景的普通异步出现实际编译回复不支持复合条件，按原始回复记任务失败。原回合发送 1 次、计时 112.9 秒。归类修正通过 89 项本地测试。
 - A 首次正式通过出现在第十二个自建场景 custom-structure-106。任务 381.85 秒、12 次发送，独立核验两台设备的裂纹和温度均正确且证据完整。该回合未观察到回包前取证。
@@ -24,6 +24,7 @@
 - 第一组结构场景已完成 24/24 场景、120/120 回合。A 和预取各通过 1，任务失败 35、超时 83，发送 1385 次。布局变化组已接续。分组统计见 outputs/protocol-v2-optimization/formal-progress/completed-custom-strata.json。
 - 正式作图脚本已验证单域和双域生成路径。每个域录齐后，按方法展示任务通过、失败和超时，并生成预登记的配对效果图。公开验证所需的本地场景包和仿真程序已确认可读。
 - 已按冻结指令复核许可覆盖。自建 72 场景有 3 个明确允许提前取得本体编号，均为 600 秒裂纹场景。公开 24 场景均明确允许提前拍侧面照片。逐场许可复核见 outputs/protocol-v2-optimization/formal-progress/registered-permissions.json。
+- 07:20，`custom-scene-021` 的 A 在第 8 次请求收到 503 `subscription_sharing_user_unavailable`，任务计时 223.75 秒。总控修复后在零新请求下结算原始一次尝试为服务中断失败，校验值一致，保留 8 次实际发送。约五分钟后在同一账号启动原定预取回合，收到有效模型结果。该回合以 480 秒、15 次发送到期。全部 90 项本地测试通过。
 - 当前回合任务时限约余 480 秒，账本剩余 24 次发送。本有界批最多启动 3 次。
 - 当前作业状态 RUNNING。继续当前冻结协议的命令为 `python3 -m experiments.flexible_execution.cli continue --profile local5060 --protocol protocol-v2 --resume --max-jobs 3`。
 
