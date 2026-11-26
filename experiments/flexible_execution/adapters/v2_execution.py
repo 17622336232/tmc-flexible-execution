@@ -8,11 +8,13 @@ from hashlib import sha256
 from math import dist
 from time import monotonic
 
+from experiments.task_attack import MODEL
 from experiments.task_attack.agent import run_agent
 from experiments.task_attack.runtime import write_json
 
 from .. import shared_frontend
 from ..evidence import Frame
+from ..frontend_evidence import project
 from ..gpt_vision import LOCATE, locate_targets, parse_intent
 from ..live_planning import STREAM_METHODS
 from ..material_schema import INSPECTION_FIELDS, canonical_record
@@ -158,8 +160,16 @@ def run(backend, instruction, directory, event, timeout, *, model, trace, method
 
     summary["visual_judgments"] = pending_results
     write_json(directory / "conditional_result.json", summary)
-    trace.event("full_inspection_started", step + 1, seeded_frames=len(_archive(directory)),
-                accepted_active_materials=len(summary["accepted_materials"]))
+    views = _archive(directory)
+    cutoff, expires = monotonic(), started + timeout
+    budget = getattr(model, "request_budget", None)
+    conditions = backend.scene.get("catalog", {}).get("scene_conditions", {})
+    prior_records, prior_evidence = project(directory, program, instruction,
+        budget.path if budget is not None and not conditions.get("dynamic") else None,
+        model=MODEL, effort=model.effort, cutoff=cutoff, expires=expires)
+    trace.event("full_inspection_started", step + 1, seeded_frames=len(views),
+                accepted_active_materials=len(summary["accepted_materials"]), seeded_records=len(prior_records),
+                evidence_cutoff_monotonic=cutoff, episode_deadline_monotonic=expires)
     visual_guard = submission_guard(instruction, directory, model, trace, summary, cache_verified=True)
 
     def guard(report, collected, report_step):
@@ -176,7 +186,8 @@ def run(backend, instruction, directory, event, timeout, *, model, trace, method
 
         pipeline = partial(decide, stream=method == "conditional-stream")
     report, metrics = run_agent(backend, instruction, directory, event, timeout, model=model, trace=trace,
-                                prior_views=_archive(directory), prior_memory=json.dumps(summary, ensure_ascii=False),
+                                prior_views=views, prior_memory=json.dumps(summary, ensure_ascii=False),
+                                prior_records=prior_records, prior_evidence=prior_evidence,
                                 episode_started=started, step_offset=step, submit_guard=guard,
                                 decision_pipeline=pipeline, fact_types=program.fields,
                                 record_adapter=partial(canonical_record, program.fields), evidence_journal=True)

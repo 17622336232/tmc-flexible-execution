@@ -66,7 +66,9 @@ def prepare_development(output_root):
 
 
 def status(output_root):
-    root = output_root / "acceleration-v2"
+    from .acceleration_revision import selected_root
+
+    root = selected_root(output_root)
     directory = root / "development"
     dev = pilot_status(directory) if (directory / "pilot_manifest.json").is_file() else None
     control = control_status(root / "control")
@@ -75,7 +77,13 @@ def status(output_root):
         pilot = root / (domain + "-final")
         if (pilot / "pilot_manifest.json").is_file():
             formal[domain] = pilot_status(pilot)
-    return {"protocol_version": PROTOCOL, "execution_status": control["execution_status"],
+    registered = root / "execution_revision.json"
+    revision = read_json(registered) if registered.is_file() else None
+    activity = control["execution_status"]
+    if revision and activity == "IDLE" and dev and dev["recorded_arms"] < dev["planned_arms"]:
+        activity = "READY"
+    return {"protocol_version": PROTOCOL, "execution_revision": revision["execution_revision"] if revision else "original",
+            "revision_registration": str(registered) if revision else None, "execution_status": activity,
             "active_jobs": control["active_jobs"], "development": dev, "formal": formal, "control": control,
             "legacy_execution": control_status(output_root / "control")["execution_status"],
             "next_command": "python3 -m experiments.flexible_execution.cli continue --profile local5060 "
@@ -83,10 +91,11 @@ def status(output_root):
 
 
 def advance_stage(output_root, checkout, defaults, args, launch_limit):
+    from .acceleration_revision import selected_root
     from .acceleration_results import update
 
-    root = output_root / "acceleration-v2"
-    directory = prepare_development(output_root)
+    root = selected_root(output_root)
+    directory = root / "development" if (root / "execution_revision.json").is_file() else prepare_development(output_root)
     development = pilot_status(directory)
     legacy = output_root / "control"
 

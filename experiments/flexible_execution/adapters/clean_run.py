@@ -72,6 +72,7 @@ def main(argv=None):
     parser.add_argument("--ranker-config", type=Path, help="Frozen candidate scoring and check budget")
     parser.add_argument("--compile-task-program", action="store_true", help="Check a typed task program at submission")
     parser.add_argument("--protocol-v2", action="store_true", help="Use the common v2 inspection loop")
+    parser.add_argument("--execution-revision", help="Registered execution implementation")
     parser.add_argument("--study-task", type=Path, help="Registered custom task with a private scoring contract")
     parser.add_argument("--frontend-reference", type=Path, help="Shared front-end reference for this registered case")
     parser.add_argument("--onboard-evidence-only", action="store_true",
@@ -171,6 +172,8 @@ def main(argv=None):
     if args.protocol_v2:
         preflight.update(protocol_version="protocol-v2", evidence_level=(
             "TRACE_SUPPORTED" if args.frontend_reference else "NATURAL_ONLINE"))
+    if args.execution_revision:
+        preflight["execution_revision"] = args.execution_revision
     if ranking:
         preflight.update(ranker_config_sha256=_hash(ranking), ranker_policy=ranking["policies"][args.method])
     ready = (preflight["signed_in"] and preflight["plan_usage_enabled"] and preflight["model_in_catalog"]
@@ -237,7 +240,12 @@ def main(argv=None):
 
         archive_sensor_logs(root)
     if code == 0 and args.method != "async-probe":
+        scoring_started = time.monotonic()
         write_json(root / "clean_coverage.json", audit_run(root))
+        if args.execution_revision:
+            write_json(root / "independent_scoring_time.json", {
+                "start_monotonic": scoring_started, "end_monotonic": time.monotonic(),
+                "scope": "post_episode_independent_coverage"})
     return code
 
 

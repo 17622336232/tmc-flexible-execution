@@ -51,7 +51,8 @@ def _verified_calls(task, registered_frames, calls):
     return successful, sorted(set(rejected))
 
 
-def score_coverage(truth, report, frames, model_calls, decisions, *, recheck_legacy_fragments=False):
+def score_coverage(truth, report, frames, model_calls, decisions, *, recheck_legacy_fragments=False,
+                   prior_observations=()):
     spec = {}
     program = None
     if truth.get("oracle_requirement_program"):
@@ -77,6 +78,13 @@ def score_coverage(truth, report, frames, model_calls, decisions, *, recheck_leg
     rejected_records = []
     merge_fragments = False
     bound_submission = False
+
+    for row in prior_observations:
+        name = by_label.get(row["object_id"].strip().casefold())
+        if name:
+            for key, value in facts(row).items():
+                if key in fields and value is not None and _equal(value, scope[name].get(key), key):
+                    supports[name][key].add(row["evidence_image_id"])
 
     for step in decisions:
         current = step.get("image_id")
@@ -137,6 +145,39 @@ def score_coverage(truth, report, frames, model_calls, decisions, *, recheck_leg
     return result
 
 
+def _prior_observations(robot, episode, task, calls, frames, rows):
+    from pathlib import Path
+
+    from .frontend_evidence import project
+    from .requirement_program import parse
+
+    ledger = rows(robot / "evidence_ledger.jsonl")
+    seeds = [row for row in ledger if row["status"] in ("frontend_bound_observation", "frontend_material_verified")]
+    if not seeds:
+        return []
+    events = rows(robot / "timeline.jsonl")
+    handoff = next((row for row in events if row["event"] == "full_inspection_started"), {})
+    budget = json.loads((episode / "request_budget_summary.json").read_text(encoding="utf8"))
+    config = json.loads((episode / "clean_preflight.json").read_text(encoding="utf8"))
+    program = parse(json.loads((robot / "typed_task_program.json").read_text(encoding="utf8")), task)
+    reconstructed, provenance = project(robot, program, task, Path(budget["ledger"]),
+        model=config["model"], effort=config["reasoning_effort"], cutoff=handoff["evidence_cutoff_monotonic"],
+        expires=handoff["episode_deadline_monotonic"])
+    invalid = {(row["object"], row["field"], row["photo"]) for row in ledger
+               if row["status"] == "frontend_observation_invalidated"}
+    accepted = []
+    for row, source in zip(reconstructed, provenance):
+        key = source["object"], source["field"], source["photo"]
+        if key in invalid or not any(all(seed.get(k) == v for k, v in source.items()) for seed in seeds):
+            continue
+        if any(row in call.get("input", {}).get("records", ()) and "current_image_id" in call["input"]
+               and frames.get(row["evidence_image_id"]) in call.get("image_sha256", ())
+               and source["available_monotonic"] <= call.get("dispatched_monotonic_seconds", 0)
+               < source["valid_until_monotonic"] for call in calls):
+            accepted.append(row)
+    return accepted
+
+
 def audit_run(episode, *, recheck_legacy_fragments=False):
     truth = json.loads((episode / "private" / "truth.json").read_text(encoding="utf8"))
     result = json.loads((episode / "result.json").read_text(encoding="utf8"))
@@ -164,5 +205,7 @@ def audit_run(episode, *, recheck_legacy_fragments=False):
     def rows(path):
         return [json.loads(line) for line in path.read_text(encoding="utf8").splitlines() if line.strip()] if path.is_file() else []
 
-    return score_coverage(truth, result["report"], frames, rows(robot / "model_calls.jsonl"),
-                          rows(robot / "decisions.jsonl"), recheck_legacy_fragments=recheck_legacy_fragments)
+    calls = rows(robot / "model_calls.jsonl")
+    prior = _prior_observations(robot, episode, truth["task"], calls, frames, rows)
+    return score_coverage(truth, result["report"], frames, calls, rows(robot / "decisions.jsonl"),
+                          recheck_legacy_fragments=recheck_legacy_fragments, prior_observations=prior)

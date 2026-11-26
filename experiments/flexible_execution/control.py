@@ -164,6 +164,10 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
     if v2 and typed:
         stage_sources += ("experiments/flexible_execution/adapters/v2_execution.py",
                           "experiments/flexible_execution/shared_frontend.py")
+    execution_revision = catalog.get("execution_revision")
+    if execution_revision and v2 and typed:
+        stage_sources += ("experiments/flexible_execution/frontend_evidence.py",
+                          "experiments/flexible_execution/live_audit.py")
     value_schema = "experiments/flexible_execution/material_schema.py"
     if conditional and (checkout / value_schema).is_file():
         stage_sources += (value_schema,)
@@ -200,7 +204,7 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
     if public:
         runtime = catalog["runtime"]
         packages = Path(runtime["packages"])
-        system_paths = [Path("/etc/os-release"), Path(sys.executable), Path(runtime["archive"]),
+        system_paths = [Path("/etc/os-release"), Path(runtime.get("python_executable", sys.executable)), Path(runtime["archive"]),
                         Path(runtime["unity_executable"]), Path(runtime["xvfb_run"]),
                         Path(runtime["xvfb_run"]).with_name("Xvfb"), packages / "ai2thor/controller.py",
                         packages / "ai2thor/server.py"]
@@ -224,7 +228,8 @@ def _runtime_inputs(checkout, catalog, auth_project, ports):
         version, stage = 3, "conditional-development"
     else:
         version, stage = 2, "matched-baselines"
-    return {"version": version, "stage": stage,
+    return {**({"execution_revision": execution_revision} if execution_revision else {}),
+            "version": version, "stage": stage,
             "catalog_sha256": _hash(catalog),
             "model": MODEL, "reasoning_effort": EFFORT, "request_limit": REQUEST_LIMIT,
             "max_infra_attempts": MAX_ATTEMPTS, "startup_cleanup_seconds": STARTUP_CLEANUP_SECONDS,
@@ -269,6 +274,18 @@ def plans(directory, protocol, catalog):
                    "arm": str(directory / case["id"] / method)}
             if catalog.get("protocol_version") == "protocol-v2":
                 job.update(protocol_version="protocol-v2", evidence_level=catalog["evidence_level"])
+            if catalog.get("execution_revision"):
+                job["execution_revision"] = catalog["execution_revision"]
+                if catalog["role"] in (CUSTOM_FINAL_ROLE, PUBLIC_FINAL_ROLE):
+                    job["natural_continuous"] = True
+                key = "/".join((case["id"], method))
+                parent = catalog.get("budget_parents", {}).get(key)
+                if parent:
+                    category = catalog["budget_classes"][key]
+                    inherited = category == "original_development"
+                    job.update(budget_parent=parent, budget_class=category,
+                               attempt=parent["prior_attempts"] if inherited else 0,
+                               charged_seconds=parent["prior_charged_seconds"] if inherited else 0.)
             if binding:
                 job.update(execution_method=execution_method, ranker_file=binding["ranker_file"],
                            training_seed=binding["seed"], ranker_config_sha256=binding["sha256"],
@@ -305,6 +322,8 @@ def _evidence(root, job):
     pre = _read(root / "clean_preflight.json")
     if pre is None:
         return None, None
+    if job.get("execution_revision") != pre.get("execution_revision"):
+        raise ValueError("The worker ran a different execution revision: " + str(root))
     _valid_preflight(pre, job["case"], job.get("execution_method", job["method"]), root)
     if (pre.get("model"), pre.get("reasoning_effort")) != (job["model"], job["reasoning_effort"]):
         raise ValueError("Result uses different model settings: " + str(root))
@@ -462,6 +481,7 @@ def _record_worker_cpu(attempt, before):
 def _finish(control, job, stop=None, returncode=None):
     root = _attempt_path(job, job["attempt"]) / "episode"
     status, detail = _outcome(root, job, returncode, stop)
+    status, detail = _natural_outcome(job, status, detail)
     budget = RequestBudget(job["request_ledger"], job["request_limit"]).summary()
     charged = job.get("charged_seconds", 0.) + detail.get("charged_seconds", 0.)
     if status == "INFRA_ERROR" and (not budget["remaining"] or charged >= job["case"]["episode_timeout_seconds"]):
@@ -471,15 +491,26 @@ def _finish(control, job, stop=None, returncode=None):
                  charged_seconds=charged, request_budget=budget, finished_at=_now(), artifact_dir=str(root))
 
 
+def _natural_outcome(job, status, detail):
+    if (job.get("natural_continuous") and status == "BLOCKED_EXTERNAL"
+            and (detail.get("charged_seconds") or detail.get("logged_dispatches"))):
+        return "FINISHED_TASK_FAILURE", {
+            **detail, "external_interruption": detail.get("reason"), "reason": "external service interrupted task"}
+    return status, detail
+
+
 def _verify_terminal(job):
     detail = job.get("result") or {}
     if job["state"] == "TIMEOUT" and detail.get("reason") in {"supervisor", "cumulative job budget exhausted"}:
         return
     root = Path(job["artifact_dir"])
     earlier_charge = job.get("charged_seconds", 0.) - detail.get("charged_seconds", 0.)
-    observed, _ = _outcome(root, {**job, "charged_seconds": max(0., earlier_charge)}, job.get("returncode"))
+    observed, recomputed = _outcome(root, {**job, "charged_seconds": max(0., earlier_charge)}, job.get("returncode"))
+    observed, recomputed = _natural_outcome(job, observed, recomputed)
     if observed != job["state"]:
         raise ValueError("Saved result no longer verifies for " + job["id"] + ": " + str(root))
+    if detail.get("external_interruption") != recomputed.get("external_interruption"):
+        raise ValueError("Saved continuous interruption differs from its original attempt")
 
 
 def verified_cohort(name, directory, role, count):
@@ -520,7 +551,8 @@ def _public_command(job, checkout, control, run, episode, auth_project):
     return ["env", f"PATH={xvfb.parent}{os.pathsep}{os.environ.get('PATH', os.defpath)}", f"PYTHONPATH={python_path}",
             "LIBGL_ALWAYS_SOFTWARE=1", "GALLIUM_DRIVER=llvmpipe", "LP_NUM_THREADS=2",
             *(f"{key}={path}" for key, path in paths.items()), str(xvfb), "-a", "-n", "95", "-s",
-            "-screen 0 640x480x24 -nolisten tcp -noreset", sys.executable, "-m", "experiments.flexible_execution.public_task",
+            "-screen 0 640x480x24 -nolisten tcp -noreset", runtime.get("python_executable", sys.executable),
+            "-m", "experiments.flexible_execution.public_task",
             "--registered-job", str(run / "launch.json"), "--output", str(episode), "--auth-project", str(auth_project)]
 
 
@@ -551,6 +583,8 @@ def _gazebo_command(job, directory, catalog, auth_project, episode, remaining, l
         command.extend(("--cost-config", str(directory / "calibrated_costs.json")))
         if catalog.get("protocol_version") == "protocol-v2":
             command.append("--protocol-v2")
+        if job.get("execution_revision"):
+            command.extend(("--execution-revision", job["execution_revision"]))
         if case.get("early_fields"):
             command.extend(("--early-fields", ",".join(case["early_fields"])))
         if case.get("collection_rule"):
@@ -588,6 +622,12 @@ def pilot_run(directory, control, checkout, *, resume, max_jobs, auth_project=DE
 
 
 def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, unlock_external, minimum_free_disk_gb):
+    migration = _read(directory / "execution_migrated.json")
+    if migration:
+        raise ValueError("This development schedule was migrated to " + migration["successor"])
+    current_state = control_status(control)
+    if current_state.get("external_hold") and not unlock_external:
+        return current_state
     warmup = simulator_running(control)
     if warmup:
         return {"execution_status": "RUNNING", "active_jobs": [warmup]}
@@ -661,6 +701,12 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
                         {**batch, "launched": launched, "actual_new_dispatches": used,
                          "actual_wall_seconds": time.monotonic() - batch_started})
 
+    def hold_after_interruption(job):
+        hold = {**refresh(job), "execution_status": "BLOCKED_EXTERNAL",
+                "external_hold": {"job": job["id"], "reason": job["result"]["external_interruption"]}}
+        write_json(control / "state.json", hold)
+        return hold
+
     refresh()
     for template in all_jobs:
         arm = Path(template["arm"])
@@ -679,6 +725,8 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
             if not is_live(job.get("process")):
                 job = _save(control, job, process=_find_worker(episode))
             job = _finish(control, job, _wait_running(job, refresh))
+            if (job.get("result") or {}).get("external_interruption"):
+                return hold_after_interruption(job)
         if job["state"] in TASK_TERMINAL:
             _verify_terminal(job)
             continue
@@ -705,6 +753,10 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
         next_case = job["case"]
         remaining = next_case["episode_timeout_seconds"] - job.get("charged_seconds", 0.)
         ledger = control / "requests" / (job["id"] + ".jsonl")
+        if job.get("budget_parent"):
+            from .acceleration_revision import initialize_budget
+
+            initialize_budget(job, ledger)
         budget = RequestBudget(ledger, REQUEST_LIMIT).summary()
         if remaining <= 0 or not budget["remaining"]:
             _save(control, job, state="TIMEOUT", request_budget=budget, finished_at=_now(),
@@ -747,6 +799,8 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
                 raise
         _record_worker_cpu(run, before_cpu)
         job = _finish(control, job, stop, returncode)
+        if (job.get("result") or {}).get("external_interruption"):
+            return hold_after_interruption(job)
         if job["state"] not in TASK_TERMINAL:
             return refresh(job)
     return refresh()
@@ -771,7 +825,7 @@ def control_status(control):
     reserve = state.get("resource_gate")
     if active:
         execution = "RUNNING"
-    elif reserve and disk_usage(reserve["path"]).free < reserve["required_free_bytes"]:
+    elif state.get("external_hold") or (reserve and disk_usage(reserve["path"]).free < reserve["required_free_bytes"]):
         execution = "BLOCKED_EXTERNAL"
     elif current_state == "RUNNING":
         execution = "EXITED_NEEDS_RECOVERY"

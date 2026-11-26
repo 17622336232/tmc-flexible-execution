@@ -13,7 +13,7 @@ from experiments.task_attack.runtime import write_json
 from .candidate_ranking import RANKED_METHODS, RETRIEVAL_METHOD
 from .clean_coverage import audit_run
 from .custom_schedule import FINAL_ROLE as CUSTOM_FINAL_ROLE
-from .live_audit import audit_capture_permissions
+from .live_audit import _camera_frames, _rows, _verified_judgment, audit_capture_permissions
 from .pilot_schedule import _read, _valid_preflight
 from .public_schedule import FINAL_ROLE as PUBLIC_FINAL_ROLE
 from .timeline import read_trace_rows, summarize
@@ -83,6 +83,53 @@ def _attempt_costs(arm, final, public, *, allow_final_truncated=False):
             "last_request_wall_time": max(dispatch_times, default=None)}
 
 
+def _mechanism(root, events, report, allow_truncated):
+    robot = root / "private/robot"
+    frames = _camera_frames(robot)
+    calls = _rows(robot / "model_calls.jsonl", allow_truncated=allow_truncated)
+    evidence = _rows(robot / "evidence_ledger.jsonl", allow_truncated=allow_truncated)
+    reviewed = audit_capture_permissions(root, allow_truncated=allow_truncated) or {}
+    permitted = {(row["step"], row["candidate"]) for row in reviewed.get("actions", []) if row["permitted"]}
+    accepted = {event["frame_id"] for event in events if event["event"] == "evidence_accepted"}
+    reported = {row["evidence_image_id"] for row in report.get("records", ()) if row.get("evidence_image_id")}
+    reported_objects = {object_id(row) for row in report.get("records", ())}
+    reported.update(proof["identity_proof"]["image_id"] for proof in evidence
+                    if proof["status"] in ("frontend_bound_observation", "frontend_material_verified")
+                    and proof["photo"] in reported and proof["object"] in reported_objects)
+    taken = []
+    early_branches, captures_before, used = 0, 0, 0
+    query_steps = sorted({row["step"] for row in events if row["event"] == "query_submitted"})
+    for index, step in enumerate(query_steps):
+        matching = [row for row in events if row["step"] == step]
+        _, request = _verified_judgment(matching, calls, frames)
+        sent, returned = request.get("dispatched_monotonic_seconds"), request.get("return_monotonic_seconds")
+        if sent is None or returned is None:
+            continue
+        upper = query_steps[index + 1] if index + 1 < len(query_steps) else float("inf")
+        while_pending = [row for row in events if row["event"] == "action_started"
+                         and step <= row["step"] < upper and (row["step"], row.get("candidate")) in permitted
+                         and sent <= row["monotonic_seconds"] < returned]
+        early_branches += len(while_pending)
+        for action in while_pending:
+            picture = next((row for row in matching if row["event"] == "candidate_executed"
+                            and row.get("candidate") == action["candidate"]
+                            and row["monotonic_seconds"] >= action["monotonic_seconds"]), None)
+            if picture and picture.get("frame_id") in frames:
+                taken.append(picture)
+                captures_before += picture["monotonic_seconds"] < returned
+                used += picture["frame_id"] in accepted and picture["image_id"] in reported
+    starts = [row["monotonic_seconds"] for row in events if row["event"] == "action_started"]
+    scored = _read(root / "independent_scoring_time.json") or {}
+    return {"conditional_moves_started_before_bound_reply": early_branches,
+            "conditional_actual_photos_from_early_moves": len(taken),
+            "conditional_photos_completed_before_bound_reply": captures_before,
+            "conditional_early_materials_used_in_report": used,
+            "conditional_early_materials_without_report_use": len(taken) - used,
+            "first_action_from_first_logged_event_seconds": min(starts) - events[0]["monotonic_seconds"]
+            if starts else None,
+            "independent_scoring_seconds": scored["end_monotonic"] - scored["start_monotonic"] if scored else None}
+
+
 def _arm_row(directory, case, method, binding=None):
     arm = directory / case["id"] / method
     job = _read(arm / "job.json")
@@ -97,6 +144,9 @@ def _arm_row(directory, case, method, binding=None):
     row.update(state=job["state"], logical_id=job["id"], infrastructure_attempts=job["attempt"],
                actual_dispatches=job.get("request_budget", {}).get("reserved"),
                cumulative_task_seconds=job.get("charged_seconds"))
+    if job.get("execution_revision"):
+        row.update(execution_revision=job["execution_revision"],
+                   external_interruption=(job.get("result") or {}).get("external_interruption"))
     if job["state"] not in RECORDED:
         return row
     output = job.get("artifact_dir")
@@ -104,7 +154,7 @@ def _arm_row(directory, case, method, binding=None):
     if not output:
         return row
     root = Path(output).resolve()
-    allow_truncated = job["state"] == "TIMEOUT"
+    allow_truncated = job["state"] == "TIMEOUT" or bool(row.get("external_interruption"))
     row.update(_attempt_costs(arm, root, bool(job.get("public_runtime")), allow_final_truncated=allow_truncated))
     if job.get("public_runtime"):
         return _public_arm(row, arm, root, job)
@@ -157,6 +207,9 @@ def _arm_row(directory, case, method, binding=None):
                        frontend_fresh_targets=aligned["fresh_targets"], frontend_used_targets=aligned["used_targets"])
         if typed_guard:
             row.update(typed_submission_checks=len(typed_guard), typed_submission_accepted=typed_guard[-1])
+        if job.get("execution_revision"):
+            accepted_report = (result or {}).get("report") if job["state"] == "FINISHED_VALID" else {}
+            row.update(_mechanism(root, events, accepted_report or {}, allow_truncated))
     if result and result.get("execution_completed") and (root / "clean_coverage.json").is_file():
         coverage = audit_run(root)
         saved = _read(root / "clean_coverage.json")
@@ -204,7 +257,7 @@ def _public_arm(row, arm, root, job):
     detail = job.get("result") or {}
     row["failure_reason"] = detail.get("reason")
     direction = job["case"]["expected_language_contract"]["direction"]
-    allow_truncated = job["state"] == "TIMEOUT"
+    allow_truncated = job["state"] == "TIMEOUT" or bool(row.get("external_interruption"))
     _add_permission_counts(row, (audit_camera_permissions(attempt, direction, allow_truncated=attempt != root or allow_truncated)
                                  for attempt in _attempt_roots(arm, root)))
     if job["state"] == "FINISHED_VALID":
@@ -214,7 +267,7 @@ def _public_arm(row, arm, root, job):
             raise ValueError("Saved public success could not be independently verified: " + job["id"])
         row.update(success=True, restricted_seconds=seconds, complete_coverage=True)
     if (root / "timeline.jsonl").is_file():
-        clock = summarize(root / "timeline.jsonl", allow_truncated=job["state"] == "TIMEOUT")
+        clock = summarize(root / "timeline.jsonl", allow_truncated=allow_truncated)
         row.update(model_request_seconds=clock["model_request_seconds"],
                    model_action_overlap_seconds=clock["model_action_overlap_seconds"],
                    action_seconds=sum(interval["seconds"] for interval in clock["intervals"].get("action", [])),
@@ -284,6 +337,25 @@ def _registered_primary(rows, ours, reference):
         p_value = (exceed + 1) / (trials + 1)
     return {"method": ours, "reference": reference, "metric": "deadline_restricted_complete_task_seconds",
             "independent_groups": len(differences), "p_two_sided_sign_flip": p_value, "alpha": .05}
+
+
+def _service_block_sensitivity(rows, ours, reference, span_seconds=3600):
+    blocks = {}
+    for row in rows:
+        if row["state"] in RECORDED:
+            blocks.setdefault(row["case"], []).append(row)
+    affected = {}
+    for case, group in blocks.items():
+        starts = [row["first_request_wall_time"] for row in group if row.get("first_request_wall_time") is not None]
+        ends = [row["last_request_wall_time"] for row in group if row.get("last_request_wall_time") is not None]
+        span = max(ends) - min(starts) if starts and ends else None
+        if any(row.get("external_interruption") for row in group) or (span is not None and span > span_seconds):
+            affected[case] = {"recorded_service_block_seconds": span,
+                              "interrupted_methods": [row["method"] for row in group if row.get("external_interruption")]}
+    remaining = [row for row in rows if row["case"] not in affected]
+    return {"block_threshold_seconds": span_seconds, "affected_cases": affected,
+            "matched_differences": _pair_rows(remaining, reference).get(ours),
+            "scope": "descriptive complete-block sensitivity"}
 
 
 def _paired_ranking(rows):
@@ -474,7 +546,12 @@ def rebuild(directory, output, *, coverage_object=None, coverage_domain=None):
         result["object_coverage_audit"] = _object_coverage(rows, coverage_object, coverage_domain)
     if formal and catalog.get("protocol_version") == "protocol-v2":
         result["protocol_version"] = "protocol-v2"
-        result["registered_primary_inference"] = _registered_primary(rows, catalog["ours_method"], reference)
+        if catalog.get("execution_revision"):
+            result["execution_revision"] = catalog["execution_revision"]
+            result["analysis_role"] = "confirmatory" if catalog["role"] == CUSTOM_FINAL_ROLE else "external_validation"
+            result["service_block_sensitivity"] = _service_block_sensitivity(rows, catalog["ours_method"], reference)
+        if result.get("analysis_role") != "external_validation":
+            result["registered_primary_inference"] = _registered_primary(rows, catalog["ours_method"], reference)
     if catalog.get("data_role") == "INDEPENDENT_NATIVE_TRAINING_CHECK":
         result["real_trajectory_forecast_checks"] = _native_forecast_check(rows)
     fragment_rechecks = [row for row in rows if "legacy_fragment_recheck_complete" in row]

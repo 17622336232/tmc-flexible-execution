@@ -92,22 +92,46 @@ def _execute_action(backend, obs, action, trace, step, image_id, event):
         return feedback
 
 
+def _seed_records(prior_records, prior_evidence, evidence_hashes, now):
+    sources = {(item["object"], item["field"], item["photo"]): item for item in prior_evidence}
+    records, used = [], []
+    for row in prior_records:
+        validate_record(row, evidence_hashes)
+        good = {}
+        for field, value in facts(row).items():
+            image = row["evidence_image_id"]
+            source = sources.get((object_id(row), field, image))
+            if (source and type(source["value"]) is type(value) and source["value"] == value
+                    and source["image_sha256"] == evidence_hashes[image]
+                    and source["available_monotonic"] <= now < source["valid_until_monotonic"]):
+                good[field] = value
+                used.append(source)
+        if good:
+            records = keep_observation(records, {**row, "facts": good})
+    return records, used
+
+
 def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trace=None,
               prior_views=(), prior_memory='', episode_started=None, step_offset=0, submit_guard=None,
-              decision_pipeline=None, fact_types=None, record_adapter=None, evidence_journal=False):
+              decision_pipeline=None, fact_types=None, record_adapter=None, evidence_journal=False,
+              prior_records=(), prior_evidence=()):
     directory.mkdir(parents=True,exist_ok=True)
     if model is None:
         model=ModelClient(directory/'model_calls.jsonl')
     started=time.monotonic() if episode_started is None else episode_started
-    memory=prior_memory;records=[];history=[];step=step_offset
+    memory=prior_memory;history=[];step=step_offset
     view_archive=list(prior_views)
     evidence_ids={item['image_id'] for item in view_archive}
     evidence_hashes = {item['image_id']: hashlib.sha256(item['data']).hexdigest() for item in view_archive}
+    records, seeded = _seed_records(prior_records, prior_evidence, evidence_hashes, time.monotonic())
+    seed_scope = backend.scene.get('catalog', {}).get('scene_conditions', {}).get('state_version') if seeded else None
     instructions = SYSTEM
     if evidence_journal:
         instructions += ("\nUse the bound visual judgments and evidence memory before requesting a new view. "
                          "Keep complementary fields from earlier photos. Avoid repeating an already settled reading. "
                          "Use short memory and evidence notes. Unknown or unreadable facts stay unresolved.")
+        for item in seeded:
+            append_json(directory / 'evidence_ledger.jsonl', {'step': step, **item})
     model.deadline_monotonic=started+timeout
     backend.execution_deadline_monotonic=started+timeout
     feedback=None
@@ -126,6 +150,21 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
             raise
         if time.monotonic()>=started+timeout:
             event('episode_budget_exhausted_after_observation',step=step);break
+        if seeded:
+            actual_scope = obs.get('state_version',
+                backend.scene.get('catalog', {}).get('scene_conditions', {}).get('state_version'))
+            invalid = [item for item in seeded if actual_scope != seed_scope
+                       or time.monotonic() >= item['valid_until_monotonic']]
+            for item in invalid:
+                for row in records:
+                    if object_id(row) == item['object'] and row['evidence_image_id'] == item['photo']:
+                        row['facts'].pop(item['field'], None)
+                seeded.remove(item)
+                if evidence_journal:
+                    append_json(directory / 'evidence_ledger.jsonl', {'step': step, **item,
+                                                                     'status': 'frontend_observation_invalidated'})
+            if invalid:
+                records = [row for row in records if facts(row)]
         (directory/(image_id+'.jpg')).write_bytes(obs['data']);evidence_ids.add(image_id)
         meta={k:v for k,v in obs.items() if k!='data'}
         meta.update(image_id=image_id,sha256=hashlib.sha256(obs['data']).hexdigest())
@@ -139,9 +178,13 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
             def diversity(item):
                 distance=sum((item['position'][axis]-obs['position'][axis])**2 for axis in ('x','y','z'))
                 return distance+(item['yaw']-obs['yaw'])**2
-            for candidate in (view_archive[0],max(view_archive,key=diversity),view_archive[-1]):
+            priorities = {row['evidence_image_id'] for row in records} & {item['photo'] for item in seeded}
+            preferred = [item for item in reversed(view_archive) if item['image_id'] in priorities]
+            for candidate in (*preferred,view_archive[0],max(view_archive,key=diversity),view_archive[-1]):
                 if candidate['image_id'] not in {x['image_id'] for x in image_memory}:
                     image_memory.append(candidate)
+                if len(image_memory) == 3:
+                    break
         public_conditions=backend.scene.get('catalog',{}).get('scene_conditions',{})
         # Source provenance is a shared, public scene condition. Simulator/API
         # handles are not sensory object identities and are unnecessary here.

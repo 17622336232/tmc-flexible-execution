@@ -492,6 +492,10 @@ def main(argv=None):
     replay_ranker.add_argument("--pilot-dir", required=True, type=Path)
     replay_ranker.add_argument("--output", required=True, type=Path)
     accel = commands.add_parser("acceleration-audit", help="Rebuild logged costs without requesting a model")
+    accel.add_argument("--current-v2", action="store_true", help="Audit the original v2 development attempts")
+    revision = commands.add_parser("acceleration-revision-preflight", help="Register and verify the revised worker without calls")
+    revision.add_argument("--output-root", type=Path, default=CHECKOUT / "outputs")
+    revision.add_argument("--chatgpt-project", type=Path, default=DEFAULT_AUTH_PROJECT)
     accel.add_argument("--out", type=Path, default=CHECKOUT / "outputs/acceleration-v2")
     accel.add_argument("--output-root", type=Path, default=CHECKOUT / "outputs")
     replay_v2 = commands.add_parser("replay-run", help="Recompute the registered acceleration candidate configurations")
@@ -528,9 +532,10 @@ def main(argv=None):
             command.add_argument("--protocol", choices=("legacy", "protocol-v2"), default="legacy")
     args = parser.parse_args(argv)
     if args.command == "acceleration-audit":
-        from .acceleration_audit import audit
+        from .acceleration_audit import audit, audit_current_v2
 
-        print(json.dumps(audit(args.output_root, args.out), ensure_ascii=False, indent=2))
+        operation = audit_current_v2 if args.current_v2 else audit
+        print(json.dumps(operation(args.output_root, args.out), ensure_ascii=False, indent=2))
         return
     if args.command == "replay-run":
         from .acceleration_replay import offline
@@ -538,6 +543,15 @@ def main(argv=None):
         path = args.output_root.resolve() / "acceleration-v2/offline_selection.json"
         result = read_json(path) if args.resume and path.is_file() else offline(args.output_root.resolve())
         print(json.dumps({k: v for k, v in result.items() if k != "grid"}, ensure_ascii=False, indent=2))
+        return
+    if args.command == "acceleration-revision-preflight":
+        from .acceleration_revision import register
+
+        try:
+            result = register(args.output_root.resolve(), CHECKOUT, args.chatgpt_project)
+        except (OSError, KeyError, ValueError) as error:
+            parser.exit(1, f"{error}\n")
+        print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
         return
     if args.command == "acceleration-final-prepare":
         from .acceleration_final import prepare_online

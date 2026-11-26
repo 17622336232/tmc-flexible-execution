@@ -16,6 +16,18 @@ from experiments.task_attack.runtime import write_json
 
 
 class SupervisorTest(unittest.TestCase):
+    def test_formal_service_interruption_after_task_start_keeps_the_attempt_as_failure(self):
+        reason = {"code": "subscription_sharing_usage_limit_exceeded"}
+        formal = {"natural_continuous": True}
+        status, detail = control._natural_outcome(formal, "BLOCKED_EXTERNAL",
+                                                 {"reason": reason, "charged_seconds": 3., "logged_dispatches": 1})
+        self.assertEqual(status, "FINISHED_TASK_FAILURE")
+        self.assertEqual(detail["external_interruption"], reason)
+        self.assertEqual(detail["charged_seconds"], 3.)
+        before_task = {"reason": reason, "charged_seconds": 0., "logged_dispatches": 0}
+        self.assertEqual(control._natural_outcome(formal, "BLOCKED_EXTERNAL", before_task),
+                         ("BLOCKED_EXTERNAL", before_task))
+
     def test_diagnostics_archive_is_lossless_and_can_resume_with_another_log(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
