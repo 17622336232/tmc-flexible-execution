@@ -13,7 +13,7 @@ import yaml
 
 from .audit import capture
 from .clean_coverage import audit_run
-from .control import DEFAULT_AUTH_PROJECT, MAX_ATTEMPTS, control_status, is_live, pilot_run
+from .control import DEFAULT_AUTH_PROJECT, MAX_ATTEMPTS, TRANSIENT_MODEL_CODES, control_status, is_live, pilot_run
 from .learning_schedule import prepare_configurations, prepare_ranker_pilot
 from .live_audit import audit_live_connection
 from .live_calibration import calibrate, calibrate_visual
@@ -428,7 +428,7 @@ def _continue(output_root, directory, defaults, args):
             break
         if state == "INFRA_ERROR":
             error = (current.get("result") or {}).get("error") or {}
-            temporary = error.get("code") in {"server_is_overloaded", "network_error", "stream_incomplete", "timeout"}
+            temporary = error.get("code") in TRANSIENT_MODEL_CODES
             if not (remaining and args.resume and temporary and 1 <= current["attempt"] < MAX_ATTEMPTS):
                 break
             # The supervisor enforces the same task budget for the next attempt.

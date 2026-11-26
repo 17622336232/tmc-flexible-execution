@@ -37,6 +37,7 @@ REQUEST_LIMIT = 24
 HEARTBEAT_SECONDS = 30
 STARTUP_CLEANUP_SECONDS = 90
 TASK_TERMINAL = {"FINISHED_VALID", "FINISHED_TASK_FAILURE", "TIMEOUT"}
+TRANSIENT_MODEL_CODES = {"server_is_overloaded", "network_error", "stream_incomplete", "timeout"}
 RUN_SOURCES = (
     "scripts/run_flexible_clean.sh", "experiments/flexible_execution/adapters/clean_run.py",
     "experiments/flexible_execution/adapters/gpt_probe.py", "experiments/flexible_execution/adapters/viewpoints.py",
@@ -68,6 +69,7 @@ def _batch_estimate(control, directory, protocol, count):
                 try:
                     row = json.loads(line)
                     if (row["state"] not in TASK_TERMINAL or not row.get("started_at") or not row.get("finished_at")
+                            or (row.get("result") or {}).get("continuous_source_attempt")
                             or row.get("model") != protocol["model"]
                             or row.get("reasoning_effort") != protocol["reasoning_effort"]):
                         continue
@@ -492,11 +494,39 @@ def _finish(control, job, stop=None, returncode=None):
 
 
 def _natural_outcome(job, status, detail):
-    if (job.get("natural_continuous") and status == "BLOCKED_EXTERNAL"
-            and (detail.get("charged_seconds") or detail.get("logged_dispatches"))):
+    if not job.get("natural_continuous") or not (detail.get("charged_seconds") or detail.get("logged_dispatches")):
+        return status, detail
+    if status == "BLOCKED_EXTERNAL":
         return "FINISHED_TASK_FAILURE", {
             **detail, "external_interruption": detail.get("reason"), "reason": "external service interrupted task"}
+    error = detail.get("error") or detail.get("reason")
+    if status == "INFRA_ERROR" and isinstance(error, dict) and error.get("code") in TRANSIENT_MODEL_CODES:
+        return "FINISHED_TASK_FAILURE", {
+            **detail, "task_interruption": error, "reason": "model service interrupted continuous task"}
     return status, detail
+
+
+def _reconcile_continuous_retry(control, job):
+    if not job.get("natural_continuous") or job["state"] not in {"INFRA_ERROR", "CANCELLED_BY_USER"}:
+        return job
+    with (control / "jobs.jsonl").open("rb") as handle:
+        for line in handle:
+            try:
+                previous = json.loads(line)
+            except (ValueError, UnicodeDecodeError):
+                continue
+            if (not isinstance(previous, dict) or previous.get("id") != job["id"]
+                    or previous.get("state") != "INFRA_ERROR" or not previous.get("finished_at")):
+                continue
+            status, detail = _natural_outcome(previous, previous["state"], previous.get("result") or {})
+            if not detail.get("task_interruption"):
+                continue
+            correction = {"state": status, "artifact_dir": previous["artifact_dir"],
+                          "returncode": previous.get("returncode"),
+                          "result": {**detail, "continuous_source_attempt": previous["attempt"]}}
+            _verify_terminal({**job, **correction})
+            return _save(control, job, **correction)
+    return job
 
 
 def _verify_terminal(job):
@@ -505,12 +535,24 @@ def _verify_terminal(job):
         return
     root = Path(job["artifact_dir"])
     earlier_charge = job.get("charged_seconds", 0.) - detail.get("charged_seconds", 0.)
-    observed, recomputed = _outcome(root, {**job, "charged_seconds": max(0., earlier_charge)}, job.get("returncode"))
+    verification_job = {**job, "charged_seconds": max(0., earlier_charge)}
+    source_attempt = detail.get("continuous_source_attempt")
+    if source_attempt is not None:
+        if type(source_attempt) is not int or not 1 <= source_attempt <= job["attempt"]:
+            raise ValueError("Invalid continuous-task attempt number for " + job["id"])
+        source = _attempt_path(job, source_attempt)
+        verification_job = _read(source / "launch.json")
+        if (not job.get("natural_continuous") or not verification_job or root != source / "episode"
+                or verification_job["attempt"] != source_attempt or verification_job["id"] != job["id"]
+                or verification_job["input_sha256"] != job["input_sha256"]):
+            raise ValueError("Invalid continuous-task source attempt for " + job["id"])
+    observed, recomputed = _outcome(root, verification_job, job.get("returncode"))
     observed, recomputed = _natural_outcome(job, observed, recomputed)
     if observed != job["state"]:
         raise ValueError("Saved result no longer verifies for " + job["id"] + ": " + str(root))
-    if detail.get("external_interruption") != recomputed.get("external_interruption"):
-        raise ValueError("Saved continuous interruption differs from its original attempt")
+    for key in ("external_interruption", "task_interruption"):
+        if detail.get(key) != recomputed.get(key):
+            raise ValueError("Saved continuous interruption differs from its original attempt")
 
 
 def verified_cohort(name, directory, role, count):
@@ -727,6 +769,7 @@ def _run_locked(directory, control, checkout, resume, max_jobs, auth_project, un
             job = _finish(control, job, _wait_running(job, refresh))
             if (job.get("result") or {}).get("external_interruption"):
                 return hold_after_interruption(job)
+        job = _reconcile_continuous_retry(control, job)
         if job["state"] in TASK_TERMINAL:
             _verify_terminal(job)
             continue

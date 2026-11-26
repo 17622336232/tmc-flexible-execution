@@ -170,9 +170,14 @@ def _arm_row(directory, case, method, binding=None):
     row.update(state=job["state"], logical_id=job["id"], infrastructure_attempts=job["attempt"],
                actual_dispatches=job.get("request_budget", {}).get("reserved"),
                cumulative_task_seconds=job.get("charged_seconds"))
+    detail = job.get("result") or {}
     if job.get("execution_revision"):
         row.update(execution_revision=job["execution_revision"],
-                   external_interruption=(job.get("result") or {}).get("external_interruption"))
+                   external_interruption=detail.get("external_interruption"))
+    if job.get("natural_continuous"):
+        row.update(continuous_task_seconds=detail.get("charged_seconds"),
+                   task_interruption=detail.get("task_interruption"),
+                   continuous_source_attempt=detail.get("continuous_source_attempt"))
     if job["state"] not in RECORDED:
         return row
     output = job.get("artifact_dir")
@@ -180,7 +185,7 @@ def _arm_row(directory, case, method, binding=None):
     if not output:
         return row
     root = Path(output).resolve()
-    allow_truncated = job["state"] == "TIMEOUT" or bool(row.get("external_interruption"))
+    allow_truncated = job["state"] == "TIMEOUT" or bool(row.get("external_interruption") or row.get("task_interruption"))
     row.update(_attempt_costs(arm, root, bool(job.get("public_runtime")), allow_final_truncated=allow_truncated))
     if job.get("public_runtime"):
         return _public_arm(row, arm, root, job)
@@ -283,7 +288,7 @@ def _public_arm(row, arm, root, job):
     detail = job.get("result") or {}
     row["failure_reason"] = detail.get("reason")
     direction = job["case"]["expected_language_contract"]["direction"]
-    allow_truncated = job["state"] == "TIMEOUT" or bool(row.get("external_interruption"))
+    allow_truncated = job["state"] == "TIMEOUT" or bool(row.get("external_interruption") or row.get("task_interruption"))
     _add_permission_counts(row, (audit_camera_permissions(attempt, direction, allow_truncated=attempt != root or allow_truncated)
                                  for attempt in _attempt_roots(arm, root)))
     if job["state"] == "FINISHED_VALID":
@@ -396,9 +401,9 @@ def _service_block_sensitivity(rows, ours, reference, span_seconds=3600):
         starts = [row["first_request_wall_time"] for row in group if row.get("first_request_wall_time") is not None]
         ends = [row["last_request_wall_time"] for row in group if row.get("last_request_wall_time") is not None]
         span = max(ends) - min(starts) if starts and ends else None
-        if any(row.get("external_interruption") for row in group) or (span is not None and span > span_seconds):
-            affected[case] = {"recorded_service_block_seconds": span,
-                              "interrupted_methods": [row["method"] for row in group if row.get("external_interruption")]}
+        interrupted = [row["method"] for row in group if row.get("external_interruption") or row.get("task_interruption")]
+        if interrupted or (span is not None and span > span_seconds):
+            affected[case] = {"recorded_service_block_seconds": span, "interrupted_methods": interrupted}
     remaining = [row for row in rows if row["case"] not in affected]
     return {"block_threshold_seconds": span_seconds, "affected_cases": affected,
             "matched_differences": _pair_rows(remaining, reference).get(ours),
@@ -460,7 +465,7 @@ def _native_forecast_check(rows):
 
 
 def _failure_category(row):
-    reason = row.get("failure_reason")
+    reason = row.get("task_interruption") or row.get("external_interruption") or row.get("failure_reason")
     if isinstance(reason, dict):
         return reason.get("code") or reason.get("category") or reason.get("type") or row["state"]
     return reason or row["state"]

@@ -28,6 +28,36 @@ class SupervisorTest(unittest.TestCase):
         self.assertEqual(control._natural_outcome(formal, "BLOCKED_EXTERNAL", before_task),
                          ("BLOCKED_EXTERNAL", before_task))
 
+    def test_reconcile_formal_timeout_keeps_original_attempt_and_retry_costs(self):
+        reason = {"type": "TransportError", "code": "timeout"}
+        failed = {"error": reason, "charged_seconds": 240.5, "returncode": 1}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            arm = root / "arm"
+            attempt = arm / "attempt-001"
+            attempt.mkdir(parents=True)
+            formal = {"id": "formal", "input_sha256": "locked", "arm": str(arm), "natural_continuous": True}
+            launch = {**formal, "attempt": 1, "charged_seconds": 0.}
+            write_json(attempt / "launch.json", launch)
+            previous = {**launch, "state": "INFRA_ERROR", "result": failed, "returncode": 1,
+                        "finished_at": "2026-11-26T07:41:06+00:00", "artifact_dir": str(attempt / "episode")}
+            current = {**formal, "state": "CANCELLED_BY_USER", "attempt": 2, "charged_seconds": 278.2,
+                       "request_budget": {"reserved": 3}}
+            ledger = root / "jobs.jsonl"
+            original = "\n".join(json.dumps(row) for row in (previous, current)) + "\n"
+            ledger.write_text(original, encoding="utf8")
+            with patch.object(control, "_outcome", return_value=("INFRA_ERROR", failed)) as outcome:
+                restored = control._reconcile_continuous_retry(root, current)
+            outcome.assert_called_once_with(attempt / "episode", launch, 1)
+            self.assertEqual(restored["state"], "FINISHED_TASK_FAILURE")
+            self.assertEqual(restored["result"]["task_interruption"], reason)
+            self.assertEqual(restored["result"]["continuous_source_attempt"], 1)
+            self.assertEqual(restored["result"]["charged_seconds"], 240.5)
+            self.assertEqual(restored["charged_seconds"], 278.2)
+            self.assertEqual(restored["request_budget"]["reserved"], 3)
+            self.assertTrue(ledger.read_text(encoding="utf8").startswith(original))
+        self.assertEqual(control._natural_outcome({}, "INFRA_ERROR", failed), ("INFRA_ERROR", failed))
+
     def test_diagnostics_archive_is_lossless_and_can_resume_with_another_log(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
