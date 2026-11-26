@@ -98,8 +98,10 @@ def _mechanism(root, events, report, allow_truncated):
     reported.update(proof["identity_proof"]["image_id"] for proof in evidence
                     if proof["status"] in ("frontend_bound_observation", "frontend_material_verified")
                     and proof["photo"] in reported and proof["object"] in reported_objects)
+    completed = {(row["step"], row.get("candidate")): row["monotonic_seconds"] for row in events
+                 if row["event"] == "action_finished" and row.get("ok") is True}
     taken = []
-    early_branches, captures_before, used = 0, 0, 0
+    early_branches, moves_before, captures_before, used = 0, 0, 0, 0
     query_steps = sorted({row["step"] for row in events if row["event"] == "query_submitted"})
     for index, step in enumerate(query_steps):
         matching = [row for row in events if row["step"] == step]
@@ -113,6 +115,8 @@ def _mechanism(root, events, report, allow_truncated):
                          and sent <= row["monotonic_seconds"] < returned]
         early_branches += len(while_pending)
         for action in while_pending:
+            finished = completed.get((action["step"], action["candidate"]))
+            moves_before += finished is not None and action["monotonic_seconds"] <= finished < returned
             picture = next((row for row in matching if row["event"] == "candidate_executed"
                             and row.get("candidate") == action["candidate"]
                             and row["monotonic_seconds"] >= action["monotonic_seconds"]), None)
@@ -123,6 +127,7 @@ def _mechanism(root, events, report, allow_truncated):
     starts = [row["monotonic_seconds"] for row in events if row["event"] == "action_started"]
     scored = _read(root / "independent_scoring_time.json") or {}
     return {"conditional_moves_started_before_bound_reply": early_branches,
+            "conditional_moves_finished_before_bound_reply": moves_before,
             "conditional_actual_photos_from_early_moves": len(taken),
             "conditional_photos_completed_before_bound_reply": captures_before,
             "conditional_early_materials_used_in_report": used,
@@ -254,7 +259,7 @@ def _arm_row(directory, case, method, binding=None):
 
 
 def _public_arm(row, arm, root, job):
-    from .public_audit import audit_camera_permissions, registered_outcome
+    from .public_audit import audit, audit_camera_permissions, registered_outcome
 
     detail = job.get("result") or {}
     row["failure_reason"] = detail.get("reason")
@@ -275,6 +280,23 @@ def _public_arm(row, arm, root, job):
                    action_seconds=sum(interval["seconds"] for interval in clock["intervals"].get("action", [])),
                    observation_seconds=sum(interval["seconds"] for interval in clock["intervals"].get("observation", [])),
                    search_seconds=sum(interval["seconds"] for interval in clock["intervals"].get("search", [])))
+        if row["success"] and job.get("execution_revision"):
+            camera = audit(root)
+            from_dispatch = camera["first_motion_seconds_after_dispatch"]
+            before_reply = camera["first_motion_seconds_before_reply"]
+            early = (camera["early_camera_motion_had_permission"] is True and from_dispatch is not None
+                     and from_dispatch >= 0 and before_reply is not None and before_reply > 0)
+            motions = clock["intervals"].get("action", [])
+            finished = early and bool(motions) and motions[0]["ok"] and motions[0]["seconds"] < before_reply
+            side_after = camera["side_capture_seconds_after_reply"]
+            captured = early and side_after is not None
+            used = captured and bool(_read(root / "report.json").get("side_sha256"))
+            row.update(conditional_moves_started_before_bound_reply=int(early),
+                       conditional_moves_finished_before_bound_reply=int(finished),
+                       conditional_actual_photos_from_early_moves=int(captured),
+                       conditional_photos_completed_before_bound_reply=int(captured and side_after < 0),
+                       conditional_early_materials_used_in_report=int(used),
+                       conditional_early_materials_without_report_use=int(captured and not used))
     if (root / "report.json").is_file():
         row["wrong_completion_claim"] = not row["success"]
     return row
@@ -456,6 +478,13 @@ def _method_summary(rows):
                       "task_elapsed_including_recovery_seconds", "task_recovery_gap_seconds"):
             measures = [row[field] for row in valid if row.get(field) is not None]
             methods[method]["mean_" + field] = mean(measures) if measures else None
+        mechanism = [row for row in valid if "conditional_moves_started_before_bound_reply" in row]
+        if mechanism:
+            methods[method]["conditional_mechanism_episodes"] = len(mechanism)
+            for field in ("conditional_moves_started_before_bound_reply", "conditional_moves_finished_before_bound_reply",
+                          "conditional_photos_completed_before_bound_reply", "conditional_early_materials_used_in_report",
+                          "conditional_early_materials_without_report_use"):
+                methods[method][field] = sum(row[field] for row in mechanism)
         successes = [row["restricted_seconds"] for row in valid if row["success"]]
         methods[method]["mean_seconds_given_success"] = mean(successes) if successes else None
     return methods

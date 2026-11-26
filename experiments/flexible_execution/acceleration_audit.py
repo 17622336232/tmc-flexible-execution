@@ -256,6 +256,11 @@ def _v2_request_rows(key, physical, events, raw_path, ledger, ledger_path, gaps)
             within_retry = (opener, fingerprint) in window_hashes
             window_hashes.add((opener, fingerprint))
         err = call.get("error") or {}
+        output = call.get("output") or {}
+        issues = output.get("issues") if isinstance(output, dict) and role in (
+            "whole_task_acceptance", "evidence_group_acceptance", "acceptance_merge") else None
+        if not isinstance(issues, list) or any(not isinstance(item, str) for item in issues):
+            issues = None
         usage = call.get("usage") if isinstance(call.get("usage"), dict) else {}
         ledger_match = number in ledger and ledger[number][1].get("image_sha256", []) == images
         if ledger_match:
@@ -269,7 +274,10 @@ def _v2_request_rows(key, physical, events, raw_path, ledger, ledger_path, gaps)
                         "output_tokens": usage.get("output_tokens", usage.get("completion_tokens")),
                         "total_tokens": usage.get("total_tokens"), "token_usage_reported": bool(usage),
                         "exact_input_repeat": fingerprint in exact, "same_request_retry": within_retry,
-                        "error": err.get("code") or err.get("type"), "post_handoff": handoff is not None and
+                        "error": err.get("code") or err.get("type"),
+                        "acceptance_issue_count": len(issues) if issues is not None else None,
+                        "acceptance_issues": json.dumps(issues, ensure_ascii=False) if issues is not None else None,
+                        "post_handoff": handoff is not None and
                         start is not None and start >= handoff,
                         "after_report_rejection": first_reject is not None and start is not None and start >= first_reject,
                         "ledger_match": ledger_match, "ledger_line": ledger[number][0] if number in ledger else None,
@@ -393,10 +401,13 @@ def audit_current_v2(output_root, destination, *, revised=False):
     roles = {}
     for name in role_names:
         group = [r for r in request_rows if r["role"] == name]
+        with_issues = [r for r in group if r.get("acceptance_issue_count")]
         roles[name] = {"dispatches": len(group), "reported_service_seconds_sum": sum(
             r.get("service_seconds") or 0. for r in group), "sent_images": sum(r.get("images") or 0 for r in group),
             "same_request_retries": sum(bool(r.get("same_request_retry")) for r in group),
             "token_usage_rows": sum(bool(r.get("token_usage_reported")) for r in group),
+            "returned_acceptance_issues": len(with_issues),
+            "returned_acceptance_issues_service_seconds": sum(r.get("service_seconds") or 0. for r in with_issues),
             "errors": dict(Counter(r["error"] for r in group if r.get("error")))}
     totals = {"actual_new_model_requests": 0, "actual_new_flights": 0,
               "execution_revision": catalog.get("execution_revision", "original"),
@@ -426,6 +437,7 @@ def _write_v2_bottlenecks(destination, totals, attempts):
     empty_handoffs = sum(bool(row["verified_frontend_materials"]) and row["first_controller_structured_records"] == 0
                          for row in attempts)
     active_episodes = sum(row["task_seconds"] > 0 for row in attempts if row["task_seconds"] is not None)
+    visual_guard = totals["role_totals"].get("whole_task_acceptance", {})
     parts = [
         "# v2 开发回合热点审计", "",
         f"执行修订 `{totals['execution_revision']}`，提交 `{totals['source_code_git_commit']}`。"
@@ -449,6 +461,9 @@ def _write_v2_bottlenecks(destination, totals, attempts):
         "前置阶段已经核验材料，整项控制器首个请求的结构化记录仍为空。",
         f"完整输入重复 {totals['exact_input_repeats']} 笔，重提完全相同的报告"
         f" {totals['exact_repeated_proposed_reports']} 次。已知外部错误列于逐请求表。",
+        f"整项视觉验收有 {visual_guard.get('returned_acceptance_issues', 0)} 笔返回缺项，响应耗时合计"
+        f" {visual_guard.get('returned_acceptance_issues_service_seconds', 0.):.2f} 秒。"
+        "逐请求表保留反馈原文和发送位置。",
         "", "## 仅由源码提出的怀疑", "",
         "全图分组在插入照片时可能失配。分组与合并终审的真实请求量见上表。"
         "已核验前置观察的交接可能减少后续查询，实际可避免的调用"
