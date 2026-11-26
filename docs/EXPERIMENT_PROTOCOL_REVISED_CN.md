@@ -11,6 +11,7 @@
 
 ```bash
 python3 -m experiments.flexible_execution.cli acceleration-audit --current-v2 --out outputs/protocol-v2-optimization/audit
+python3 -m experiments.flexible_execution.cli acceleration-audit --revised-v2 --out outputs/protocol-v2-optimization/revised-audit
 python3 -m experiments.flexible_execution.cli acceleration-revision-preflight
 python3 -m experiments.flexible_execution.cli status --profile local5060 --protocol protocol-v2
 python3 -m experiments.flexible_execution.cli continue --profile local5060 --protocol protocol-v2 --resume --max-jobs 12
@@ -21,6 +22,8 @@ python3 -m experiments.flexible_execution.cli continue --profile local5060 --pro
 前置阶段产生的可核对观察进入现有记录和证据账本。记录包含实际对象身份、事实字段、原始照片和发送哈希、请求序号、真实回包可用时刻和有效区间。当前仅在静态仿真回合交接具有身份关联的明确字段。临时目标号、含糊复合判断及未读到的事实仍待解决。场景状态变化或证据过期时撤销记录。在线终验仍按原要求核对全任务，结束后的独立评分重新走原始照片、请求和报告。公用改动与 A 的调度贡献分列。
 
 P0 发现 34 笔发生在整项控制器接管以后。13 笔在首轮报告拒绝之后，其中包含合理补做。只观察到 1 笔完整输入重复，来自同一编译请求的传输重试。分组照片核验和合并终审均无实测发送，保持原实现。无进展停机、换模型和提示精简留待对应证据支持。
+
+新版请求剖析采用相同用途分类和账本核对。尚在运行的尝试列为未结算，已完成的请求和暂时失败的尝试按各自原始终态保留。
 
 ## 证据层级
 

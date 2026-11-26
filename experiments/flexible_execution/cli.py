@@ -492,7 +492,9 @@ def main(argv=None):
     replay_ranker.add_argument("--pilot-dir", required=True, type=Path)
     replay_ranker.add_argument("--output", required=True, type=Path)
     accel = commands.add_parser("acceleration-audit", help="Rebuild logged costs without requesting a model")
-    accel.add_argument("--current-v2", action="store_true", help="Audit the original v2 development attempts")
+    audit_scope = accel.add_mutually_exclusive_group()
+    audit_scope.add_argument("--current-v2", action="store_true", help="Audit the original v2 development attempts")
+    audit_scope.add_argument("--revised-v2", action="store_true", help="Audit only closed revised v2 attempts")
     revision = commands.add_parser("acceleration-revision-preflight", help="Register and verify the revised worker without calls")
     revision.add_argument("--output-root", type=Path, default=CHECKOUT / "outputs")
     revision.add_argument("--chatgpt-project", type=Path, default=DEFAULT_AUTH_PROJECT)
@@ -534,8 +536,11 @@ def main(argv=None):
     if args.command == "acceleration-audit":
         from .acceleration_audit import audit, audit_current_v2
 
-        operation = audit_current_v2 if args.current_v2 else audit
-        print(json.dumps(operation(args.output_root, args.out), ensure_ascii=False, indent=2))
+        if args.current_v2 or args.revised_v2:
+            result = audit_current_v2(args.output_root, args.out, revised=args.revised_v2)
+        else:
+            result = audit(args.output_root, args.out)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
         return
     if args.command == "replay-run":
         from .acceleration_replay import offline

@@ -1,13 +1,16 @@
 # TMC 实验进度
 
-**2026-11-26 13:27 UTC+8。evidence-handoff-r1 开发 1/12，正式 0/456。accel-dev-001 conditional-prefetch 在运行，PID 1908141。**
+**2026-11-26 14:03 UTC+8。evidence-handoff-r1 开发 6/12，正式 0/456。accel-dev-002 conditional-a 第 1 次尝试，PID 1932169。**
 
-- 旧 v2 原始终态保留 5/12。P0 无新模型请求，账本对上 7 次启动和 65 次发送。模型耗时主要来自整项控制和编译。热点表在 outputs/protocol-v2-optimization/audit/。
-- 新版累计完成 1 臂，已结束尝试新发 14 次，当前在跑作业新发 8 次。该版本已结束尝试的 worker 墙钟 8.2 分钟。
-- 首场景已结束结果为 conditional-a TIMEOUT 480.0 秒、14 次。新版首 A 的记录进入真实控制请求，独立覆盖确认为两设备均有字段证据，最终报告未按时验收。
-- 新版冻结源码 e43aa46。原开发的 7 个未完成槽继承账本，原已结束的首场景 5 臂另用第 1 轮修复预算。首个暂停作业仍继承原第 1 次启动。
-- 正式 456 臂继续封存。活跃工时中位情景 49.8 小时。自建当前使用 original_v2_development，服务可用小时数待测。
-- 预检通过的项目接续命令为 `python3 -m experiments.flexible_execution.cli continue --profile local5060 --protocol protocol-v2 --resume --max-jobs 12`。预算父账本、固定源码和原盲选名单见 outputs/protocol-v2-optimization/execution_revision.json。
+- 新版通过 1、任务失败 0、超时 5。已结束尝试发送 83 次，当前正在执行的尝试新增 0 次。已结束 worker 墙钟 47.9 分钟。
+- 旧 v2 保留 5/12 终态。P0 无新请求，重建 7 次启动和 65 笔发送。整项动作推理和联合编译是最大的模型耗时项。明细见 outputs/protocol-v2-optimization/audit/。
+- 新版首场景已结束结果为 conditional-a TIMEOUT 480.0 秒、14 次，conditional-async TIMEOUT 480.0 秒、14 次，conditional-planner FINISHED_VALID 411.5 秒、15 次，conditional-prefetch TIMEOUT 480.0 秒、10 次，conditional-stream TIMEOUT 480.0 秒、16 次。新版首 A 的结构化记录进入真实控制请求并可由独立评分复核，最终报告超时。
+- 新版首场景复算的 6 次已进入任务的尝试，没有出现已核验前置材料在首条控制请求中丢失。旧版同一场景有 4/6 次。全库 87 项本地测试通过。
+- 第二场景流式适配按仅确认后取证许可执行，两次原图判断均绑定原始发送，均无回包前取证动作。该回合超时，发送 14 次。当前继续第二场景 A。
+- 当前有界批次最多启动 6 次。开发回合仍各用原 480 秒上限及 24 次发送上限，既有尝试消耗继续计入。
+- 冻结 worker e43aa46，原 7 个未完成槽迁移并继承旧预算。原已结束的首场景五臂分列到第 1 轮修复。正式用原已盲选 ID。
+- 正式设计为 456 臂。单机活跃工时中位参考 49.9 小时。真实日历时长取决于服务可用性。
+- 当前作业状态 RUNNING。后续从原逻辑预算位置接续。命令 `python3 -m experiments.flexible_execution.cli continue --profile local5060 --protocol protocol-v2 --resume --max-jobs 12`。运行版本和父账本见 outputs/protocol-v2-optimization/execution_revision.json。
 
 ## 旧协议的暂停和历史证据
 

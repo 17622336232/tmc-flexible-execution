@@ -2,6 +2,7 @@
 
 import csv
 from collections import Counter
+from hashlib import sha256
 from math import isfinite
 from pathlib import Path
 from random import Random
@@ -16,6 +17,7 @@ from .custom_schedule import FINAL_ROLE as CUSTOM_FINAL_ROLE
 from .live_audit import _camera_frames, _rows, _verified_judgment, audit_capture_permissions
 from .pilot_schedule import _read, _valid_preflight
 from .public_schedule import FINAL_ROLE as PUBLIC_FINAL_ROLE
+from .runner import _hash
 from .timeline import read_trace_rows, summarize
 
 
@@ -297,7 +299,7 @@ def _paired_summary(rows):
                      "cluster_bootstrap_95": _interval(numbers, 17, 2000)} for key, numbers in values.items()}}
 
 
-def _pair_rows(rows, reference):
+def _pair_differences(rows, reference):
     cases = {}
     for row in rows:
         if row["state"] in RECORDED:
@@ -313,7 +315,11 @@ def _pair_rows(rows, reference):
                               "success_difference": int(row["success"]) - int(target["success"]),
                               "restricted_seconds_difference": row["restricted_seconds"] - target["restricted_seconds"]}
                 reports.setdefault(method, []).append(difference)
-    return {method: _paired_summary(differences) for method, differences in reports.items()}
+    return reports
+
+
+def _pair_rows(rows, reference):
+    return {method: _paired_summary(differences) for method, differences in _pair_differences(rows, reference).items()}
 
 
 def _registered_primary(rows, ours, reference):
@@ -526,8 +532,10 @@ def rebuild(directory, output, *, coverage_object=None, coverage_domain=None):
     rows = [_arm_row(directory, case, method, bindings.get(method))
             for case in catalog["cases"] for method in case["order"]]
     methods = _method_summary(rows)
-    reference = catalog.get("primary_reference") or next((name for name in (
-        "conditional-async", "paired-async", "conditional-rank-heuristic") if name in methods), None)
+    fallback_references = ("conditional-async", "paired-async", "conditional-rank-heuristic")
+    if catalog.get("execution_revision"):
+        fallback_references = ("conditional-planner", *fallback_references)
+    reference = catalog.get("primary_reference") or next((name for name in fallback_references if name in methods), None)
     formal = catalog["role"] in (PUBLIC_FINAL_ROLE, CUSTOM_FINAL_ROLE)
     mode = "ACTUAL_LANGUAGE_AND_VISION_CLOSED_LOOP" if formal else "NATURAL_LATENCY_DEVELOPMENT"
     permission_rows = [row for row in rows if "conditional_permission_violations" in row]
@@ -542,6 +550,11 @@ def rebuild(directory, output, *, coverage_object=None, coverage_domain=None):
               "paired_ranking_comparisons": _paired_ranking(rows),
               "energy_measurement": None, "independently_scored_constraint_violations": permission,
               "scientific_conclusion": "INCONCLUSIVE"}
+    if catalog.get("execution_revision"):
+        protocol = _read(directory / "run_protocol.json")
+        result.update(execution_revision=catalog["execution_revision"], evidence_level=catalog["evidence_level"],
+                      catalog_sha256=_hash(catalog), worker_protocol_sha256=_hash(protocol) if protocol else None,
+                      analysis_sha256=sha256(Path(__file__).read_bytes()).hexdigest())
     if coverage_object is not None:
         result["object_coverage_audit"] = _object_coverage(rows, coverage_object, coverage_domain)
     if formal and catalog.get("protocol_version") == "protocol-v2":
@@ -578,5 +591,12 @@ def rebuild(directory, output, *, coverage_object=None, coverage_domain=None):
         writer = csv.DictWriter(handle, fieldnames=header)
         writer.writeheader()
         writer.writerows(rows)
+    if catalog.get("execution_revision"):
+        fields = ("method", "reference", "case", "group", "success_difference", "restricted_seconds_difference")
+        with (output / "paired_effects.csv").open("w", newline="", encoding="utf8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fields)
+            writer.writeheader()
+            for method, pairs in _pair_differences(rows, reference).items():
+                writer.writerows({**pair, "method": method, "reference": reference} for pair in pairs)
     write_json(output / "summary.json", result)
     return result

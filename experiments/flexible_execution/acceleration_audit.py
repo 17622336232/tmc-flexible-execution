@@ -6,6 +6,7 @@ from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from statistics import median, quantiles
+from time import monotonic
 
 from experiments.task_attack.records import facts, object_id
 from experiments.task_attack.runtime import write_json
@@ -282,15 +283,16 @@ def _v2_request_rows(key, physical, events, raw_path, ledger, ledger_path, gaps)
     return records, windows, open_windows, len(claimed)
 
 
-def audit_current_v2(output_root, destination):
+def audit_current_v2(output_root, destination, *, revised=False):
     from .control import plans
 
-    source = output_root / "acceleration-v2"
+    audit_started = monotonic()
+    source = output_root / ("protocol-v2-optimization" if revised else "acceleration-v2")
     development = source / "development"
     catalog, protocol = (_read(development / name) for name in ("pilot_manifest.json", "run_protocol.json"))
     if not catalog or protocol.get("catalog_sha256") != _hash(catalog):
         raise ValueError("The audited v2 development directory does not match its frozen catalog")
-    gaps, attempts, request_rows, timelines = [], [], [], []
+    gaps, attempts, request_rows, timelines, active_attempts = [], [], [], [], []
     journal = source / "control/jobs.jsonl"
     transitions = {}
     for _, row in _indexed_rows(journal, gaps):
@@ -311,13 +313,16 @@ def audit_current_v2(output_root, destination):
             number = launch["attempt"]
             terminal = transitions.get((job["id"], number), job if job["attempt"] == number else {})
             started_at, finished_at = launch.get("started_at"), terminal.get("finished_at")
+            if finished_at is None:
+                active_attempts.append({"job": job["id"], "attempt": number, "launch": str(launch_path)})
+                continue
             worker_start = datetime.fromisoformat(started_at).timestamp() if started_at else None
             worker_end = datetime.fromisoformat(finished_at).timestamp() if finished_at else None
             lower = launch.get("request_budget", {}).get("reserved", 0)
             upper = terminal.get("request_budget", {}).get("reserved")
             attempt_ledger = {n: row for n, row in ledger.items() if n > lower and
                               (n <= upper if upper is not None else worker_start is None or row[1]["wall"] >= worker_start)}
-            key = {"protocol_version": "protocol-v2", "execution_revision": "original",
+            key = {"protocol_version": "protocol-v2", "execution_revision": catalog.get("execution_revision", "original"),
                    "case": job["case"]["id"], "method": job["method"], "job_id": job["id"], "attempt": number,
                    "code_git_commit": launch.get("code_git_commit", protocol["code_git_commit"])}
             root = launch_path.parent / "episode"
@@ -394,6 +399,7 @@ def audit_current_v2(output_root, destination):
             "token_usage_rows": sum(bool(r.get("token_usage_reported")) for r in group),
             "errors": dict(Counter(r["error"] for r in group if r.get("error")))}
     totals = {"actual_new_model_requests": 0, "actual_new_flights": 0,
+              "execution_revision": catalog.get("execution_revision", "original"),
               "source_cohort": str(development), "source_code_git_commit": protocol["code_git_commit"],
               "source_fingerprint": _hash(protocol["source_sha256"]), "role_totals": roles,
               "recorded_episodes": sum(r["state"] in ("FINISHED_VALID", "FINISHED_TASK_FAILURE", "TIMEOUT")
@@ -405,10 +411,12 @@ def audit_current_v2(output_root, destination):
               "post_rejection_calls": sum(r["requests_after_first_rejection"] for r in attempts),
               "exact_repeated_proposed_reports": sum(r["exact_repeated_proposed_reports"] for r in attempts),
               "exact_input_repeats": sum(bool(r.get("exact_input_repeat")) for r in request_rows),
-              "gap_records": gaps, "pending_jobs_without_attempt": pending_jobs}
+              "gap_records": gaps, "pending_jobs_without_attempt": pending_jobs,
+              "unsettled_attempts_excluded_from_cost_totals": active_attempts}
     destination.mkdir(parents=True, exist_ok=True)
     _csv(destination / "current_v2_attempts.csv", attempts)
     _csv(destination / "current_v2_request_roles.csv", request_rows)
+    totals["audit_active_seconds"] = monotonic() - audit_started
     write_json(destination / "current_v2_timeline.json", {**totals, "attempt_timelines": timelines})
     _write_v2_bottlenecks(destination, totals, attempts)
     return totals
@@ -420,7 +428,7 @@ def _write_v2_bottlenecks(destination, totals, attempts):
     active_episodes = sum(row["task_seconds"] > 0 for row in attempts if row["task_seconds"] is not None)
     parts = [
         "# v2 开发回合热点审计", "",
-        f"原执行提交 `{totals['source_code_git_commit']}`。"
+        f"执行修订 `{totals['execution_revision']}`，提交 `{totals['source_code_git_commit']}`。"
         f"共 {totals['saved_attempts']} 次启动，{totals['recorded_episodes']} 个终态回合。"
         f"{totals['dispatches']} 笔发送中 {totals['raw_dispatch_ledger_matches']} 笔对上账本。"
         f"worker 活跃墙钟 {totals['elapsed_worker_seconds']:.0f} 秒。"
@@ -442,14 +450,15 @@ def _write_v2_bottlenecks(destination, totals, attempts):
         f"完整输入重复 {totals['exact_input_repeats']} 笔，重提完全相同的报告"
         f" {totals['exact_repeated_proposed_reports']} 次。已知外部错误列于逐请求表。",
         "", "## 仅由源码提出的怀疑", "",
-        "全图分组在插入照片时可能失配，超过四图才走的分组与合并终审在这份样本中均未发生。"
-        "当前没有这一分支的热点证据。已核验前置观察的交接可能减少后续查询，实际可避免的调用"
+        "全图分组在插入照片时可能失配。分组与合并终审的真实请求量见上表。"
+        "已核验前置观察的交接可能减少后续查询，实际可避免的调用"
         "及整项时差需在同版本真实开发中核验。",
         "", "## 无法确认项", "",
         "服务未返回令牌计数时保留缺失。既有事件能确认冻结结果应用和报告拒绝后的顺序，"
         "不足以复原完整关键路径。独立评分与退出的各自时长缺少起止事件，worker 退出前的合并时段仍保留。",
         f"原始日志解析缺口 {len(totals['gap_records'])} 条，日志索引及不可分类调用见时间线与逐请求表。"
-        "所有有模型请求的尝试来自首个物理场景。跨作业的额度等待可由原始日历时间重算。",
+        f"有真实发送记录的尝试来自 {len({row['case'] for row in attempts if row['physical_dispatches']})} 个场景。"
+        "跨作业的额度等待可由原始日历时间重算。",
         "", "重算命令见本目录父项目的实验协议。", "",
     ]
     (destination / "BOTTLENECK_REPORT.md").write_text("\n".join(parts), encoding="utf8")

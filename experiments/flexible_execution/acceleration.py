@@ -139,4 +139,9 @@ def advance_stage(output_root, checkout, defaults, args, launch_limit):
             return batch(cohort)
         result = rebuild(cohort, root / "reports" / cohort.name)
         finished[cohort.name] = result["recorded_episodes"]
+    if root.name == "protocol-v2-optimization":
+        import sys
+
+        run([sys.executable, str(checkout / "scripts/plot_v2_optimization.py"), "--outputs", str(output_root)],
+            cwd=checkout, check=True)
     return {**status(output_root), "execution_status": "EVALUATED", "completed_reports": finished}, 0

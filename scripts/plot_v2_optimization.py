@@ -55,7 +55,7 @@ def _development(old, new, output):
                 continue
             passed = row["state"] == "FINISHED_VALID"
             axis.bar(index + shift, row["seconds"] if passed else 480, .34, color=color,
-                     hatch=None if passed else "////", edgecolor=color, alpha=.95,
+                     hatch=None if passed else "////", edgecolor=color if passed else "#39475a", alpha=.95,
                      label=label if method == next(item for item in METHODS if item in rows) else None)
     axis.set_xticks(range(len(NAMES)))
     axis.set_xticklabels(NAMES)
@@ -64,9 +64,9 @@ def _development(old, new, output):
     axis.set_title("Development scene 001  |  recorded arms", loc="left")
     axis.grid(axis="y", alpha=.18)
     axis.set_axisbelow(True)
-    axis.legend(frameon=False, loc="lower left")
+    axis.legend(frameon=False, loc="upper center", bbox_to_anchor=(.5, -.13), ncol=2)
     figure.text(.12, .008, "Hatched: unsuccessful by deadline. Missing: no recorded result. One scene.", fontsize=9)
-    figure.subplots_adjust(bottom=.18)
+    figure.subplots_adjust(bottom=.25)
     _export(figure, output / "scene-001-development.png")
 
 

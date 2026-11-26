@@ -172,8 +172,11 @@ def update(output_root, development):
         "validated_parallelism": None, "applied_speedup_assumption": 1}
     write_json(root / "measured_estimate.json", estimate)
     if revised:
+        from .acceleration_replay import _trace
+
         write_json(root / "cost_projection.json", _cost_projection(output_root, result, estimate))
         write_json(root / "development_power.json", _power(development, result))
+        write_json(root / "development-trace-replay.json", _trace(development))
     return result
 
 
@@ -228,6 +231,7 @@ def _cost_projection(output_root, development, estimate):
             "original_post_task_seconds_including_score_and_teardown": sum(
                 float(row["post_task_worker_seconds"] or 0) for row in original_timing),
             "original_active_worker_dispatches_per_hour": 3600 * audit["dispatches"] / audit["elapsed_worker_seconds"],
+            "original_zero_request_audit_active_seconds": audit.get("audit_active_seconds"),
             "revised_development_active_worker_seconds": development["all_closed_attempts_worker_seconds"],
             "revised_development_actual_dispatches": development["all_closed_attempts_requests"],
             "observed_external_restart_gaps": calendar_gaps, "verified_quota_reset_schedule": None,
