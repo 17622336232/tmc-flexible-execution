@@ -7,7 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from experiments.flexible_execution import cli, control
+from experiments.flexible_execution import acceleration, cli, control
 from experiments.flexible_execution.pilot_report import _attempt_costs
 from experiments.flexible_execution.request_budget import RequestBudget
 from experiments.flexible_execution.storage import archive_sensor_logs
@@ -58,11 +58,14 @@ class SupervisorTest(unittest.TestCase):
     def test_project_spends_remaining_launches_on_the_next_stage(self):
         stages = [({"stage": "first", "last_batch": {"launched": 1}, "active_jobs": []}, 1),
                   ({"stage": "next", "last_batch": {"launched": 2}, "active_jobs": []}, 2)]
-        with patch.object(cli, "_continue_stage", side_effect=stages) as run_stage:
-            result = cli._continue(Path("out"), Path("run"), {}, SimpleNamespace(max_jobs=3))
-        self.assertEqual([call.args[-1] for call in run_stage.call_args_list], [3, 2])
-        self.assertEqual([row["stage"] for row in result["project_batches"]], ["first", "next"])
-        self.assertEqual(result["remaining_launch_allowance"], 0)
+        for protocol, module, stage in (("legacy", cli, "_continue_stage"),
+                                        ("protocol-v2", acceleration, "advance_stage")):
+            with self.subTest(protocol=protocol), patch.object(module, stage, side_effect=stages) as run_stage:
+                args = SimpleNamespace(max_jobs=3, protocol=protocol)
+                result = cli._continue(Path("out"), Path("run"), {}, args)
+                self.assertEqual([call.args[-1] for call in run_stage.call_args_list], [3, 2])
+                self.assertEqual([row["stage"] for row in result["project_batches"]], ["first", "next"])
+                self.assertEqual(result["remaining_launch_allowance"], 0)
 
     def test_resume_requests_the_existing_owned_schedule(self):
         state = {"execution_status": "RUNNING", "pilot_directory": "existing", "active_jobs": [{"arm": "owned"}]}

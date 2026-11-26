@@ -412,13 +412,19 @@ def _continue(output_root, directory, defaults, args):
     remaining = args.max_jobs
     batches = []
     while remaining:
-        result, launched = _continue_stage(output_root, directory, defaults, args, remaining)
+        if getattr(args, "protocol", "legacy") == "protocol-v2":
+            from .acceleration import advance_stage
+
+            result, launched = advance_stage(output_root, CHECKOUT, defaults, args, remaining)
+        else:
+            result, launched = _continue_stage(output_root, directory, defaults, args, remaining)
         if launched:
             batches.append({"stage": result["stage"], **result["last_batch"]})
             remaining -= launched
         current = result.get("current_job") or {}
         state = current.get("state")
-        if not launched or result.get("active_jobs") or state in {"BLOCKED_EXTERNAL", "CANCELLED_BY_USER"}:
+        if (not launched or result.get("active_jobs") or state in {"BLOCKED_EXTERNAL", "CANCELLED_BY_USER"}
+                or result.get("execution_status") == "BLOCKED_EXTERNAL"):
             break
         if state == "INFRA_ERROR":
             error = (current.get("result") or {}).get("error") or {}
@@ -710,11 +716,10 @@ def main(argv=None):
             result = run(directory, CHECKOUT, defaults, args.resume)
         elif args.command == "reproduce":
             result = reproduce(directory, manifest(CHECKOUT, defaults))
-        elif args.command in ("continue", "status") and args.protocol == "protocol-v2":
+        elif args.command == "status" and args.protocol == "protocol-v2":
             from . import acceleration
 
-            result = (acceleration.advance(args.output_root.resolve(), CHECKOUT, defaults, args)
-                      if args.command == "continue" else acceleration.status(args.output_root.resolve()))
+            result = acceleration.status(args.output_root.resolve())
         elif args.command == "continue":
             result = _continue(args.output_root.resolve(), directory, defaults, args)
         else:

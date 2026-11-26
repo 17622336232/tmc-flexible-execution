@@ -82,7 +82,7 @@ def status(output_root):
                             "--protocol protocol-v2 --resume --max-jobs 12"}
 
 
-def advance(output_root, checkout, defaults, args):
+def advance_stage(output_root, checkout, defaults, args, launch_limit):
     from .acceleration_results import update
 
     root = output_root / "acceleration-v2"
@@ -91,25 +91,31 @@ def advance(output_root, checkout, defaults, args):
     legacy = output_root / "control"
 
     def batch(pilot):
-        return pilot_run(pilot, root / "control", checkout, resume=args.resume, max_jobs=args.max_jobs,
-                         auth_project=args.chatgpt_project, unlock_external=args.retry_external,
-                         minimum_free_disk_gb=defaults["resources"]["minimum_free_disk_gb"], lease_control=legacy)
+        result = pilot_run(pilot, root / "control", checkout, resume=args.resume, max_jobs=launch_limit,
+                           auth_project=args.chatgpt_project, unlock_external=args.retry_external,
+                           minimum_free_disk_gb=defaults["resources"]["minimum_free_disk_gb"], lease_control=legacy)
+        used = 0 if result.get("worker_owned_by_another_batch") else result.get("last_batch", {}).get("launched", 0)
+        return result, used
 
-    active = control_status(root / "control")
-    if active["active_jobs"]:
-        return batch(Path(active["pilot_directory"])) if args.resume else active
+    execution = control_status(root / "control")
+    if execution["active_jobs"]:
+        if args.resume and execution.get("pilot_directory") and any(j.get("arm") for j in execution["active_jobs"]):
+            return batch(Path(execution["pilot_directory"]))
+        return execution, 0
+    if execution["execution_status"] == "BLOCKED_EXTERNAL" and not args.retry_external:
+        return execution, 0
     if development["recorded_arms"] < development["planned_arms"]:
-        batch_result = batch(directory)
+        batch_result, used = batch(directory)
         if (directory / "run_protocol.json").is_file() and not batch_result.get("active_jobs"):
             update(output_root, directory)
-        return batch_result
+        return batch_result, used
     from .cli import _scene_python
     from .pilot_report import rebuild
 
     update(output_root, directory)
     estimate = read_json(root / "measured_estimate.json")
     if estimate["main_hours_q1_median_q3"][2] > 7 * 24:
-        return {**status(output_root), "execution_status": "BLOCKED_DURATION", "estimate": estimate}
+        return {**status(output_root), "execution_status": "BLOCKED_DURATION", "estimate": estimate}, 0
     custom, public = root / "custom-final", root / "public-final"
     if not all((path / "pilot_manifest.json").is_file() for path in (custom, public)):
         prepared = run([str(_scene_python()), "-m", "experiments.flexible_execution.cli", "acceleration-final-prepare",
@@ -124,4 +130,4 @@ def advance(output_root, checkout, defaults, args):
             return batch(cohort)
         result = rebuild(cohort, root / "reports" / cohort.name)
         finished[cohort.name] = result["recorded_episodes"]
-    return {**status(output_root), "execution_status": "EVALUATED", "completed_reports": finished}
+    return {**status(output_root), "execution_status": "EVALUATED", "completed_reports": finished}, 0

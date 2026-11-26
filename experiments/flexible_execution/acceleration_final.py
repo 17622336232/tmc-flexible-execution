@@ -83,6 +83,10 @@ def prepare_online(output_root, checkout, defaults, auth_project):
     from .acceleration_results import development_summary
 
     evidence = development_summary(development)
+    violations = [row["job"] for row in evidence["rows"]
+                  if (row["permit_audit"] or {}).get("violations") or row["prior_attempt_permission_violations"]]
+    if violations:
+        raise ValueError("Development camera permission violations prevent the test freeze: " + ", ".join(violations))
     if not evidence["ours_complete_with_multiple_verified_queries"]:
         raise ValueError("A has no independently accepted v2 task with multiple bound judgments")
     # Learning has no v2 natural development contrast in the first budgeted cohort.

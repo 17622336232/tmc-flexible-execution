@@ -66,6 +66,11 @@ def _spans(events):
     return phases, len(starts)
 
 
+def _field_map(records):
+    return {(str(object_id(record)).casefold(), field): value for record in (records or [])
+            for field, value in facts(record).items() if object_id(record) and value is not None}
+
+
 def _attempt(job, launch, root, terminal, failures):
     public = bool(job.get("public_runtime"))
     robot = root if public else root / "private/robot"
@@ -109,6 +114,18 @@ def _attempt(job, launch, root, terminal, failures):
     identity = dict(platform="ProcTHOR" if public else "Gazebo", case=case["id"], method=job["method"],
                     family=case["family"], job_id=job["id"], attempt=launch.get("attempt", job.get("attempt")),
                     cohort=job["stage"])
+    controller = [call for call in calls if _purpose(call) == "action_and_reading" and isinstance(call.get("output"), dict)]
+    dropped = 0
+    for before, after in zip(controller, controller[1:]):
+        previous = _field_map(before["input"].get("records"))
+        added = _field_map(before["output"].get("records"))
+        current = _field_map(after["input"].get("records"))
+        updated = {obj for obj, _ in added}
+        overwritten = {key for key in previous if key[0] in updated and key not in added and key not in current}
+        dropped += len(overwritten)
+        for obj, field in sorted(overwritten):
+            failures.append({**identity, "object": obj, "field": field, "finding": "complementary_field_disappeared",
+                             "raw_index": str(root)})
     for obj, fields in coverage.get("missing_fields_by_object", {}).items():
         for field in fields:
             count = mentions[obj.casefold(), field]
@@ -123,10 +140,15 @@ def _attempt(job, launch, root, terminal, failures):
     front = [v for group in spans.values() for start, end in group for v in (start, end)]
     front_span = prefix - min(front) if prefix is not None and front else None
     timings = {kind + "_interval_seconds": sum(b - a for a, b in group) for kind, group in spans.items()}
+    cpu = _read(root.parent / "worker_cpu.json")
+    lengths = {key + "_json_utf8_bytes": sum(len(json.dumps(call[key], ensure_ascii=False).encode("utf8"))
+                                             for call in calls if key in call) for key in ("input", "output")}
     return {**identity, "model": job.get("model"), "effort": job.get("reasoning_effort"),
             "code_git_commit": launch.get("code_git_commit", job.get("code_git_commit")), "started_at": launched,
             "terminal_state": terminal.get("state"), "dispatches_with_log": len(calls),
             "usage_token_samples": sum(bool(c.get("usage")) for c in calls),
+            "local_worker_cpu_seconds": cpu["user_seconds"] + cpu["system_seconds"] if cpu else None,
+            "complementary_field_disappearances": dropped,
             "model_transport_seconds": sum(c.get("wall_seconds", 0) for c in calls),
             "repeat_exact_requests": sum(amount - 1 for amount in fingerprints.values()),
             "acceptance_without_new_image_hash": no_new_acceptance,
@@ -146,7 +168,7 @@ def _attempt(job, launch, root, terminal, failures):
             "later_strategy_checks": sum(e["event"] == "pending_strategy" for e in events),
             "controller_report_claim": next((e.get("outcome") for e in reversed(events) if e["event"] ==
                                              "report_written"), None),
-            "independent_coverage_pass": coverage.get("complete"), "raw_index": str(root), **phases, **timings}
+            "independent_coverage_pass": coverage.get("complete"), "raw_index": str(root), **phases, **timings, **lengths}
 
 
 def _csv(path, rows):
@@ -189,6 +211,7 @@ def audit(output_root, destination):
               "actual_new_model_requests": 0, "saved_worker_attempts": len(rows),
               "logged_dispatches": sum(r["dispatches_with_log"] for r in rows),
               "exact_duplicate_requests": sum(r["repeat_exact_requests"] for r in rows),
+              "complementary_field_disappearances": sum(r["complementary_field_disappearances"] for r in rows),
               "acceptance_without_new_images": sum(r["acceptance_without_new_image_hash"] for r in rows),
               "old": old, "old_total": sum(old.values()), "new": new, "new_main": 456, "new_final_ceiling": 528,
               "new_final_request_ceiling": 12672, "initial_projections_by_worker": platforms,

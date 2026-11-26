@@ -64,28 +64,56 @@ def replay(directory, output, *, configurations=None):
             task = _contract(raw_contract)
             state = Snapshot(binding["submitted_at"], task.start, {}, {}, {})
             pool = candidate_prefixes(task, state, 3, 256, float("inf"))
-            methods = {}
+            methods, checked_prefixes = {}, {}
             for (label, name), policy in policies.items():
-                stats = {}
+                stats, examined = {}, set()
 
                 def record(event, **fields):
                     if event == "candidate_search_summary":
                         stats.update(fields)
+                    elif event == "candidate_checked":
+                        examined.add(fields["candidate"])
 
                 started_cpu = process_time()
                 decision = select_ranked(task, state, checked, record, ranker=policy.ranker,
                                          check_cap=policy.check_cap, budget_ms=1000, max_prepare=3,
                                          minimum_net_gain=policy.minimum_net_gain, fixed_prefixes=pool)
                 identifier = name if label == "recorded" else label + "/" + name
+                checked_prefixes[identifier] = examined
                 methods[identifier] = {**stats,
                     "process_cpu_seconds": process_time() - started_cpu,
                     "selected": [action.skill.id for action in decision.prepare] if decision else [],
                     "predicted_finish_seconds": decision.expected_finish if decision else stats["baseline_finish"]}
-            if len({row["candidate_prefixes_sha256"] for row in methods.values()}) != 1:
+            if (any(row["generated"] != len(pool) for row in methods.values()) or
+                    len({row["candidate_prefixes_sha256"] for row in methods.values()}) != 1):
                 raise ValueError("The identical candidate pool could not be scored within every policy's wall budget")
+            # Only the evaluator sees these certificates, after every policy has selected.
+            exhaustive_start = process_time()
+            feasible = {}
+            for prefix in pool:
+                proof, _ = checked(task, state, prefix)
+                if proof is not None:
+                    feasible["|".join(action.skill.id for action in prefix)] = proof.expected_finish
+            exhaustive_cpu = process_time() - exhaustive_start
+            baseline = next(iter(methods.values()))["baseline_finish"]
+            improving = {key: finish for key, finish in feasible.items() if finish < baseline - 1e-9}
+            best_finish = min(improving.values(), default=baseline)
+            for identifier, row in methods.items():
+                chosen = "|".join(row["selected"])
+                difference = max(0.0, row["predicted_finish_seconds"] - best_finish)
+                row.update({"selected_prefix_feasible": not chosen or chosen in feasible,
+                            "unexamined_feasible_prefixes": len(feasible.keys() - checked_prefixes[identifier]),
+                            "unexamined_improving_prefixes": len(improving.keys() - checked_prefixes[identifier]),
+                            "forecast_gap_to_best_seconds": difference,
+                            "missed_best_forecast": difference > 1e-9})
             rows.append({"case": case["id"], "group": case["group_id"], "source_method": method,
+                         "model": job["model"], "reasoning_effort": job["reasoning_effort"],
+                         "source_code_git_commit": job["code_git_commit"], "source": str(robot),
                          "bound_original_query_sha256": binding["input_hash"], "contract_sha256": _hash(raw_contract),
-                         "pending_at_seconds": state.at, "fixed_candidates": len(pool), "methods": methods})
+                         "pending_at_seconds": state.at, "fixed_candidates": len(pool), "methods": methods,
+                         "exhaustive_same_pool": {"checked": len(pool), "feasible": len(feasible),
+                                                  "improving": len(improving), "best_finish_seconds": best_finish,
+                                                  "baseline_finish_seconds": baseline, "cpu_seconds": exhaustive_cpu}})
     output.parent.mkdir(parents=True, exist_ok=True)
     result = {"mode": "OFFLINE_FIXED_POOLS_FROM_ACTUAL_VISUAL_FRONTENDS", "actual_model_requests": 0,
               "evidence_level": "DECISION_REPLAY",
