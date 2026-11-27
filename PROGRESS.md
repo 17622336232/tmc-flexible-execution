@@ -1,20 +1,20 @@
 # TMC 实验进度
 
-**2026-11-28 05:18 UTC+8。开发 12/12，正式 355/456。custom-execution-condition-195 conditional-async 第 1 次尝试，PID 3252505。**
+**2026-11-28 05:54 UTC+8。开发 12/12，正式 365/456。procthor-test-house-0539-view-2 conditional-planner 第 1 次尝试，PID 3271978。**
 
-- 正式名单与原盲选 ID 一致。自建 355/360，公开 0/96，附加回合登记 0。正式冻结使用 evidence-handoff-r1、gpt-6.1-terra、max 和每回合 24 次请求上限。
-- 正式已结束回合通过 98、任务失败 93、超时 164。
-- 正式实际运行提交 d144b9c。已观察到正式发送 3471 次，已结束正式尝试的控制账本墙钟 2147.9 分钟。
+- 正式名单与原盲选 ID 一致。自建 360/360，公开 5/96，附加回合登记 0。正式冻结使用 evidence-handoff-r1、gpt-6.1-terra、max 和每回合 24 次请求上限。
+- 正式已结束回合通过 103、任务失败 94、超时 168。
+- 正式实际运行提交 自建 d144b9c、公开 5716da5。已观察到正式发送 3549 次，已结束正式尝试的控制账本墙钟 2182.6 分钟。
 - 开发 1 通过、2 任务失败、9 超时，全部尝试共 145 次真实发送，worker 活跃 92.9 分钟。开发独立许可审计发现 0 个违规。首 A 的证据交接已在真实发送与独立评分中复核。
 - 旧 v2 保留 5/12 终态。P0 重建 7 次启动、65 次实际发送，审计无额外模型请求。旧排程继续保持暂停。
 - 开发作业共 12 个槽位已对照旧版和修订版。旧版 65 次与接续 76 次合计 141/288。第一轮修复 69/144，第二轮未启用。详见 outputs/protocol-v2-optimization/development-report/execution_crosswalk.csv。
 - 正式全部回合活跃工时中位情景 49.8 小时。套餐可用时间和真实日历工期尚未确定。开发图、原始审计和成本表见 outputs/protocol-v2-optimization/。
-- 按已结束的 355 个自建回合及4 间旧公开验证房估算。若后续实测耗时相近，剩余约 1.5 小时活跃工时。日历用时还受服务中断影响。
+- 按已结束的 360 个自建回合及5 个正式公开回合估算。若后续实测耗时相近，剩余约 1.3 小时活跃工时。日历用时还受服务中断影响。
 - 首个正式场景五臂均已记账，通过 0、任务失败 1、超时 4，共 49 次发送，批次墙钟 37.5 分钟。
 - 第二场景流式回合在原尝试的 240.5 秒处因服务超时中断，按原期限记失败。两次尝试合计 278.2 秒、3 次发送。修复依据原始尝试复核，88 项本地测试通过。
-- 正式前 355 个自建回合共核对 3471/3471 次调用和图像账本。联合编译 425 次，其中 95 次传输超时。耗时分解见 outputs/protocol-v2-optimization/formal-progress/request-role-summary.json。
-- 已复核 164 个到期回合的最后一秒，其中 161 个仍有真实模型调用。逐次计量见 outputs/protocol-v2-optimization/formal-progress/deadline-request-windows.csv。
-- 正式逐回合表已复核 355 条，71 个完整场景配对。见 outputs/protocol-v2-optimization/formal-progress/。
+- 正式前 360 个自建回合共核对 3530/3530 次调用和图像账本。联合编译 430 次，其中 95 次传输超时。耗时分解见 outputs/protocol-v2-optimization/formal-progress/request-role-summary.json。
+- 已复核 168 个到期回合的最后一秒，其中 165 个仍有真实模型调用。逐次计量见 outputs/protocol-v2-optimization/formal-progress/deadline-request-windows.csv。
+- 正式逐回合表已复核 365 条，73 个完整场景配对。见 outputs/protocol-v2-optimization/formal-progress/。
 - 18:07 发现总控退出，复核并接收第六场景预取保存的原始超时结果，任务计时 480 秒，13 次发送。控制账本关闭比最后原始结果落盘约晚 35 秒。正式连续任务时间取原始计时。
 - 第七场景的普通异步出现实际编译回复不支持复合条件，按原始回复记任务失败。原回合发送 1 次、计时 112.9 秒。归类修正通过 89 项本地测试。
 - 联合编译诊断在前 315 个回合中复现 18 次同类退出。只把条件分支设为 `null` 时，18 份任务字段均可解析。`custom-execution-condition-134` 的四个对照在等待策略启动前触发，A 用 337.95 秒通过。另一个库存定位场景 `custom-execution-condition-077` 的 A 也发生同类退出。复核新增模型请求为 0，原终态保留。见 `outputs/protocol-v2-optimization/formal-progress/compiler-branch-replays.json`。
@@ -26,6 +26,8 @@
 - `custom-scene-106` 的通道定位也有五种方法通过独立验收。同场 PLANNER 111.30 秒，A 116.89 秒，均实际发送 5 次。逐回合实测见 `outputs/protocol-v2-optimization/formal-progress/recorded_episodes.csv`。
 - 11 月 27 日 01:44 检测到总控退出码 143。第十八场景 A 已留下原始记录，任务 480 秒、16 次真实发送，独立验收未通过。恢复时从第 1 次尝试结算超时，账本保留单次尝试，随后启动同场景规划基线。
 - 11 月 27 日 02:43 从第二十场景预取的原始日志恢复总控。此前总控退出码 143，仿真自行写完原始超时结果。480 秒、14 次发送均核对，原回合保留一次尝试，同场景 A 随后启动。
+- 自建正式 72 个场景的 360 回合全部结算，通过 98、任务失败 94、超时 168，真实发送 3530 次。主配对使用 70 个独立来源组，预登记检验和区间已从全部原始记录重建。结果和逐回合表见 outputs/protocol-v2-optimization/reports/custom-final/。首间公开测试房四法均通过，共发送 16 次。
+- 自建实际 worker 为 `d144b9c`，公开为 `5716da5`。两份实际锁定目录分别逐字节匹配登记的 123、113 个运行源码，登记环境哈希一致。提交差异涉及总控错误结算、分析、测试和文档。两个域各自锁定源码。见 outputs/protocol-v2-optimization/formal-progress/formal-worker-versions.json。
 - 第一组结构场景已完成 24/24 场景、120/120 回合。A 和预取各通过 1，任务失败 35、超时 83，发送 1385 次。布局变化组已接续。分组统计见 outputs/protocol-v2-optimization/formal-progress/completed-custom-strata.json。
 - 布局变化组已完成 24/24 场景、120/120 回合。独立验收通过 43、任务失败 35、超时 42，共发送 1030 次。A 通过 11/24，PLANNER 9/24。同场受限完成用时的平均差为 A 减 PLANNER −21.04 秒。布局组各方法均无回包前取证。分组统计为描述性结果。下一组执行条件已启动。
 - 执行条件组 `custom-execution-condition-001` 的 A 在 360 秒限时内用 249.53 秒、9 次真实发送完成。独立验收确认 4 处通道的堵塞记录正确且完整，回包前动作数为 0。见 outputs/protocol-v2-optimization/formal-progress/first-execution-a-valid-proof.json。
@@ -50,8 +52,8 @@
 - 07:20，`custom-scene-021` 的 A 在第 8 次请求收到 503 `subscription_sharing_user_unavailable`，任务计时 223.75 秒。总控修复后在零新请求下结算原始一次尝试为服务中断失败，校验值一致，保留 8 次实际发送。约五分钟后在同一账号启动原定预取回合，收到有效模型结果。该回合以 480 秒、15 次发送到期。全部 90 项本地测试通过。
 - 21:26 核对无活跃仿真。`custom-execution-condition-071` 的 PLANNER 和流式回合因 `network_error` 结算，原始用时 88.30 秒和 10.57 秒。启动下一登记 `custom-execution-condition-077` 普通异步的命令两次在运行前遭遇自动审批超时，作业和请求预算尚未启动。
 - 21:28 自动审批通过，`custom-execution-condition-077` 普通异步收到任务解析回复，后续传输报 `network_error`，原回合记 81.84 秒、3 次发送。完成零模型请求的连接检查后接续登记预取。预取的真实图片调用和完整验收均通过，181.45 秒、5 次发送。同场其余三法随后启动。
-- 当前回合任务时限约余 360 秒，账本剩余 24 次发送。本有界批最多启动 5 次。
-- 当前作业状态 RUNNING。继续当前冻结协议的命令为 `python3 -m experiments.flexible_execution.cli continue --profile local5060 --protocol protocol-v2 --resume --max-jobs 5`。
+- 当前回合任务时限约余 480 秒，账本剩余 24 次发送。本有界批最多启动 4 次。
+- 当前作业状态 RUNNING。继续当前冻结协议的命令为 `python3 -m experiments.flexible_execution.cli continue --profile local5060 --protocol protocol-v2 --resume --max-jobs 4`。
 
 ## 旧协议的暂停和历史证据
 
