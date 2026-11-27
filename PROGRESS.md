@@ -1,20 +1,20 @@
 # TMC 实验进度
 
-**2026-11-27 23:49 UTC+8。开发 12/12，正式 300/456。custom-execution-condition-112 conditional-stream 第 1 次尝试，PID 3074546。**
+**2026-11-28 00:37 UTC+8。开发 12/12，正式 305/456。custom-execution-condition-128 conditional-a 第 1 次尝试，PID 3099832。**
 
-- 正式名单与原盲选 ID 一致。自建 300/360，公开 0/96，附加回合登记 0。正式冻结使用 evidence-handoff-r1、gpt-6.1-terra、max 和每回合 24 次请求上限。
-- 正式已结束回合通过 74、任务失败 83、超时 143。
-- 正式实际运行提交 d144b9c。已观察到正式发送 2937 次，已结束正式尝试的控制账本墙钟 1839.5 分钟。
+- 正式名单与原盲选 ID 一致。自建 305/360，公开 0/96，附加回合登记 0。正式冻结使用 evidence-handoff-r1、gpt-6.1-terra、max 和每回合 24 次请求上限。
+- 正式已结束回合通过 76、任务失败 83、超时 146。
+- 正式实际运行提交 d144b9c。已观察到正式发送 3021 次，已结束正式尝试的控制账本墙钟 1884.9 分钟。
 - 开发 1 通过、2 任务失败、9 超时，全部尝试共 145 次真实发送，worker 活跃 92.9 分钟。开发独立许可审计发现 0 个违规。首 A 的证据交接已在真实发送与独立评分中复核。
 - 旧 v2 保留 5/12 终态。P0 重建 7 次启动、65 次实际发送，审计无额外模型请求。旧排程继续保持暂停。
 - 开发作业共 12 个槽位已对照旧版和修订版。旧版 65 次与接续 76 次合计 141/288。第一轮修复 69/144，第二轮未启用。详见 outputs/protocol-v2-optimization/development-report/execution_crosswalk.csv。
 - 正式全部回合活跃工时中位情景 49.8 小时。套餐可用时间和真实日历工期尚未确定。开发图、原始审计和成本表见 outputs/protocol-v2-optimization/。
-- 按已结束的 300 个自建回合及4 间旧公开验证房估算。若后续实测耗时相近，剩余约 7.1 小时活跃工时。日历用时还受服务中断影响。
+- 按已结束的 305 个自建回合及4 间旧公开验证房估算。若后续实测耗时相近，剩余约 6.6 小时活跃工时。日历用时还受服务中断影响。
 - 首个正式场景五臂均已记账，通过 0、任务失败 1、超时 4，共 49 次发送，批次墙钟 37.5 分钟。
 - 第二场景流式回合在原尝试的 240.5 秒处因服务超时中断，按原期限记失败。两次尝试合计 278.2 秒、3 次发送。修复依据原始尝试复核，88 项本地测试通过。
-- 正式前 300 个自建回合共核对 2937/2937 次调用和图像账本。联合编译 363 次，其中 85 次传输超时。耗时分解见 outputs/protocol-v2-optimization/formal-progress/request-role-summary.json。
-- 已复核 143 个到期回合的最后一秒，其中 141 个仍有真实模型调用。逐次计量见 outputs/protocol-v2-optimization/formal-progress/deadline-request-windows.csv。
-- 正式逐回合表已复核 300 条，60 个完整场景配对。见 outputs/protocol-v2-optimization/formal-progress/。
+- 正式前 305 个自建回合共核对 3021/3021 次调用和图像账本。联合编译 368 次，其中 85 次传输超时。耗时分解见 outputs/protocol-v2-optimization/formal-progress/request-role-summary.json。
+- 已复核 146 个到期回合的最后一秒，其中 144 个仍有真实模型调用。逐次计量见 outputs/protocol-v2-optimization/formal-progress/deadline-request-windows.csv。
+- 正式逐回合表已复核 305 条，61 个完整场景配对。见 outputs/protocol-v2-optimization/formal-progress/。
 - 18:07 发现总控退出，复核并接收第六场景预取保存的原始超时结果，任务计时 480 秒，13 次发送。控制账本关闭比最后原始结果落盘约晚 35 秒。正式连续任务时间取原始计时。
 - 第七场景的普通异步出现实际编译回复不支持复合条件，按原始回复记任务失败。原回合发送 1 次、计时 112.9 秒。归类修正通过 89 项本地测试。
 - 联合编译诊断在前 280 个回合中复现 12 次同类退出。只把条件分支设为 `null` 时，12 份任务字段均可解析。`custom-scene-064` 的 4 个对照、`custom-scene-164` 的 3 个方法，以及 `custom-execution-condition-077` 的 A 均在等待策略启动前触发。复核新增模型请求为 0，原终态保留。见 `outputs/protocol-v2-optimization/formal-progress/compiler-branch-replays.json`。
@@ -35,6 +35,8 @@
 - 19:24 核实双场景批次总控退出码 143，最后心跳 19:20:44。`custom-execution-condition-030` 的流式仿真留下原始结果，327.37 秒、9 次发送后报告 `network_error`。总控按同一次尝试接收为任务中断失败，后续登记作业已接续。随后按各场限时把批次控制在约半小时，减少总控中途退出的影响。
 - 正式停车任务首次通过出现在 `custom-execution-condition-030`。PLANNER 用 578.06 秒、19 次真实发送，A 用 492.81 秒、11 次，均在 600 秒内通过。独立验收确认两处点位的禁停规定和车辆占用来自有效照片。
 - `custom-execution-condition-058` 是执行条件组首个五种方法均通过的场景。独立验收覆盖设备裂纹与温度。整项用时 A 221.68、普通异步 272.93、PLANNER 315.20、预取 357.15、流式 501.99 秒，各用 9、11、12、14、15 次实际发送。
+- 首个提前许可场景 `custom-execution-condition-112` 的 A 在 520.83 秒、16 次发送后通过独立验收。两次真实判断回包前均启动获许可的动作，其中一次在回包前拍完。阳性设备的编号照于回包后 0.99 秒完成，第 4 次真实调用确认编号，第 6 次实际控制调用含绑定编号的裂纹事实。阴性设备的照片早于回包 5.41 秒完成，在后续模型的场景图片中出现。最终报告引用了两张后拍照片。同场普通异步通过，用时 361.97 秒。见 outputs/protocol-v2-optimization/formal-progress/first-formal-early-action-chain.json。
+- 首个提前许可场景五法已结算。流式无绑定回包前动作，规划和预取均有两次获许可的提前移动，预取一次在回包前拍完。这三法都在 600 秒到期。该场五法的许可动作复核未观察到违规。完整计量见 outputs/protocol-v2-optimization/formal-progress/registered-early-results.json。
 - 正式作图脚本已验证单域和双域生成路径。每个域录齐后，按方法展示任务通过、失败和超时，并生成预登记的配对效果图。公开验证所需的本地场景包和仿真程序已确认可读。
 - 已按冻结指令复核许可覆盖。自建 72 场景有 3 个明确允许提前取得本体编号，均为 600 秒裂纹场景。公开 24 场景均明确允许提前拍侧面照片。逐场许可复核见 outputs/protocol-v2-optimization/formal-progress/registered-permissions.json。
 - 零请求核对 72 个不同物理布局，来源组为 70。两对场景在自建结构及执行条件层之间共用资产组，实测布局各异。与登记的训练及开发清单相比，资产来源和物理布局均无重合。配对检验按来源组归并。见 outputs/protocol-v2-optimization/formal-progress/stratum-coverage.json。
