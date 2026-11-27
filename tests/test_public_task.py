@@ -106,6 +106,9 @@ class PublicInspectionScoreTest(unittest.TestCase):
             row = _public_arm(initial.copy(), arm, episode, job)
             method = _method_summary([row])[row["method"]]
             self.assertFalse(row["success"])
+            self.assertEqual(row["first_action_from_first_logged_event_seconds"], 4)
+            self.assertEqual(method["first_action_measured_episodes"], 1)
+            self.assertEqual(method["mean_first_action_from_first_logged_event_seconds"], 4)
             self.assertNotIn("conditional_mechanism_episodes", method)
             supplement = method["public_failed_mechanism"]
             self.assertEqual(supplement["measured_episodes"], 1)

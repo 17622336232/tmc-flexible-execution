@@ -89,6 +89,11 @@ def _attempt_costs(arm, final, public, *, allow_final_truncated=False):
             "last_request_wall_time": max(dispatch_times, default=None)}
 
 
+def _first_action_seconds(events):
+    starts = [row["monotonic_seconds"] for row in events if row["event"] == "action_started"]
+    return min(starts) - events[0]["monotonic_seconds"] if starts else None
+
+
 def _mechanism(root, events, report, allow_truncated):
     robot = root / "private/robot"
     frames = _camera_frames(robot)
@@ -146,7 +151,6 @@ def _mechanism(root, events, report, allow_truncated):
                 taken.append(picture)
                 captures_before += picture["monotonic_seconds"] < returned
                 used += picture["frame_id"] in accepted and picture["image_id"] in reported
-    starts = [row["monotonic_seconds"] for row in events if row["event"] == "action_started"]
     scored = _read(root / "independent_scoring_time.json") or {}
     return {"conditional_moves_started_before_bound_reply": early_branches,
             "conditional_moves_finished_before_bound_reply": moves_before,
@@ -155,8 +159,7 @@ def _mechanism(root, events, report, allow_truncated):
             "conditional_early_materials_used_in_report": used,
             "conditional_early_materials_without_report_use": len(taken) - used,
             **{f"judgment_condition_{name}": count for name, count in conditions.items()},
-            "first_action_from_first_logged_event_seconds": min(starts) - events[0]["monotonic_seconds"]
-            if starts else None,
+            "first_action_from_first_logged_event_seconds": _first_action_seconds(events),
             "independent_scoring_seconds": scored["end_monotonic"] - scored["start_monotonic"] if scored else None}
 
 
@@ -375,6 +378,8 @@ def _public_arm(row, arm, root, job):
         row["public_failed_mechanism_measured"] = False
     if (root / "timeline.jsonl").is_file():
         clock = summarize(root / "timeline.jsonl", allow_truncated=allow_truncated)
+        events, _ = read_trace_rows(root / "timeline.jsonl", allow_truncated=allow_truncated)
+        row["first_action_from_first_logged_event_seconds"] = _first_action_seconds(events)
         row.update(model_request_seconds=clock["model_request_seconds"],
                    model_action_overlap_seconds=clock["model_action_overlap_seconds"],
                    action_seconds=sum(interval["seconds"] for interval in clock["intervals"].get("action", [])),
@@ -571,6 +576,8 @@ def _method_summary(rows):
                                                                for row in valid),
                            "task_clock_measured_episodes": sum("task_elapsed_including_recovery_seconds" in row
                                                                for row in valid),
+                           "first_action_measured_episodes": sum(
+                               row.get("first_action_from_first_logged_event_seconds") is not None for row in valid),
                            "failure_types": dict(Counter(_failure_category(row) for row in valid if not row["success"])),
                            "frontend_alignment_counts": dict(Counter(row["frontend_alignment"] for row in valid
                                                                      if "frontend_alignment" in row)),
@@ -579,7 +586,9 @@ def _method_summary(rows):
                            "mean_restricted_seconds": mean(row["restricted_seconds"] for row in valid) if valid else None}
         for field in ("actual_dispatches", "total_model_transport_wall_seconds", "total_action_seconds",
                       "total_observation_seconds", "total_search_seconds", "total_local_worker_cpu_seconds",
-                      "task_elapsed_including_recovery_seconds", "task_recovery_gap_seconds"):
+                      "task_elapsed_including_recovery_seconds", "task_recovery_gap_seconds",
+                      "continuous_task_seconds", "first_action_from_first_logged_event_seconds",
+                      "independent_scoring_seconds"):
             measures = [row[field] for row in valid if row.get(field) is not None]
             methods[method]["mean_" + field] = mean(measures) if measures else None
         mechanism = [row for row in valid if "conditional_moves_started_before_bound_reply" in row]
@@ -709,6 +718,7 @@ def rebuild(directory, output, *, coverage_object=None, coverage_domain=None):
             result["execution_revision"] = catalog["execution_revision"]
             result["analysis_role"] = "confirmatory" if catalog["role"] == CUSTOM_FINAL_ROLE else "external_validation"
             result["service_block_sensitivity"] = _service_block_sensitivity(rows, catalog["ours_method"], reference)
+            result["exploratory_baseline_minus_a"] = _pair_rows(rows, catalog["ours_method"])
         if result.get("analysis_role") != "external_validation":
             result["registered_primary_inference"] = _registered_primary(rows, catalog["ours_method"], reference)
     if catalog.get("data_role") == "INDEPENDENT_NATIVE_TRAINING_CHECK":
