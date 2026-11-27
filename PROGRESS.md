@@ -1,20 +1,20 @@
 # TMC 实验进度
 
-**2026-11-28 06:06 UTC+8。开发 12/12，正式 376/456。procthor-test-house-0907-view-3 conditional-a 第 1 次尝试，PID 3278263。**
+**2026-11-28 06:29 UTC+8。开发 12/12，正式 400/456。procthor-test-house-0345-view-3 conditional-planner 第 1 次尝试，PID 3291654。**
 
-- 正式名单与原盲选 ID 一致。自建 360/360，公开 16/96，附加回合登记 0。正式冻结使用 evidence-handoff-r1、gpt-6.1-terra、max 和每回合 24 次请求上限。
-- 正式已结束回合通过 111、任务失败 97、超时 168。
-- 正式实际运行提交 自建 d144b9c、公开 5716da5。已观察到正式发送 3585 次，已结束正式尝试的控制账本墙钟 2192.6 分钟。
+- 正式名单与原盲选 ID 一致。自建 360/360，公开 40/96，附加回合登记 0。正式冻结使用 evidence-handoff-r1、gpt-6.1-terra、max 和每回合 24 次请求上限。
+- 正式已结束回合通过 135、任务失败 97、超时 168。
+- 正式实际运行提交 自建 d144b9c、公开 5716da5。已观察到正式发送 3664 次，已结束正式尝试的控制账本墙钟 2212.7 分钟。
 - 开发 1 通过、2 任务失败、9 超时，全部尝试共 145 次真实发送，worker 活跃 92.9 分钟。开发独立许可审计发现 0 个违规。首 A 的证据交接已在真实发送与独立评分中复核。
 - 旧 v2 保留 5/12 终态。P0 重建 7 次启动、65 次实际发送，审计无额外模型请求。旧排程继续保持暂停。
 - 开发作业共 12 个槽位已对照旧版和修订版。旧版 65 次与接续 76 次合计 141/288。第一轮修复 69/144，第二轮未启用。详见 outputs/protocol-v2-optimization/development-report/execution_crosswalk.csv。
 - 正式全部回合活跃工时中位情景 49.8 小时。套餐可用时间和真实日历工期尚未确定。开发图、原始审计和成本表见 outputs/protocol-v2-optimization/。
-- 按已结束的 360 个自建回合及16 个正式公开回合估算。若后续实测耗时相近，剩余约 1.2 小时活跃工时。日历用时还受服务中断影响。
+- 按已结束的 360 个自建回合及40 个正式公开回合估算。若后续实测耗时相近，剩余约 0.8 小时活跃工时。日历用时还受服务中断影响。
 - 首个正式场景五臂均已记账，通过 0、任务失败 1、超时 4，共 49 次发送，批次墙钟 37.5 分钟。
 - 第二场景流式回合在原尝试的 240.5 秒处因服务超时中断，按原期限记失败。两次尝试合计 278.2 秒、3 次发送。修复依据原始尝试复核，88 项本地测试通过。
 - 正式前 360 个自建回合共核对 3530/3530 次调用和图像账本。联合编译 430 次，其中 95 次传输超时。耗时分解见 outputs/protocol-v2-optimization/formal-progress/request-role-summary.json。
 - 已复核 168 个到期回合的最后一秒，其中 165 个仍有真实模型调用。逐次计量见 outputs/protocol-v2-optimization/formal-progress/deadline-request-windows.csv。
-- 正式逐回合表已复核 376 条，76 个完整场景配对。见 outputs/protocol-v2-optimization/formal-progress/。
+- 正式逐回合表已复核 400 条，82 个完整场景配对。见 outputs/protocol-v2-optimization/formal-progress/。
 - 18:07 发现总控退出，复核并接收第六场景预取保存的原始超时结果，任务计时 480 秒，13 次发送。控制账本关闭比最后原始结果落盘约晚 35 秒。正式连续任务时间取原始计时。
 - 第七场景的普通异步出现实际编译回复不支持复合条件，按原始回复记任务失败。原回合发送 1 次、计时 112.9 秒。归类修正通过 89 项本地测试。
 - 联合编译诊断在前 315 个回合中复现 18 次同类退出。只把条件分支设为 `null` 时，18 份任务字段均可解析。`custom-execution-condition-134` 的四个对照在等待策略启动前触发，A 用 337.95 秒通过。另一个库存定位场景 `custom-execution-condition-077` 的 A 也发生同类退出。复核新增模型请求为 0，原终态保留。见 `outputs/protocol-v2-optimization/formal-progress/compiler-branch-replays.json`。
@@ -29,6 +29,7 @@
 - 自建正式 72 个场景的 360 回合全部结算，通过 98、任务失败 94、超时 168，真实发送 3530 次。主配对使用 70 个独立来源组，预登记检验和区间已从全部原始记录重建。结果和逐回合表见 outputs/protocol-v2-optimization/reports/custom-final/。首间公开测试房四法均通过，共发送 16 次。
 - 自建实际 worker 为 `d144b9c`，公开为 `5716da5`。两份实际锁定目录分别逐字节匹配登记的 123、113 个运行源码，登记环境哈希一致。提交差异涉及总控错误结算、分析、测试和文档。两个域各自锁定源码。见 outputs/protocol-v2-optimization/formal-progress/formal-worker-versions.json。
 - 公开前两间房四法各自结算后，后续每批依冻结顺序串行运行两间房、最多 8 个回合。首批两间的 8 个回合账本墙钟 482.20 秒、27 次实际发送。第四间公开房 A、预取与规划未通过独立验收，普通异步通过。
+- 首个正式公开房屋 `procthor-test-house-0322-view-1` 的 A 在真实回包前 3.160 秒开始转向，侧图早于回包 0.055 秒完成，侧图哈希经报告采用和独立验收。A 用 43.79 秒、规划 68.65 秒、普通异步 62.64 秒、预取 37.71 秒，四法均完整通过。见 outputs/protocol-v2-optimization/formal-progress/first-public-closed-loop.json。
 - 第一组结构场景已完成 24/24 场景、120/120 回合。A 和预取各通过 1，任务失败 35、超时 83，发送 1385 次。布局变化组已接续。分组统计见 outputs/protocol-v2-optimization/formal-progress/completed-custom-strata.json。
 - 布局变化组已完成 24/24 场景、120/120 回合。独立验收通过 43、任务失败 35、超时 42，共发送 1030 次。A 通过 11/24，PLANNER 9/24。同场受限完成用时的平均差为 A 减 PLANNER −21.04 秒。布局组各方法均无回包前取证。分组统计为描述性结果。下一组执行条件已启动。
 - 执行条件组 `custom-execution-condition-001` 的 A 在 360 秒限时内用 249.53 秒、9 次真实发送完成。独立验收确认 4 处通道的堵塞记录正确且完整，回包前动作数为 0。见 outputs/protocol-v2-optimization/formal-progress/first-execution-a-valid-proof.json。
