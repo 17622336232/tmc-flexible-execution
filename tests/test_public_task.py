@@ -1,12 +1,13 @@
 import json
 import unittest
+from hashlib import sha256
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from experiments.flexible_execution.evidence import Frame
 from experiments.flexible_execution.live_calibration import calibrate_public_visual
-from experiments.flexible_execution.pilot_report import _method_summary
+from experiments.flexible_execution.pilot_report import _method_summary, _public_arm
 from experiments.flexible_execution.public_audit import audit_camera_permissions
 from experiments.flexible_execution.public_schedule import VALIDATION_ROLE, prepare_final
 from experiments.flexible_execution.public_task import VALIDATION, parse_intent, verify
@@ -67,6 +68,56 @@ class PublicInspectionScoreTest(unittest.TestCase):
         self.assertEqual(method["recorded"], 1)
         self.assertEqual(method["successes"], 0)
         self.assertEqual(method["failure_types"], {"unsupported_output": 1})
+
+    def test_timed_out_public_episode_keeps_verified_early_photo(self):
+        grant = "采集规则：允许在判读结果返回前采集以下材料：side_photo。"
+        front_hash = self.front.digest
+        prompt = {"target_class": "Chair", "frame": "front", "sha256": front_hash}
+        digest = sha256((front_hash + "\n" + json.dumps(prompt, sort_keys=True)).encode("utf8")).hexdigest()
+        binding = {"frame_id": "front", "input_hash": digest, "outcomes": ["positive", "negative"]}
+        events = [
+            ("camera_observation", "front", 1, {"image_sha256": front_hash}),
+            ("query_submitted", "front", 2, {"binding": binding}),
+            ("approved_preparation", "side", 4, {"permission": grant}),
+            ("action_started", "RotateRight", 5, {}),
+            ("action_finished", "RotateRight", 6, {"ok": True}),
+            ("camera_observation", "side", 7, {"image_sha256": self.side.digest}),
+        ]
+        with TemporaryDirectory() as temp:
+            arm = Path(temp)
+            episode = arm / "episode"
+            write_json(episode / "source.json", {"instruction": "Check both views.\n" + grant})
+            (episode / "front.jpg").write_bytes(self.front.payload)
+            (episode / "side.jpg").write_bytes(self.side.payload)
+            (episode / "timeline.jsonl").write_text("".join(json.dumps(dict(event=event, step=step,
+                monotonic_seconds=at, **fields)) + "\n" for event, step, at, fields in events))
+            ledger = episode / "requests.jsonl"
+            call = {"model": "test-model", "reasoning_effort": "max", "logical_job_attempt": 1,
+                    "input": prompt, "image_sha256": [front_hash], "dispatched_monotonic_seconds": 3,
+                    "return_monotonic_seconds": 8, "output": {"outcome": "positive"}}
+            (episode / "model_calls.jsonl").write_text(json.dumps(call) + "\n")
+            job = {"state": "TIMEOUT", "execution_revision": "evidence-handoff-r1",
+                   "case": {"expected_language_contract": {"direction": "right"}},
+                   "model": call["model"], "reasoning_effort": call["reasoning_effort"]}
+            initial = {"state": "TIMEOUT", "method": "conditional-a", "success": False, "restricted_seconds": 480}
+            reservation = {"reservation": 1, "image_sha256": [front_hash],
+                           "model": call["model"], "reasoning_effort": call["reasoning_effort"]}
+            ledger.write_text(json.dumps(reservation) + "\n")
+            row = _public_arm(initial.copy(), arm, episode, job)
+            method = _method_summary([row])[row["method"]]
+            self.assertFalse(row["success"])
+            self.assertNotIn("conditional_mechanism_episodes", method)
+            supplement = method["public_failed_mechanism"]
+            self.assertEqual(supplement["measured_episodes"], 1)
+            self.assertEqual(supplement["conditional_moves_started_before_bound_reply"], 1)
+            self.assertEqual(supplement["conditional_photos_completed_before_bound_reply"], 1)
+            self.assertEqual(supplement["conditional_early_materials_used_in_report"], 0)
+            self.assertEqual(supplement["conditional_early_materials_without_report_use"], 1)
+
+            ledger.write_text(json.dumps({**reservation, "image_sha256": [self.side.digest]}) + "\n")
+            row = _public_arm(initial.copy(), arm, episode, job)
+            self.assertFalse(row["public_failed_mechanism_measured"])
+            self.assertNotIn("public_failed_conditional_photos_completed_before_bound_reply", row)
 
     def test_unfinished_validation_leaves_the_official_test_archive_sealed(self):
         with TemporaryDirectory() as temp:

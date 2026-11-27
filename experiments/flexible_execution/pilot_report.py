@@ -1,6 +1,7 @@
 """Rebuild paired development metrics from saved arm outcomes and event ledgers."""
 
 import csv
+import json
 from collections import Counter
 from hashlib import sha256
 from math import isfinite
@@ -22,6 +23,9 @@ from .timeline import read_trace_rows, summarize
 
 
 RECORDED = {"FINISHED_VALID", "FINISHED_TASK_FAILURE", "TIMEOUT"}
+MECHANISM_COUNTS = ("conditional_moves_started_before_bound_reply", "conditional_moves_finished_before_bound_reply",
+                    "conditional_actual_photos_from_early_moves", "conditional_photos_completed_before_bound_reply",
+                    "conditional_early_materials_used_in_report", "conditional_early_materials_without_report_use")
 
 
 def _attempt_roots(arm, final):
@@ -282,6 +286,75 @@ def _arm_row(directory, case, method, binding=None):
     return row
 
 
+def _public_mechanism(root, job, clock, permission, allow_truncated):
+    events = _rows(root / "timeline.jsonl", allow_truncated=allow_truncated)
+    observations = {event["step"]: event for event in events if event["event"] == "camera_observation"}
+    front = observations.get("front")
+    submitted = next((event["binding"] for event in events if event["event"] == "query_submitted"), {})
+    applied = next((event for event in events if event["event"] == "query_applied"), None)
+    if not (front and submitted and permission is not None and (root / "front.jpg").is_file()):
+        return {}
+    front_hash = sha256((root / "front.jpg").read_bytes()).hexdigest()
+    if front["image_sha256"] != front_hash or submitted["frame_id"] != "front":
+        return {}
+
+    calls = _rows(root / "model_calls.jsonl", allow_truncated=allow_truncated)
+    ledger_path = root / "requests.jsonl"
+    if not ledger_path.is_file():
+        ledger_path = Path(job["request_ledger"])
+    ledger = {entry["reservation"]: entry for entry in _rows(ledger_path, allow_truncated=allow_truncated)}
+
+    def dispatched(call, hashes):
+        send = ledger.get(call.get("logical_job_attempt"), {})
+        return (call.get("image_sha256") == hashes and send.get("image_sha256") == hashes
+                and call.get("model") == send.get("model") == job["model"]
+                and call.get("reasoning_effort") == send.get("reasoning_effort") == job["reasoning_effort"])
+
+    matches = []
+    for call in calls:
+        payload, output = call.get("input", {}), call.get("output")
+        if not (payload.get("frame") == "front" and payload.get("sha256") == front_hash
+                and dispatched(call, [front_hash]) and isinstance(output, dict)
+                and set(output) == {"outcome"} and output["outcome"] in submitted["outcomes"]):
+            continue
+        prompt = json.dumps(payload, sort_keys=True)
+        if sha256((front_hash + "\n" + prompt).encode("utf8")).hexdigest() == submitted["input_hash"]:
+            matches.append(call)
+    if len(matches) != 1:
+        return {}
+    reply = matches[0]
+    if applied and (applied["binding"] != submitted or reply["output"] != {"outcome": applied["outcome"]}):
+        return {}
+    sent, returned = reply.get("dispatched_monotonic_seconds"), reply.get("return_monotonic_seconds")
+    if sent is None or returned is None or not front["monotonic_seconds"] <= sent <= returned:
+        return {}
+
+    motion = next((event for event in events if event["event"] == "action_started"), None)
+    early = (permission["violations"] == 0 and motion is not None
+             and sent <= motion["monotonic_seconds"] < returned)
+    finished = early and any(interval["step"] == motion["step"] and interval["start"] == motion["monotonic_seconds"]
+                             and interval["ok"] and interval["finish"] < returned
+                             for interval in clock["intervals"].get("action", ()))
+    side = observations.get("side") if early else None
+    path = root / "side.jpg"
+    if early and path.is_file() != (side is not None):
+        return {}
+    used = False
+    if side:
+        if sha256(path.read_bytes()).hexdigest() != side["image_sha256"]:
+            return {}
+        report = _read(root / "report.json")
+        used = bool(isinstance(report, dict) and report.get("side_sha256") == side["image_sha256"] and
+                    any(call.get("output") == report and dispatched(call, [front_hash, side["image_sha256"]])
+                        for call in calls))
+    return {"conditional_moves_started_before_bound_reply": int(early),
+            "conditional_moves_finished_before_bound_reply": int(finished),
+            "conditional_actual_photos_from_early_moves": int(side is not None),
+            "conditional_photos_completed_before_bound_reply": int(side is not None and side["monotonic_seconds"] < returned),
+            "conditional_early_materials_used_in_report": int(used),
+            "conditional_early_materials_without_report_use": int(side is not None and not used)}
+
+
 def _public_arm(row, arm, root, job):
     from .public_audit import audit, audit_camera_permissions, registered_outcome
 
@@ -289,14 +362,17 @@ def _public_arm(row, arm, root, job):
     row["failure_reason"] = detail.get("reason")
     direction = job["case"]["expected_language_contract"]["direction"]
     allow_truncated = job["state"] == "TIMEOUT" or bool(row.get("external_interruption") or row.get("task_interruption"))
-    _add_permission_counts(row, (audit_camera_permissions(attempt, direction, allow_truncated=attempt != root or allow_truncated)
-                                 for attempt in _attempt_roots(arm, root)))
+    permissions = {attempt: audit_camera_permissions(attempt, direction, allow_truncated=attempt != root or allow_truncated)
+                   for attempt in _attempt_roots(arm, root)}
+    _add_permission_counts(row, permissions.values())
     if job["state"] == "FINISHED_VALID":
         state, _ = registered_outcome(root, job, detail["charged_seconds"], job["returncode"], None)
         seconds = row["cumulative_task_seconds"]
         if state != job["state"] or not 0 < seconds <= row["deadline_seconds"]:
             raise ValueError("Saved public success could not be independently verified: " + job["id"])
         row.update(success=True, restricted_seconds=seconds, complete_coverage=True)
+    if not row["success"] and job.get("execution_revision"):
+        row["public_failed_mechanism_measured"] = False
     if (root / "timeline.jsonl").is_file():
         clock = summarize(root / "timeline.jsonl", allow_truncated=allow_truncated)
         row.update(model_request_seconds=clock["model_request_seconds"],
@@ -321,6 +397,10 @@ def _public_arm(row, arm, root, job):
                        conditional_photos_completed_before_bound_reply=int(captured and side_after < 0),
                        conditional_early_materials_used_in_report=int(used),
                        conditional_early_materials_without_report_use=int(captured and not used))
+        elif "public_failed_mechanism_measured" in row:
+            stats = _public_mechanism(root, job, clock, permissions[root.resolve()], allow_truncated)
+            row["public_failed_mechanism_measured"] = bool(stats)
+            row.update({"public_failed_" + field: value for field, value in stats.items()})
     if (root / "report.json").is_file():
         row["wrong_completion_claim"] = not row["success"]
     return row
@@ -505,10 +585,16 @@ def _method_summary(rows):
         mechanism = [row for row in valid if "conditional_moves_started_before_bound_reply" in row]
         if mechanism:
             methods[method]["conditional_mechanism_episodes"] = len(mechanism)
-            for field in ("conditional_moves_started_before_bound_reply", "conditional_moves_finished_before_bound_reply",
-                          "conditional_photos_completed_before_bound_reply", "conditional_early_materials_used_in_report",
-                          "conditional_early_materials_without_report_use"):
+            for field in MECHANISM_COUNTS:
                 methods[method][field] = sum(row[field] for row in mechanism)
+        public_failures = [row for row in valid if "public_failed_mechanism_measured" in row]
+        if public_failures:
+            measured = [row for row in public_failures if row["public_failed_mechanism_measured"]]
+            supplement = {"recorded_nonpassing_episodes": len(public_failures), "measured_episodes": len(measured)}
+            if measured:
+                supplement.update({field: sum(row["public_failed_" + field] for row in measured)
+                                   for field in MECHANISM_COUNTS})
+            methods[method]["public_failed_mechanism"] = supplement
         condition_counts = Counter()
         condition_prefix = "judgment_condition_"
         for row in mechanism:
