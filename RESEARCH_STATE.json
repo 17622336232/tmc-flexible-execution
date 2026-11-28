@@ -1,9 +1,9 @@
 {
   "status": "RESEARCH_IN_PROGRESS",
-  "stage": "event-driven scheduling of physical evidence and dependent semantic requests",
+  "stage": "native controller source binding and legal multi-view request scheduling",
   "resumed_remote": "94bd1e78953164dce48ec38c8cc15dbd010f2e56",
   "resumed_local": "90f390c8ee332c866f4204dee628d447f8ddab2c",
-  "as_of_utc": "2026-11-28T16:28:56+00:00",
+  "as_of_utc": "2026-11-28T16:50:27+00:00",
   "method_version": {
     "native-views-dev01": "2e8e26cb8f0099bb68d02e5aa1c1e9569423706ec413227f9d9aa7714ffcef2b",
     "native-evidence-dev02": "6c5dab53a9faf9d2de88df4c2d988619c066176423a1223341f30e75b84c2577",
@@ -46,7 +46,7 @@
   "pending_workers": [],
   "account_remaining_requests": null,
   "hardware_motion_authorized": false,
-  "current_hypothesis": "在原版 GPT 的同一次正常决策中验证，能否由用户原话提出合法的多判断工作单，复用已报告字段，等真实条件回来再合问后续字段。先检验结构和来源，再进入匹配整项。",
+  "current_hypothesis": "用已封存的模型和动作时钟，比较先发问并同步取证，与先拿齐两张已许可原图再合问。逐条检查真实结果回来前可以回答哪些问题，并列出原版 GPT、优化串行和强预取的请求轮数与时间下界。这能判断联合安排是否少掉一轮串行推理。地图拒绝的两条动作保留原始失败，回位收益目前缺少完整路径时钟。",
   "validated": [
     "93 prior sends attributed to six roles",
     "with original requests fixed the nonrequest ceiling is 10.50% on cracks and 5.14% on inventory",
@@ -55,8 +55,8 @@
   "rejected": [
     "fixed conservative OCR has zero detections on 64 sampled historical image/ROI questions; 31 had independently assigned target identity"
   ],
-  "next": "在原版 GPT 的同一次正常决策中验证，能否由用户原话提出合法的多判断工作单，复用已报告字段，等真实条件回来再合问后续字段。先检验结构和来源，再进入匹配整项。",
-  "phase": "event-driven scheduling of physical evidence and dependent semantic requests",
+  "next": "用已封存的模型和动作时钟，比较先发问并同步取证，与先拿齐两张已许可原图再合问。逐条检查真实结果回来前可以回答哪些问题，并列出原版 GPT、优化串行和强预取的请求轮数与时间下界。这能判断联合安排是否少掉一轮串行推理。地图拒绝的两条动作保留原始失败，回位收益目前缺少完整路径时钟。",
+  "phase": "native controller source binding and legal multi-view request scheduling",
   "paired_rgb_assay": {
     "sends": 18,
     "results": {
@@ -78,7 +78,8 @@
     "explicit_roster_mechanism": 0,
     "standalone_first_decisions": 8,
     "matched_room_cost_calibration": 6,
-    "matched_room_tasks": 9
+    "matched_room_tasks": 9,
+    "ordinary_section_first_decisions": 4
   },
   "closed_external_attempts": [
     {
@@ -604,7 +605,7 @@
     "scoped_mechanism_admitted": false,
     "region_summary_sha256": "59791085a516fd82b660ba09ea32baad37b0b880acd7114dd308b9987e351b83"
   },
-  "execution_state": "active",
+  "execution_state": "paused",
   "mandatory_itinerary_direct": {
     "role": "calibration",
     "registrations": "527109b2661a58d2adcc6cd01fe6ad8df969b9b3b984d0c98bfc71f92d0b276f",
@@ -1719,5 +1720,311 @@
     "max_observed_overrun_ms": 15.952070034109056,
     "median_observed_overrun_ms": 0.0,
     "zero_request": true
+  },
+  "native_ordinary_frontier": {
+    "proposals": {
+      "registered": 4,
+      "sends": 4,
+      "cases": [
+        {
+          "case": "warehouse-crossed",
+          "method": "original",
+          "sha256": "4abbb9906b3d5c2b9218d540d9761e7acae1453e84d295b6e0579e771f1baefc",
+          "sent": true,
+          "valid_reply": true,
+          "service_s": 13.71600450295955,
+          "error": null,
+          "endpoint_block": null,
+          "action": "move",
+          "offered": false,
+          "accepted": false,
+          "reason": "ordinary-action",
+          "seeded": {
+            "Q0": true
+          },
+          "premature_fields": []
+        },
+        {
+          "case": "warehouse-crossed",
+          "method": "section",
+          "sha256": "fccf0aeebde9568de07d84262e2ab603b968512f1ce9687ed08f5ecd830b24c9",
+          "sent": true,
+          "valid_reply": true,
+          "service_s": 12.681246542022564,
+          "error": null,
+          "endpoint_block": null,
+          "action": "move",
+          "offered": false,
+          "accepted": false,
+          "reason": "ordinary-action",
+          "seeded": {
+            "Q0": true
+          },
+          "premature_fields": []
+        },
+        {
+          "case": "campus-two-screens",
+          "method": "section",
+          "sha256": "d3060231ba2f7409e02d7d8b9bce2bf9ae4c458f7cc9b88de810f8a17683a4f4",
+          "sent": true,
+          "valid_reply": true,
+          "service_s": 16.652340707951225,
+          "error": null,
+          "endpoint_block": null,
+          "action": "move",
+          "offered": false,
+          "accepted": false,
+          "reason": "ordinary-action",
+          "seeded": {
+            "Q0": true,
+            "Q1": true
+          },
+          "premature_fields": []
+        },
+        {
+          "case": "campus-two-screens",
+          "method": "original",
+          "sha256": "b9b258b4df1105fb192b2bdfae9fbd4364d804c5b24f3cc954ee15da7f4415f6",
+          "sent": true,
+          "valid_reply": true,
+          "service_s": 24.97019060299499,
+          "error": null,
+          "endpoint_block": null,
+          "action": "move",
+          "offered": false,
+          "accepted": false,
+          "reason": "ordinary-action",
+          "seeded": {
+            "Q0": true,
+            "Q1": true
+          },
+          "premature_fields": []
+        }
+      ],
+      "eligible_full_cases": [],
+      "sealed_source_sha256": "367bc73275ace4c654b67a83cf3d1122827f396133faa75a55368d37e08096a4",
+      "scope": "Supplied source, ordinary action, task proposal and field grammar only; independent visual correctness and complete task delivery require new physical episodes."
+    },
+    "binding": {
+      "eligibility_sha256": "aaf696cd506d67c04717801445f05b3e5bf486f911ffc12fb13314e7c95c6cc3",
+      "new_requests": 0,
+      "registered": 4,
+      "bound": 4,
+      "repeated_field_observations": 6,
+      "correct_observations": 6,
+      "distinct_fields": 3,
+      "distinct_correct": 3,
+      "rows": [
+        {
+          "case": "warehouse-crossed",
+          "method": "original",
+          "source": "onboard_0001",
+          "image_sha256": "18a363710a122072596cd8ac1a748dde713d94659ed9cbce70bb43f3dcf07e7e",
+          "log_sha256": "4abbb9906b3d5c2b9218d540d9761e7acae1453e84d295b6e0579e771f1baefc",
+          "root_claims": {
+            "Q0": true
+          },
+          "root_coverage": true,
+          "issues": [],
+          "ordinary_move_to_authorized_side": true,
+          "eligible": true,
+          "subsequently_legal": [
+            "Q1",
+            "Q2"
+          ],
+          "skipped": [],
+          "alignment": 0.9665972222222222,
+          "fields": [
+            {
+              "id": "Q0",
+              "claimed": true,
+              "predicate": "red_carton",
+              "pixels": {
+                "warehouse_station_02/0": 307,
+                "warehouse_station_02/1": 405,
+                "warehouse_station_02/2": 369,
+                "warehouse_station_03/0": 46,
+                "warehouse_station_03/1": 253,
+                "warehouse_station_03/2": 214,
+                "warehouse_station_03/3": 223
+              },
+              "target": true,
+              "correct": true
+            }
+          ]
+        },
+        {
+          "case": "warehouse-crossed",
+          "method": "section",
+          "source": "onboard_0001",
+          "image_sha256": "18a363710a122072596cd8ac1a748dde713d94659ed9cbce70bb43f3dcf07e7e",
+          "log_sha256": "fccf0aeebde9568de07d84262e2ab603b968512f1ce9687ed08f5ecd830b24c9",
+          "root_claims": {
+            "Q0": true
+          },
+          "root_coverage": true,
+          "issues": [],
+          "ordinary_move_to_authorized_side": true,
+          "eligible": true,
+          "subsequently_legal": [
+            "Q1",
+            "Q2"
+          ],
+          "skipped": [],
+          "alignment": 0.9665972222222222,
+          "fields": [
+            {
+              "id": "Q0",
+              "claimed": true,
+              "predicate": "red_carton",
+              "pixels": {
+                "warehouse_station_02/0": 307,
+                "warehouse_station_02/1": 405,
+                "warehouse_station_02/2": 369,
+                "warehouse_station_03/0": 46,
+                "warehouse_station_03/1": 253,
+                "warehouse_station_03/2": 214,
+                "warehouse_station_03/3": 223
+              },
+              "target": true,
+              "correct": true
+            }
+          ]
+        },
+        {
+          "case": "campus-two-screens",
+          "method": "section",
+          "source": "onboard_0001",
+          "image_sha256": "b8a7a551c2eacb70d84b1705a83737f7d0887516cd596bb0ffce133043cc396d",
+          "log_sha256": "d3060231ba2f7409e02d7d8b9bce2bf9ae4c458f7cc9b88de810f8a17683a4f4",
+          "root_claims": {
+            "Q0": true,
+            "Q1": true
+          },
+          "root_coverage": true,
+          "issues": [],
+          "ordinary_move_to_authorized_side": true,
+          "eligible": true,
+          "subsequently_legal": [
+            "Q2",
+            "Q3"
+          ],
+          "skipped": [],
+          "alignment": 0.9592013888888888,
+          "fields": [
+            {
+              "id": "Q0",
+              "claimed": true,
+              "predicate": "vehicle",
+              "pixels": {
+                "campus_station_01": 5981,
+                "campus_station_02": 3497,
+                "campus_station_03": 1863
+              },
+              "target": true,
+              "correct": true
+            },
+            {
+              "id": "Q1",
+              "claimed": true,
+              "predicate": "extinguisher",
+              "pixels": {
+                "campus_station_02": 511,
+                "campus_station_03": 23
+              },
+              "target": true,
+              "correct": true
+            }
+          ]
+        },
+        {
+          "case": "campus-two-screens",
+          "method": "original",
+          "source": "onboard_0001",
+          "image_sha256": "b8a7a551c2eacb70d84b1705a83737f7d0887516cd596bb0ffce133043cc396d",
+          "log_sha256": "b9b258b4df1105fb192b2bdfae9fbd4364d804c5b24f3cc954ee15da7f4415f6",
+          "root_claims": {
+            "Q0": true,
+            "Q1": true
+          },
+          "root_coverage": true,
+          "issues": [],
+          "ordinary_move_to_authorized_side": true,
+          "eligible": true,
+          "subsequently_legal": [
+            "Q2",
+            "Q3"
+          ],
+          "skipped": [],
+          "alignment": 0.9592013888888888,
+          "fields": [
+            {
+              "id": "Q0",
+              "claimed": true,
+              "predicate": "vehicle",
+              "pixels": {
+                "campus_station_01": 5981,
+                "campus_station_02": 3497,
+                "campus_station_03": 1863
+              },
+              "target": true,
+              "correct": true
+            },
+            {
+              "id": "Q1",
+              "claimed": true,
+              "predicate": "extinguisher",
+              "pixels": {
+                "campus_station_02": 511,
+                "campus_station_03": 23
+              },
+              "target": true,
+              "correct": true
+            }
+          ]
+        }
+      ],
+      "scope": "Independent post-seal grade of original first-frame claims on two archival JPEGs, not an online episode."
+    },
+    "acquisition_clocks": {
+      "new_model_requests": 0,
+      "role": "physical clocks",
+      "cases": [
+        {
+          "case": "warehouse-crossed",
+          "world_matches": true,
+          "phases": [
+            {
+              "view": "side",
+              "motion_s": 1.1029136310098693,
+              "after_move_capture_s": 0.277386718953494,
+              "to_fresh_source_s": 1.3803003499633633,
+              "actual_yaw": 1.4381317007977321,
+              "arrival": {
+                "x": -6.0,
+                "y": -3.0,
+                "z": 1.1805443892399707,
+                "yaw": 1.4381317007977321
+              },
+              "sha256": "33aea86cf5b5f2a962559bd45e4b579fcfb4ceb8f9894135ea71ce49494ce257"
+            }
+          ],
+          "error": {
+            "code": "RuntimeError",
+            "message": "规划器在 8 秒内未返回可用新轨迹；目标可能位于障碍物、不可达区域，或规划失败。请调整目标点后重试。"
+          }
+        },
+        {
+          "case": "campus-two-screens",
+          "world_matches": true,
+          "phases": [],
+          "error": {
+            "code": "goal_unobserved",
+            "message": "接近点的机体空间尚未充分观测或地图不可用，请重新观察"
+          }
+        }
+      ]
+    },
+    "workers": []
   }
 }

@@ -128,6 +128,26 @@ def main():
     room_bounds=optional("matched-event-rooms-dev01/prior_bounds.json")
     deadline_result=optional("deadline-coalescing-dev01/summary.json")
     limit_result=optional("event-compute-dev02/summary.json")
+    ordinary_section=optional("native-section-dev01/proposal_summary.json")
+    ordinary_binding=optional("native-action-binding-dev01/summary.json")
+    acquisition_clocks=optional("native-acquisition-clocks-dev01/summary.json")
+    section_ledger=local/"native-section-dev01/sends.jsonl"
+    section_sends=len(section_ledger.read_bytes().splitlines()) if section_ledger.is_file() else 0
+    ordinary_workers=[]
+    ordinary_scripts={
+        b"continuing_native_section_study.py":(b"run",),
+        b"continuing_native_acquisition_clocks.py":(b"run",b"worker"),
+    }
+    for proc in Path("/proc").glob("[0-9]*/cmdline"):
+        try:
+            args=proc.read_bytes().split(b"\0")
+            for script, modes in ordinary_scripts.items():
+                for index, arg in enumerate(args[:-1]):
+                    if arg.rsplit(b"/",1)[-1]==script and args[index+1] in modes:
+                        ordinary_workers.append(dict(pid=int(proc.parent.name),script=script.decode(),
+                                                     mode=args[index+1].decode()))
+        except (FileNotFoundError,ProcessLookupError,PermissionError):
+            pass
     room_workers=[]
     room_slots=0;room_settled=0;room_sends=0
     if (room_base/"live/registration.json").is_file():
@@ -197,10 +217,30 @@ def main():
         status+=f"独立核验严格通过 {room_live['strict']}/{room_live['registered']}。"
     if limit_result:
         status+=f"强化对照在 {limit_result['matched_cells']} 组相同墙钟预算下与通用规划的中位可行成本相同 {limit_result['cost_tied_with_generic']} 组。"
+    if ordinary_section:
+        status+=(f"首轮工作单试验实发 {section_sends}/{ordinary_section['registered']} 次。"
+                 f"可选委派放行 {len(ordinary_section['eligible_full_cases'])}/2 个任务。")
+    if ordinary_binding:
+        status+=(f"用封存首帧核对原版动作与来源，{ordinary_binding['bound']}/{ordinary_binding['registered']} 份答复符合。"
+                 f"{ordinary_binding['distinct_correct']}/{ordinary_binding['distinct_fields']} 个不同判断正确。")
+    if acquisition_clocks:
+        cases=acquisition_clocks["cases"]
+        completed=sum(len(case["phases"])==2 for case in cases)
+        status+=f"两站转向时钟校准完成 {len(cases)} 次尝试，其中往返均到位 {completed}/{len(cases)}，新增模型请求为零。"
+    if ordinary_workers:
+        status+="当前首轮答复或动作测量进程 "+", ".join(str(w["pid"]) for w in ordinary_workers)+"。"
     if unavailable:
         next_step="等待现有 Diff-VLA 套餐显示可用，再从未发送且已登记的位置恢复。"
     elif workers:
         next_step="跟踪正在进行的 "+workers[0]["cohort"]+" 批次，逐一保留原始收据并复核完整评分。"
+    elif acquisition_clocks:
+        next_step=("用已封存的模型和动作时钟，比较先发问并同步取证，与先拿齐两张已许可原图再合问。"
+                   "逐条检查真实结果回来前可以回答哪些问题，并列出原版 GPT、优化串行和强预取的请求轮数与时间下界。"
+                   "这能判断联合安排是否少掉一轮串行推理。地图拒绝的两条动作保留原始失败，回位收益目前缺少完整路径时钟。")
+    elif ordinary_binding:
+        next_step="沿用原版正常移动和真实首轮判断，先查实际捕获和回位时钟，再量化合法合问的时间上限。"
+    elif ordinary_section:
+        next_step="用封存原图独立验证普通决策的来源、动作和已答字段，核对无需另增一轮的交接方式。"
     elif room_live:
         next_step="在原版 GPT 的同一次正常决策中验证，能否由用户原话提出合法的多判断工作单，复用已报告字段，等真实条件回来再合问后续字段。先检验结构和来源，再进入匹配整项。"
     elif room_slots:
@@ -221,9 +261,11 @@ def main():
         stage="frozen first-decision replies and pending simulator verification"
     if event_grid:
         stage="event-driven scheduling of physical evidence and dependent semantic requests"
+    if ordinary_binding:
+        stage="native controller source binding and legal multi-view request scheduling"
     execution_state=requested_state or doc.get("execution_state","active")
     if execution_state=="paused":
-        if workers or fv_pids or room_workers:
+        if workers or fv_pids or room_workers or ordinary_workers:
             raise ValueError("A study worker is still active at the requested pause")
         status="执行已按用户要求暂停，当前研究任务进程为 0。"+status
     doc.update(as_of_utc=timestamp,method_version=versions,
@@ -245,6 +287,8 @@ def main():
             scheduled=room_slots,settled=room_settled,sends=room_sends,workers=room_workers,
             graded=None if not room_live else {"strict":room_live["strict"],"registered":room_live["registered"]}),
         deadline_policy_sensitivity=deadline_result,hard_compute_budget=limit_result,
+        native_ordinary_frontier=dict(proposals=ordinary_section,binding=ordinary_binding,
+                                      acquisition_clocks=acquisition_clocks,workers=ordinary_workers),
         first_decision_study=dict(registered=fv_slots,sends=fv_sends,sealed=fv_sealed,pids=fv_pids,
           sealed_file_sha256=digest(first_view/"sealed_replies.json") if fv_sealed else None,receipts=fv_rows,
           replay_entry_present=Path("scripts/continuing_first_view_replay.py").is_file(),replay=fv_replay),
@@ -257,7 +301,8 @@ def main():
         accounted_sends=dict(historical_formal=3842,historical_revision_development=93,
           continued_native_development=totals,archived_rgb_assay=assay_sends,one_image_regions=regional_sends,
           explicit_roster_mechanism=scoped_sends,standalone_first_decisions=fv_sends,
-          matched_room_cost_calibration=room_cal.get("actual_sends",0),matched_room_tasks=room_sends),
+          matched_room_cost_calibration=room_cal.get("actual_sends",0),matched_room_tasks=room_sends,
+          ordinary_section_first_decisions=section_sends),
         next=next_step)
     save(Path("RESEARCH_STATE.json"),doc)
     tally="；".join(f"{k} 主对照 {v['primary']}/{planned_counts[k]['primary']}、强对照 {v['comparators']}/{planned_counts[k]['comparators']}" for k,v in cohorts.items())
@@ -285,6 +330,8 @@ def main():
         recovery+="用 `scripts/continuing_first_views.py status` 核对首次决策位置，用 `scripts/continuing_first_views.py seal` 核对封存回复，两条命令均为零新增模型请求。"
     if event_grid:
         recovery+="主线的零请求复核命令是 `scripts/continuing_v3_attribution.py`、`scripts/continuing_concurrent_workflow.py summary`。运行 `scripts/continuing_matched_event_rooms.py status` 可核对正式登记的六个开发位置。"
+    if ordinary_binding:
+        recovery+="可用 `python scripts/continuing_native_action_binding.py grade` 核验四份封存答复，用 `python scripts/continuing_native_acquisition_clocks.py summary` 核对两条实测记录。两条命令均为零新增模型请求。"
     upsert(Path("NEXT_ACTION.md"),"## 最近一次恢复位置",stat+"\n\n"+next_step+"\n\n"+recovery)
     manuscript=Path("docs/DEVELOPMENT_EVIDENCE_CN.md")
     if manuscript.exists():

@@ -1,0 +1,109 @@
+{
+  "id": "native-section-dev01",
+  "role": "Prospective development of optional work discovery in an ordinary unmodified upstream GPT decision. First expose four standalone requests on genuine archived first cameras, then test actual full simulator tasks on new developer seeds only if scoped delegation is observed. No held-out selection or task-specific detector.",
+  "model": "gpt-6.1-terra",
+  "effort": "max",
+  "standalone_max": 4,
+  "per_request_s": 120,
+  "full_deadline_s": 240,
+  "full_max_sends": 10,
+  "cases": [
+    {
+      "id": "warehouse-crossed",
+      "source": "outputs/continuing/native-evidence-dev02/warehouse-filter-02/evidence-off",
+      "family": "large_inventory",
+      "source_profile": "single",
+      "layout_seed": 679301,
+      "seed": 979301,
+      "count": 3,
+      "direction": "left",
+      "angle_degrees": 40,
+      "finish": "side",
+      "categories": [
+        "red_carton",
+        "blue_carton",
+        "white_carton",
+        "blue_carton",
+        "red_carton"
+      ],
+      "sites": [
+        "front",
+        "side",
+        "side",
+        "front",
+        "side"
+      ],
+      "any_of": [
+        [],
+        [],
+        [
+          "Q0"
+        ],
+        [
+          "Q1"
+        ],
+        [
+          "Q2",
+          "Q3"
+        ]
+      ],
+      "order": [
+        "original",
+        "section"
+      ],
+      "full_order": [
+        "original",
+        "section-joint",
+        "section-serial"
+      ],
+      "instruction": "在当前悬停位置做一次货位巡检。正面是起始朝向，侧面是在同一点向左转40度的朝向。Q0 判断正面照片中能否看见红色货箱。Q1 判断侧面照片中能否看见蓝色货箱。两项都要交付。只有 Q0 肯定，才判断 Q2：侧面有无白色货箱。只有 Q1 肯定，才判断 Q3：正面有无蓝色货箱。只有 Q2 或 Q3 至少一项肯定，才判断 Q4：侧面有无红色货箱。可以在等待时提前采集侧面照片；每个有条件的问题须等对应的真实肯定判断返回后才可判读。只报告实际需要的各项，包含否定结果。看不清就记为未解决，每项附自己的实拍来源。最后停在侧面朝向。请用 object_id Q0 等问题编号和布尔字段 visible 提交。"
+    },
+    {
+      "id": "campus-two-screens",
+      "source": "outputs/continuing/coordinated-handoff-dev03/campus-access-03/coordinated-deferred",
+      "family": "blocked_exit",
+      "source_profile": "independent",
+      "layout_seed": 679313,
+      "seed": 979313,
+      "count": 3,
+      "direction": "right",
+      "angle_degrees": 40,
+      "finish": "front",
+      "categories": [
+        "vehicle",
+        "extinguisher",
+        "extinguisher",
+        "obstruction_crate"
+      ],
+      "sites": [
+        "front",
+        "front",
+        "side",
+        "side"
+      ],
+      "any_of": [
+        [],
+        [],
+        [
+          "Q0"
+        ],
+        [
+          "Q1"
+        ]
+      ],
+      "order": [
+        "section",
+        "original"
+      ],
+      "full_order": [
+        "section-serial",
+        "section-joint",
+        "original"
+      ],
+      "instruction": "在当前悬停位置巡查校园设施。正面指起始朝向，侧面指在同一点向右转40度。请分别判断 Q0：正面照片中是否能看到停放车辆，以及 Q1：正面照片中是否能看到灭火器。只有 Q0 肯定，才判断 Q2：侧面照片中是否能看到灭火器。只有 Q1 肯定，才判断 Q3：侧面照片中是否能看到通道上的货箱障碍物。准许等待时提前采集侧面原图，但有条件的问题必须等对应的真实肯定判断回来之后才判读。每项只用指定视角的实际照片，报告全部应答项及其否定结果，看不清就记为未解决，最后恢复起始朝向。用 object_id Q0 等问题编号和布尔字段 visible 提交。"
+    }
+  ],
+  "rule": "For each initial camera send exactly one original ordinary upstream request, and one ordinary request with an optional inspection_section tool. Preserve the original task/state/image, model, effort and timeout across arms. Do not show expected graph, hidden labels, layout answers or a future action. The public field dictionary only describes legitimate predicates. The optional tool can be accepted only when the actual answer chooses observe or record, originates in the supplied frame and proposes exactly the user's named fields, placements, causal gates and finish. Only actual authorized records tied to the supplied front camera can seed later decisions. Raw physical acquisition is allowed separately from semantic release. Seal all four packets before inspecting eligibility.",
+  "full_gate": "For each case with a valid original first-decision delegation in the optional arm, admit a fresh, single-seed closed-loop three-arm comparison. Independent fresh replies and camera measurements throughout; do not substitute archived scores. Keep native original GPT as a reference. Serial and joint use the same optional proposal, normal loop, cached observed facts, source grants, terminal template and native map. On no delegation keep the ordinary controller. If the accepted branch can legally close conditional work while physically required action is performed, inspect meaningful measured overlap, genuine request mergers, final strict coverage and permission. No further repetitions on a missing or losing witness. Strong/generic evaluated on equal public planning problem, additional live comparison only if a real delivery chain in this first block warrants one.",
+  "grading": "Development full reports require source-bound visible booleans for all and only actual active fields; own image in correct measured public pose; official simulated visual surface at >=36 pixels for a positive instance (for a negative, whole nominated frame), same initial position and specified final yaw. Eligibility and independent renderer agreement >=0.90 within per-channel difference 18 throughout. Failure to deliver scores 240 s in sensitivity. Use no simulator identity/category masks in proposal, cost estimation or runtime. Record baseline outputs before grading the block."
+}

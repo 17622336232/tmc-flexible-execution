@@ -4654,6 +4654,309 @@
     "actual_model_requests": 0,
     "note": "All costs and probabilities are model-based sensitivity results. The two timeout rates for a two-question one-image call are not estimates from an adequate sample. Previously measured motion at a specific site is available on revisits only."
   },
+  "ordinary_section_proposals": {
+    "registered": 4,
+    "sends": 4,
+    "cases": [
+      {
+        "case": "warehouse-crossed",
+        "method": "original",
+        "sha256": "4abbb9906b3d5c2b9218d540d9761e7acae1453e84d295b6e0579e771f1baefc",
+        "sent": true,
+        "valid_reply": true,
+        "service_s": 13.71600450295955,
+        "error": null,
+        "endpoint_block": null,
+        "action": "move",
+        "offered": false,
+        "accepted": false,
+        "reason": "ordinary-action",
+        "seeded": {
+          "Q0": true
+        },
+        "premature_fields": []
+      },
+      {
+        "case": "warehouse-crossed",
+        "method": "section",
+        "sha256": "fccf0aeebde9568de07d84262e2ab603b968512f1ce9687ed08f5ecd830b24c9",
+        "sent": true,
+        "valid_reply": true,
+        "service_s": 12.681246542022564,
+        "error": null,
+        "endpoint_block": null,
+        "action": "move",
+        "offered": false,
+        "accepted": false,
+        "reason": "ordinary-action",
+        "seeded": {
+          "Q0": true
+        },
+        "premature_fields": []
+      },
+      {
+        "case": "campus-two-screens",
+        "method": "section",
+        "sha256": "d3060231ba2f7409e02d7d8b9bce2bf9ae4c458f7cc9b88de810f8a17683a4f4",
+        "sent": true,
+        "valid_reply": true,
+        "service_s": 16.652340707951225,
+        "error": null,
+        "endpoint_block": null,
+        "action": "move",
+        "offered": false,
+        "accepted": false,
+        "reason": "ordinary-action",
+        "seeded": {
+          "Q0": true,
+          "Q1": true
+        },
+        "premature_fields": []
+      },
+      {
+        "case": "campus-two-screens",
+        "method": "original",
+        "sha256": "b9b258b4df1105fb192b2bdfae9fbd4364d804c5b24f3cc954ee15da7f4415f6",
+        "sent": true,
+        "valid_reply": true,
+        "service_s": 24.97019060299499,
+        "error": null,
+        "endpoint_block": null,
+        "action": "move",
+        "offered": false,
+        "accepted": false,
+        "reason": "ordinary-action",
+        "seeded": {
+          "Q0": true,
+          "Q1": true
+        },
+        "premature_fields": []
+      }
+    ],
+    "eligible_full_cases": [],
+    "sealed_source_sha256": "367bc73275ace4c654b67a83cf3d1122827f396133faa75a55368d37e08096a4",
+    "scope": "Supplied source, ordinary action, task proposal and field grammar only; independent visual correctness and complete task delivery require new physical episodes."
+  },
+  "ordinary_action_and_source_binding": {
+    "eligibility_sha256": "aaf696cd506d67c04717801445f05b3e5bf486f911ffc12fb13314e7c95c6cc3",
+    "new_requests": 0,
+    "registered": 4,
+    "bound": 4,
+    "repeated_field_observations": 6,
+    "correct_observations": 6,
+    "distinct_fields": 3,
+    "distinct_correct": 3,
+    "rows": [
+      {
+        "case": "warehouse-crossed",
+        "method": "original",
+        "source": "onboard_0001",
+        "image_sha256": "18a363710a122072596cd8ac1a748dde713d94659ed9cbce70bb43f3dcf07e7e",
+        "log_sha256": "4abbb9906b3d5c2b9218d540d9761e7acae1453e84d295b6e0579e771f1baefc",
+        "root_claims": {
+          "Q0": true
+        },
+        "root_coverage": true,
+        "issues": [],
+        "ordinary_move_to_authorized_side": true,
+        "eligible": true,
+        "subsequently_legal": [
+          "Q1",
+          "Q2"
+        ],
+        "skipped": [],
+        "alignment": 0.9665972222222222,
+        "fields": [
+          {
+            "id": "Q0",
+            "claimed": true,
+            "predicate": "red_carton",
+            "pixels": {
+              "warehouse_station_02/0": 307,
+              "warehouse_station_02/1": 405,
+              "warehouse_station_02/2": 369,
+              "warehouse_station_03/0": 46,
+              "warehouse_station_03/1": 253,
+              "warehouse_station_03/2": 214,
+              "warehouse_station_03/3": 223
+            },
+            "target": true,
+            "correct": true
+          }
+        ]
+      },
+      {
+        "case": "warehouse-crossed",
+        "method": "section",
+        "source": "onboard_0001",
+        "image_sha256": "18a363710a122072596cd8ac1a748dde713d94659ed9cbce70bb43f3dcf07e7e",
+        "log_sha256": "fccf0aeebde9568de07d84262e2ab603b968512f1ce9687ed08f5ecd830b24c9",
+        "root_claims": {
+          "Q0": true
+        },
+        "root_coverage": true,
+        "issues": [],
+        "ordinary_move_to_authorized_side": true,
+        "eligible": true,
+        "subsequently_legal": [
+          "Q1",
+          "Q2"
+        ],
+        "skipped": [],
+        "alignment": 0.9665972222222222,
+        "fields": [
+          {
+            "id": "Q0",
+            "claimed": true,
+            "predicate": "red_carton",
+            "pixels": {
+              "warehouse_station_02/0": 307,
+              "warehouse_station_02/1": 405,
+              "warehouse_station_02/2": 369,
+              "warehouse_station_03/0": 46,
+              "warehouse_station_03/1": 253,
+              "warehouse_station_03/2": 214,
+              "warehouse_station_03/3": 223
+            },
+            "target": true,
+            "correct": true
+          }
+        ]
+      },
+      {
+        "case": "campus-two-screens",
+        "method": "section",
+        "source": "onboard_0001",
+        "image_sha256": "b8a7a551c2eacb70d84b1705a83737f7d0887516cd596bb0ffce133043cc396d",
+        "log_sha256": "d3060231ba2f7409e02d7d8b9bce2bf9ae4c458f7cc9b88de810f8a17683a4f4",
+        "root_claims": {
+          "Q0": true,
+          "Q1": true
+        },
+        "root_coverage": true,
+        "issues": [],
+        "ordinary_move_to_authorized_side": true,
+        "eligible": true,
+        "subsequently_legal": [
+          "Q2",
+          "Q3"
+        ],
+        "skipped": [],
+        "alignment": 0.9592013888888888,
+        "fields": [
+          {
+            "id": "Q0",
+            "claimed": true,
+            "predicate": "vehicle",
+            "pixels": {
+              "campus_station_01": 5981,
+              "campus_station_02": 3497,
+              "campus_station_03": 1863
+            },
+            "target": true,
+            "correct": true
+          },
+          {
+            "id": "Q1",
+            "claimed": true,
+            "predicate": "extinguisher",
+            "pixels": {
+              "campus_station_02": 511,
+              "campus_station_03": 23
+            },
+            "target": true,
+            "correct": true
+          }
+        ]
+      },
+      {
+        "case": "campus-two-screens",
+        "method": "original",
+        "source": "onboard_0001",
+        "image_sha256": "b8a7a551c2eacb70d84b1705a83737f7d0887516cd596bb0ffce133043cc396d",
+        "log_sha256": "b9b258b4df1105fb192b2bdfae9fbd4364d804c5b24f3cc954ee15da7f4415f6",
+        "root_claims": {
+          "Q0": true,
+          "Q1": true
+        },
+        "root_coverage": true,
+        "issues": [],
+        "ordinary_move_to_authorized_side": true,
+        "eligible": true,
+        "subsequently_legal": [
+          "Q2",
+          "Q3"
+        ],
+        "skipped": [],
+        "alignment": 0.9592013888888888,
+        "fields": [
+          {
+            "id": "Q0",
+            "claimed": true,
+            "predicate": "vehicle",
+            "pixels": {
+              "campus_station_01": 5981,
+              "campus_station_02": 3497,
+              "campus_station_03": 1863
+            },
+            "target": true,
+            "correct": true
+          },
+          {
+            "id": "Q1",
+            "claimed": true,
+            "predicate": "extinguisher",
+            "pixels": {
+              "campus_station_02": 511,
+              "campus_station_03": 23
+            },
+            "target": true,
+            "correct": true
+          }
+        ]
+      }
+    ],
+    "scope": "Independent post-seal grade of original first-frame claims on two archival JPEGs, not an online episode."
+  },
+  "ordinary_camera_acquisition_clocks": {
+    "new_model_requests": 0,
+    "role": "physical clocks",
+    "cases": [
+      {
+        "case": "warehouse-crossed",
+        "world_matches": true,
+        "phases": [
+          {
+            "view": "side",
+            "motion_s": 1.1029136310098693,
+            "after_move_capture_s": 0.277386718953494,
+            "to_fresh_source_s": 1.3803003499633633,
+            "actual_yaw": 1.4381317007977321,
+            "arrival": {
+              "x": -6.0,
+              "y": -3.0,
+              "z": 1.1805443892399707,
+              "yaw": 1.4381317007977321
+            },
+            "sha256": "33aea86cf5b5f2a962559bd45e4b579fcfb4ceb8f9894135ea71ce49494ce257"
+          }
+        ],
+        "error": {
+          "code": "RuntimeError",
+          "message": "规划器在 8 秒内未返回可用新轨迹；目标可能位于障碍物、不可达区域，或规划失败。请调整目标点后重试。"
+        }
+      },
+      {
+        "case": "campus-two-screens",
+        "world_matches": true,
+        "phases": [],
+        "error": {
+          "code": "goal_unobserved",
+          "message": "接近点的机体空间尚未充分观测或地图不可用，请重新观察"
+        }
+      }
+    ]
+  },
   "fixed_transport_critical_path": {
     "scored": 16,
     "paired_strict_device_tasks": [
