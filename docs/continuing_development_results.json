@@ -844,11 +844,11 @@
       ]
     },
     "coordinated-handoff-dev03": {
-      "scored": 1,
-      "strict": 1,
-      "sends": 6,
-      "started": 1,
-      "all_started_sends": 6,
+      "scored": 6,
+      "strict": 4,
+      "sends": 44,
+      "started": 6,
+      "all_started_sends": 44,
       "service_interrupted": [],
       "other_undelivered": [],
       "episodes": [
@@ -868,10 +868,181 @@
           "early_field_support": 0,
           "early_final_citation": 0,
           "field_violations": 0
+        },
+        {
+          "cohort": "coordinated-handoff-dev03",
+          "case": "equipment-inspection-03",
+          "method": "Proposed",
+          "passed": true,
+          "whole_s": 113.71260531496955,
+          "restricted_s": 113.71260531496955,
+          "requests": 4,
+          "transport_s": 99.09620829502819,
+          "concurrent_motion_s": 0.0,
+          "idle_transport_s": 99.09620829502819,
+          "first_valid_move_start_s": 29.855579347989988,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "coordinated-handoff-dev03",
+          "case": "equipment-inspection-03",
+          "method": "Original GPT",
+          "passed": true,
+          "whole_s": 145.17106326395879,
+          "restricted_s": 145.17106326395879,
+          "requests": 5,
+          "transport_s": 129.05336028599413,
+          "concurrent_motion_s": 0.0,
+          "idle_transport_s": 129.05336028599413,
+          "first_valid_move_start_s": 14.748773329949472,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "coordinated-handoff-dev03",
+          "case": "campus-access-03",
+          "method": "Original GPT",
+          "passed": false,
+          "whole_s": 360.0101453930256,
+          "restricted_s": 360.0,
+          "requests": 11,
+          "transport_s": 327.3028881289647,
+          "concurrent_motion_s": 0.0,
+          "idle_transport_s": 327.3028881289647,
+          "first_valid_move_start_s": 21.879097915021703,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "coordinated-handoff-dev03",
+          "case": "campus-access-03",
+          "method": "Proposed",
+          "passed": true,
+          "whole_s": 209.40506460901815,
+          "restricted_s": 209.40506460901815,
+          "requests": 7,
+          "transport_s": 191.05473443103256,
+          "concurrent_motion_s": 15.586517582996748,
+          "idle_transport_s": 175.4682168480358,
+          "first_valid_move_start_s": 17.193281264044344,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "coordinated-handoff-dev03",
+          "case": "campus-access-03",
+          "method": "Observe-only ablation",
+          "passed": false,
+          "whole_s": 360.0314923499827,
+          "restricted_s": 360.0,
+          "requests": 11,
+          "transport_s": 336.0162207841058,
+          "concurrent_motion_s": 0.0,
+          "idle_transport_s": 336.0162207841058,
+          "first_valid_move_start_s": 22.420416158041917,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
         }
       ],
-      "paired": [],
-      "all_started_delivery_pairs": []
+      "paired": [
+        {
+          "cohort": "coordinated-handoff-dev03",
+          "case": "campus-access-03",
+          "baseline": "Original GPT",
+          "proposed_pass": true,
+          "baseline_pass": false,
+          "delta_restricted_s": -150.59493539098185,
+          "delta_restricted_pct": -41.831926497494955,
+          "delta_transport_s": -136.24815369793214,
+          "delta_requests": -4
+        },
+        {
+          "cohort": "coordinated-handoff-dev03",
+          "case": "campus-access-03",
+          "baseline": "Observe-only ablation",
+          "proposed_pass": true,
+          "baseline_pass": false,
+          "delta_restricted_s": -150.59493539098185,
+          "delta_restricted_pct": -41.831926497494955,
+          "delta_transport_s": -144.96148635307327,
+          "delta_requests": -4
+        },
+        {
+          "cohort": "coordinated-handoff-dev03",
+          "case": "equipment-inspection-03",
+          "baseline": "Observe-only ablation",
+          "proposed_pass": true,
+          "baseline_pass": true,
+          "delta_restricted_s": -64.08247123903129,
+          "delta_restricted_pct": -36.04288289702321,
+          "delta_transport_s": -65.1610061819083,
+          "delta_requests": -2
+        },
+        {
+          "cohort": "coordinated-handoff-dev03",
+          "case": "equipment-inspection-03",
+          "baseline": "Original GPT",
+          "proposed_pass": true,
+          "baseline_pass": true,
+          "delta_restricted_s": -31.458457948989235,
+          "delta_restricted_pct": -21.669923221399547,
+          "delta_transport_s": -29.95715199096594,
+          "delta_requests": -1
+        }
+      ],
+      "all_started_delivery_pairs": [
+        {
+          "case": "equipment-inspection-03",
+          "baseline": "Observe-only ablation",
+          "proposed_delivered": true,
+          "baseline_delivered": true,
+          "delta_deadline_restricted_s": -64.08247123903129,
+          "proposed_interruption": null,
+          "baseline_interruption": null,
+          "both_algorithm_outcomes_scored": true
+        },
+        {
+          "case": "equipment-inspection-03",
+          "baseline": "Original GPT",
+          "proposed_delivered": true,
+          "baseline_delivered": true,
+          "delta_deadline_restricted_s": -31.458457948989235,
+          "proposed_interruption": null,
+          "baseline_interruption": null,
+          "both_algorithm_outcomes_scored": true
+        },
+        {
+          "case": "campus-access-03",
+          "baseline": "Original GPT",
+          "proposed_delivered": true,
+          "baseline_delivered": false,
+          "delta_deadline_restricted_s": -150.59493539098185,
+          "proposed_interruption": null,
+          "baseline_interruption": null,
+          "both_algorithm_outcomes_scored": true
+        },
+        {
+          "case": "campus-access-03",
+          "baseline": "Observe-only ablation",
+          "proposed_delivered": true,
+          "baseline_delivered": false,
+          "delta_deadline_restricted_s": -150.59493539098185,
+          "proposed_interruption": null,
+          "baseline_interruption": null,
+          "both_algorithm_outcomes_scored": true
+        }
+      ]
     }
   },
   "perception": {
@@ -1797,42 +1968,448 @@
       "weights_sha256": "bd33c41ebde27ea06931c7f49193375e71b65079773999d7a84beabb8fa2092e",
       "before_any_campus_send": true
     },
-    "exposed_layouts": 0,
-    "terminal_methods": [],
-    "actual_candidate_count": 0,
+    "exposed_layouts": 1,
+    "terminal_methods": [
+      "coordinated-deferred",
+      "coordinated-observe-only",
+      "original-gpt"
+    ],
+    "actual_candidate_count": 2,
     "prospective_by_calendar": true,
     "deployed": false,
     "metrics": {
       "fixed-half": {
-        "labelled": 0,
-        "brier": null,
-        "log_loss": null,
+        "labelled": 2,
+        "positives": 2,
+        "turns": 1,
+        "layouts": 1,
+        "brier": 0.25,
+        "log_loss": 0.6931471805599453,
         "two_way_choices": 0,
-        "top1_hits": null
+        "top1_hits": 0
       },
       "prevalence": {
-        "labelled": 0,
-        "brier": null,
-        "log_loss": null,
+        "labelled": 2,
+        "positives": 2,
+        "turns": 1,
+        "layouts": 1,
+        "brier": 0.5080804457199547,
+        "log_loss": 1.2475681516182642,
         "two_way_choices": 0,
-        "top1_hits": null
+        "top1_hits": 0
       },
       "task-only": {
-        "labelled": 0,
-        "brier": null,
-        "log_loss": null,
+        "labelled": 2,
+        "positives": 2,
+        "turns": 1,
+        "layouts": 1,
+        "brier": 0.2625657014813028,
+        "log_loss": 0.7182837790494683,
         "two_way_choices": 0,
-        "top1_hits": null
+        "top1_hits": 0
       },
       "visual-and-cost": {
-        "labelled": 0,
-        "brier": null,
-        "log_loss": null,
+        "labelled": 2,
+        "positives": 2,
+        "turns": 1,
+        "layouts": 1,
+        "brier": 0.09230326667989995,
+        "log_loss": 0.36084619671106555,
         "two_way_choices": 0,
-        "top1_hits": null
+        "top1_hits": 0
       }
     },
     "new_model_requests": 0
+  },
+  "cross_fitted_demand_action_changes": {
+    "pre_recovery_cross_fitted": {
+      "expressed": {
+        "fixed-half": {
+          "decisions": 19,
+          "same_set_as_fixed_half": 19,
+          "unrequested_selected": 9,
+          "wanted_selected": 11,
+          "sum_oracle_gap_nominal_s": 0.0,
+          "sum_gain_from_serial_nominal_s": 104.09246051423384
+        },
+        "prevalence": {
+          "decisions": 19,
+          "same_set_as_fixed_half": 19,
+          "unrequested_selected": 9,
+          "wanted_selected": 11,
+          "sum_oracle_gap_nominal_s": 0.0,
+          "sum_gain_from_serial_nominal_s": 104.09246051423384
+        },
+        "task-only": {
+          "decisions": 19,
+          "same_set_as_fixed_half": 19,
+          "unrequested_selected": 9,
+          "wanted_selected": 11,
+          "sum_oracle_gap_nominal_s": 0.0,
+          "sum_gain_from_serial_nominal_s": 104.09246051423384
+        },
+        "visual-and-cost": {
+          "decisions": 19,
+          "same_set_as_fixed_half": 18,
+          "unrequested_selected": 9,
+          "wanted_selected": 11,
+          "sum_oracle_gap_nominal_s": 0.0,
+          "sum_gain_from_serial_nominal_s": 104.09246051423384
+        }
+      },
+      "recognized-top-level": {
+        "fixed-half": {
+          "decisions": 19,
+          "same_set_as_fixed_half": 19,
+          "unrequested_selected": 11,
+          "wanted_selected": 9,
+          "sum_oracle_gap_nominal_s": 2.7283850486933705,
+          "sum_gain_from_serial_nominal_s": 81.41783670057129
+        },
+        "prevalence": {
+          "decisions": 19,
+          "same_set_as_fixed_half": 19,
+          "unrequested_selected": 11,
+          "wanted_selected": 9,
+          "sum_oracle_gap_nominal_s": 2.7283850486933705,
+          "sum_gain_from_serial_nominal_s": 81.41783670057129
+        },
+        "task-only": {
+          "decisions": 19,
+          "same_set_as_fixed_half": 19,
+          "unrequested_selected": 11,
+          "wanted_selected": 9,
+          "sum_oracle_gap_nominal_s": 2.7283850486933705,
+          "sum_gain_from_serial_nominal_s": 81.41783670057129
+        },
+        "visual-and-cost": {
+          "decisions": 19,
+          "same_set_as_fixed_half": 18,
+          "unrequested_selected": 11,
+          "wanted_selected": 9,
+          "sum_oracle_gap_nominal_s": 2.7283850486933705,
+          "sum_gain_from_serial_nominal_s": 81.41783670057129
+        }
+      }
+    },
+    "training_independent_unit": "full development layout",
+    "interpretation": "Offline single frozen decision. Exact legal subsets and nominal round-trip estimates are identical for all four variants. Only probabilities differ. The later real response and observed transport window score choices after selection. Unseen travel times and later ordinary model replies are never synthesized. Section estimates do not establish a complete-task improvement.",
+    "online_deployed": false,
+    "new_model_requests": 0
+  },
+  "observed_approach_refusals": {
+    "domains": {
+      "coordinated-handoff-dev03-later": {
+        "approach_replies": 1,
+        "actual_successes": 0,
+        "actual_rejections": 1,
+        "unverified": 0,
+        "rejection_reasons": {
+          "unproven_foreground": 1
+        },
+        "next_actions": {
+          "move": 1
+        },
+        "followed_by_successful_direct_move": 1,
+        "confirmed_move_also_returned_material": 0,
+        "median_next_service_s_on_confirmed_move": 17.09518638299778
+      },
+      "historical-custom": {
+        "approach_replies": 77,
+        "actual_successes": 0,
+        "actual_rejections": 76,
+        "unverified": 1,
+        "rejection_reasons": {
+          "insufficient_coverage": 8,
+          "ambiguous_depth": 19,
+          "sparse_center": 25,
+          "nearer_obstruction": 3,
+          "unproven_foreground": 17,
+          "move_too_far": 4
+        },
+        "next_actions": {
+          "move": 76
+        },
+        "followed_by_successful_direct_move": 71,
+        "confirmed_move_also_returned_material": 2,
+        "median_next_service_s_on_confirmed_move": 19.838706459995592
+      },
+      "native-evidence-dev02-later": {
+        "approach_replies": 5,
+        "actual_successes": 0,
+        "actual_rejections": 5,
+        "unverified": 0,
+        "rejection_reasons": {
+          "unproven_foreground": 3,
+          "ambiguous_depth": 2
+        },
+        "next_actions": {
+          "observe": 5
+        },
+        "followed_by_successful_direct_move": 0,
+        "confirmed_move_also_returned_material": 0,
+        "median_next_service_s_on_confirmed_move": null
+      },
+      "pre-restoration-native": {
+        "approach_replies": 9,
+        "actual_successes": 0,
+        "actual_rejections": 9,
+        "unverified": 0,
+        "rejection_reasons": {
+          "unproven_foreground": 9
+        },
+        "next_actions": {
+          "observe": 5,
+          "move": 4
+        },
+        "followed_by_successful_direct_move": 4,
+        "confirmed_move_also_returned_material": 0,
+        "median_next_service_s_on_confirmed_move": 19.31002633049502
+      }
+    },
+    "note": "A normal decision is matched to its execution record. Segmented-navigation calls with the same frame id are separate and cannot replace the original action. A later ordinary response can incorporate a fresh camera or additional evidence even after rejection; its service time cannot all be credited to an unobserved alternative. Original map and target-grounding refusals remain intact.",
+    "new_model_requests": 0
+  },
+  "same_frame_region_requests": {
+    "role": "perception-only",
+    "registered": 6,
+    "sends": 6,
+    "regions": [
+      {
+        "domain": "equipment",
+        "region": "first",
+        "photo_sha256": "6025d62bdc7da5b915146215c697749beb8afd05c7b13aacfeea4ebf14724046",
+        "object": "EQ-02",
+        "alignment": 0.9779513888888889,
+        "expected": "positive",
+        "group": "positive",
+        "single": "positive",
+        "group_error": null,
+        "single_error": null
+      },
+      {
+        "domain": "equipment",
+        "region": "second",
+        "photo_sha256": "6025d62bdc7da5b915146215c697749beb8afd05c7b13aacfeea4ebf14724046",
+        "object": "EQ-01",
+        "alignment": 0.9779513888888889,
+        "expected": "negative",
+        "group": "negative",
+        "single": "negative",
+        "group_error": null,
+        "single_error": null
+      },
+      {
+        "domain": "campus",
+        "region": "first",
+        "photo_sha256": "a45d41657288daa8146e87817f4ae1e978ba9c3dfcc70d6288e94197656c5bff",
+        "object": null,
+        "alignment": 0.95265625,
+        "expected": null,
+        "group": "positive",
+        "single": "positive",
+        "group_error": null,
+        "single_error": null
+      },
+      {
+        "domain": "campus",
+        "region": "second",
+        "photo_sha256": "a45d41657288daa8146e87817f4ae1e978ba9c3dfcc70d6288e94197656c5bff",
+        "object": null,
+        "alignment": 0.95265625,
+        "expected": null,
+        "group": "uncertain",
+        "single": "uncertain",
+        "group_error": null,
+        "single_error": null
+      }
+    ],
+    "cases": [
+      {
+        "domain": "equipment",
+        "regions_independently_assigned": true,
+        "both_treatments_definite": true,
+        "group_all_correct": true,
+        "single_all_correct": true,
+        "paired_service_saving_s": 4.93220407696208
+      },
+      {
+        "domain": "campus",
+        "regions_independently_assigned": false,
+        "both_treatments_definite": false,
+        "group_all_correct": null,
+        "single_all_correct": null,
+        "paired_service_saving_s": null
+      }
+    ]
+  },
+  "measured_condition_range": {
+    "routes": [
+      {
+        "region": "v1-1",
+        "anchor_measured": true,
+        "close_measured": true,
+        "returned": true,
+        "local_model_requests": 0,
+        "matching_world": true,
+        "alignment": {
+          "ncc": 0.9708716869354248,
+          "delta_pixels": [
+            0,
+            0
+          ]
+        },
+        "registered_box": [
+          0.284,
+          0.281,
+          0.498,
+          0.761
+        ],
+        "fresh_reference_sha256": "cd21654afbd3a6d9bb05d4d1b1d9aeb501fab465505e1fb29519189b6b777ac4",
+        "anchor": {
+          "view": "anchor",
+          "native_returns": 321,
+          "scoped_returns": 95,
+          "occupied": 50,
+          "coarse_returns": 4,
+          "coarse_occupied": 4,
+          "released_numeric_only": true,
+          "packet_sha256": "16e6bf38356a4e9a57b442c6ae78bddbd771259b155e28c92e1c59653988673e",
+          "raw_image_sha256": "cd21654afbd3a6d9bb05d4d1b1d9aeb501fab465505e1fb29519189b6b777ac4"
+        },
+        "close": {
+          "view": "close",
+          "native_returns": 984,
+          "scoped_returns": 722,
+          "occupied": 28,
+          "coarse_returns": 17,
+          "coarse_occupied": 14,
+          "released_numeric_only": true,
+          "packet_sha256": "b62c74255946e4389f8d14b6d91b74eac052adf6ea52ae3789ed9ced464d2409",
+          "raw_image_sha256": "ed801165bdcd24252fd4fd13d0286c5350e1a50925bda9137a4215b3a8994991"
+        },
+        "outward_capture_s": 8.328821244009305,
+        "status": "measured",
+        "return_s": 9.121746747987345
+      },
+      {
+        "region": "v1-2",
+        "anchor_measured": true,
+        "close_measured": true,
+        "returned": true,
+        "local_model_requests": 0,
+        "matching_world": true,
+        "alignment": {
+          "ncc": 0.9921597838401794,
+          "delta_pixels": [
+            0,
+            0
+          ]
+        },
+        "registered_box": [
+          0.477,
+          0.322,
+          0.634,
+          0.694
+        ],
+        "fresh_reference_sha256": "255b48f4094a2bf5748a434cc275ec63a693650168cce7c765741de4af86a1e7",
+        "anchor": {
+          "view": "anchor",
+          "native_returns": 322,
+          "scoped_returns": 21,
+          "occupied": 16,
+          "coarse_returns": 1,
+          "coarse_occupied": 1,
+          "released_numeric_only": true,
+          "packet_sha256": "18a503a82396e84329ba46fda2a7adcfb4fb0059e16e76205c82240199e0f9e7",
+          "raw_image_sha256": "255b48f4094a2bf5748a434cc275ec63a693650168cce7c765741de4af86a1e7"
+        },
+        "close": {
+          "view": "close",
+          "native_returns": 416,
+          "scoped_returns": 233,
+          "occupied": 54,
+          "coarse_returns": 5,
+          "coarse_occupied": 5,
+          "released_numeric_only": true,
+          "packet_sha256": "392655d97893d15d4f4d560883ea0ca38376051523514977e38f0754dab213f5",
+          "raw_image_sha256": "375803aa44ff9156413d7716ec270a99d24381a834415d279eb2e5fc21f6e8aa"
+        },
+        "outward_capture_s": 6.122078368964139,
+        "status": "measured",
+        "return_s": 6.213824229023885
+      }
+    ],
+    "scored": [
+      {
+        "region": "v1-1",
+        "view": "anchor",
+        "target": "CP-03",
+        "raw_hits": 95,
+        "occupied_bins": 50,
+        "portal_hit_counts": [
+          8,
+          3,
+          2
+        ],
+        "obstacle_hits": 25,
+        "source_rgb_alignment": 0.9587760416666666,
+        "capture_rgb_alignment": 0.9587760416666666,
+        "positive_geometry_support": true,
+        "verified_return": true,
+        "packet_sha256": "16e6bf38356a4e9a57b442c6ae78bddbd771259b155e28c92e1c59653988673e"
+      },
+      {
+        "region": "v1-1",
+        "view": "close",
+        "target": "CP-03",
+        "raw_hits": 722,
+        "occupied_bins": 28,
+        "portal_hit_counts": [
+          39,
+          68,
+          0
+        ],
+        "obstacle_hits": 0,
+        "source_rgb_alignment": 0.9587760416666666,
+        "capture_rgb_alignment": 0.9869965277777778,
+        "positive_geometry_support": false,
+        "verified_return": true,
+        "packet_sha256": "b62c74255946e4389f8d14b6d91b74eac052adf6ea52ae3789ed9ced464d2409"
+      },
+      {
+        "region": "v1-2",
+        "view": "anchor",
+        "target": null,
+        "raw_hits": 21,
+        "occupied_bins": 16,
+        "portal_hit_counts": [],
+        "obstacle_hits": 0,
+        "source_rgb_alignment": 0.9590190972222222,
+        "capture_rgb_alignment": 0.9590190972222222,
+        "positive_geometry_support": false,
+        "verified_return": true,
+        "packet_sha256": "18a503a82396e84329ba46fda2a7adcfb4fb0059e16e76205c82240199e0f9e7"
+      },
+      {
+        "region": "v1-2",
+        "view": "close",
+        "target": null,
+        "raw_hits": 233,
+        "occupied_bins": 54,
+        "portal_hit_counts": [],
+        "obstacle_hits": 0,
+        "source_rgb_alignment": 0.9590190972222222,
+        "capture_rgb_alignment": 0.9434027777777778,
+        "positive_geometry_support": false,
+        "verified_return": true,
+        "packet_sha256": "392655d97893d15d4f4d560883ea0ca38376051523514977e38f0754dab213f5"
+      }
+    ],
+    "registered": 2,
+    "model_requests": 0,
+    "real_vehicle_motion": 0,
+    "interpretation": "A scoped numerical range packet can show actual physical surfaces. Correct branch inference is untested, an absent hit does not establish a clear portal, and these fresh resets do not supply the old run's missing range scan."
   },
   "fixed_transport_critical_path": {
     "scored": 16,
@@ -1970,18 +2547,18 @@
         "released": 6
       },
       "coordinated-handoff-dev03": {
-        "sends": 6,
-        "valid_replies": 6,
-        "replies_nominating": 0,
-        "published_next_offers": 0,
-        "turns_offering_a_photo": 0,
+        "sends": 17,
+        "valid_replies": 17,
+        "replies_nominating": 1,
+        "published_next_offers": 2,
+        "turns_offering_a_photo": 1,
         "turns_selecting_top_level": 0,
-        "turns_selecting_only_inside_action": 0,
+        "turns_selecting_only_inside_action": 1,
         "selected_and_moving": 0,
         "explicit_independent_move_with_selection": 0,
         "turns_with_valid_positive_or_independent_grant": 0,
         "executor_accepted_turns": 0,
-        "raw_early_starts": 0,
+        "raw_early_starts": 1,
         "released": 0
       }
     },
@@ -2141,6 +2718,21 @@
         }
       },
       "coordinated-handoff-dev03": {
+        "coordinated-deferred": {
+          "sends": 11,
+          "valid_replies": 11,
+          "replies_nominating": 1,
+          "published_next_offers": 2,
+          "turns_offering_a_photo": 1,
+          "turns_selecting_top_level": 0,
+          "turns_selecting_only_inside_action": 1,
+          "selected_and_moving": 0,
+          "explicit_independent_move_with_selection": 0,
+          "turns_with_valid_positive_or_independent_grant": 0,
+          "executor_accepted_turns": 0,
+          "raw_early_starts": 1,
+          "released": 0
+        },
         "coordinated-observe-only": {
           "sends": 6,
           "valid_replies": 6,

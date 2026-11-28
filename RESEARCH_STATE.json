@@ -1,9 +1,9 @@
 {
   "status": "RESEARCH_IN_PROGRESS",
-  "stage": "paired native development and measured serial inference dependencies",
+  "stage": "source-bound evidence and mandatory inspection travel",
   "resumed_remote": "94bd1e78953164dce48ec38c8cc15dbd010f2e56",
   "resumed_local": "90f390c8ee332c866f4204dee628d447f8ddab2c",
-  "as_of_utc": "2026-11-28T14:26:39+00:00",
+  "as_of_utc": "2026-11-28T14:58:34+00:00",
   "method_version": {
     "native-views-dev01": "2e8e26cb8f0099bb68d02e5aa1c1e9569423706ec413227f9d9aa7714ffcef2b",
     "native-evidence-dev02": "6c5dab53a9faf9d2de88df4c2d988619c066176423a1223341f30e75b84c2577",
@@ -18,12 +18,12 @@
     "sends": 93
   },
   "new_dev": {
-    "scored_episodes": 23,
-    "strict_successes": 17,
-    "scored_sends": 121,
-    "in_flight_sends_at_snapshot": 3,
+    "scored_episodes": 28,
+    "strict_successes": 20,
+    "scored_sends": 159,
+    "in_flight_sends_at_snapshot": 0,
     "closed_unscored_sends": 9,
-    "started_episodes": 26,
+    "started_episodes": 30,
     "blocks_completed": {
       "native-views-dev01": {
         "primary": 6,
@@ -34,7 +34,7 @@
         "comparators": 5
       },
       "coordinated-handoff-dev03": {
-        "primary": 1,
+        "primary": 6,
         "comparators": 0
       }
     },
@@ -43,22 +43,10 @@
     "early_photos_cited_in_final": 0,
     "early_field_violations": 0
   },
-  "pending_workers": [
-    {
-      "utc": "2026-11-28T14:26:37.678723+00:00",
-      "state": "running",
-      "controller_pid": 3793943,
-      "worker_pid": 3795880,
-      "case": "equipment-inspection-03",
-      "method": "coordinated-deferred",
-      "sends": 2,
-      "cohort": "coordinated-handoff-dev03",
-      "heartbeat": "outputs/continuing/coordinated-handoff-dev03/heartbeat.json"
-    }
-  ],
+  "pending_workers": [],
   "account_remaining_requests": null,
   "hardware_motion_authorized": false,
-  "current_hypothesis": "Test whether co-issuing a grounded photo with an ordinary move or judging several regions on one image can remove serial model service. Test public-scope assembly only with externally defined regions.",
+  "current_hypothesis": "已关闭的相机补图批次保留原判。接下来检查能否在判读现场照片期间执行任务本来就要求的下一段行程，先核验场景、照片归属及路线，再决定是否使用真实模型。",
   "validated": [
     "93 prior sends attributed to six roles",
     "with original requests fixed the nonrequest ceiling is 10.50% on cracks and 5.14% on inventory",
@@ -67,8 +55,8 @@
   "rejected": [
     "fixed conservative OCR has zero detections on 64 sampled historical image/ROI questions; 31 had independently assigned target identity"
   ],
-  "next": "跟踪正在进行的 coordinated-handoff-dev03 批次，逐一保留原始收据并复核完整评分。",
-  "phase": "coordinating actual material handoff, ordinary movement and source-bound completion",
+  "next": "已关闭的相机补图批次保留原判。接下来检查能否在判读现场照片期间执行任务本来就要求的下一段行程，先核验场景、照片归属及路线，再决定是否使用真实模型。",
+  "phase": "source-bound evidence and mandatory inspection travel",
   "paired_rgb_assay": {
     "sends": 18,
     "results": {
@@ -84,9 +72,9 @@
   "accounted_sends": {
     "historical_formal": 3842,
     "historical_revision_development": 93,
-    "continued_native_development": 133,
+    "continued_native_development": 168,
     "archived_rgb_assay": 18,
-    "one_image_regions": 0,
+    "one_image_regions": 6,
     "explicit_roster_mechanism": 0
   },
   "closed_external_attempts": [
@@ -337,7 +325,7 @@
   },
   "optional_development": {
     "region_assay_registered_sends": 6,
-    "region_assay_actual_sends": 0,
+    "region_assay_actual_sends": 6,
     "closed_mechanism_registered_arms": [
       "evidence-off",
       "evidence-deferred"
@@ -364,5 +352,253 @@
       "kind": "undelivered-run-error",
       "error_type": "TransportError"
     }
-  ]
+  ],
+  "region_assay_result": {
+    "role": "perception-only",
+    "registered": 6,
+    "sends": 6,
+    "regions": [
+      {
+        "domain": "equipment",
+        "region": "first",
+        "photo_sha256": "6025d62bdc7da5b915146215c697749beb8afd05c7b13aacfeea4ebf14724046",
+        "object": "EQ-02",
+        "alignment": 0.9779513888888889,
+        "expected": "positive",
+        "group": "positive",
+        "single": "positive",
+        "group_error": null,
+        "single_error": null
+      },
+      {
+        "domain": "equipment",
+        "region": "second",
+        "photo_sha256": "6025d62bdc7da5b915146215c697749beb8afd05c7b13aacfeea4ebf14724046",
+        "object": "EQ-01",
+        "alignment": 0.9779513888888889,
+        "expected": "negative",
+        "group": "negative",
+        "single": "negative",
+        "group_error": null,
+        "single_error": null
+      },
+      {
+        "domain": "campus",
+        "region": "first",
+        "photo_sha256": "a45d41657288daa8146e87817f4ae1e978ba9c3dfcc70d6288e94197656c5bff",
+        "object": null,
+        "alignment": 0.95265625,
+        "expected": null,
+        "group": "positive",
+        "single": "positive",
+        "group_error": null,
+        "single_error": null
+      },
+      {
+        "domain": "campus",
+        "region": "second",
+        "photo_sha256": "a45d41657288daa8146e87817f4ae1e978ba9c3dfcc70d6288e94197656c5bff",
+        "object": null,
+        "alignment": 0.95265625,
+        "expected": null,
+        "group": "uncertain",
+        "single": "uncertain",
+        "group_error": null,
+        "single_error": null
+      }
+    ],
+    "cases": [
+      {
+        "domain": "equipment",
+        "regions_independently_assigned": true,
+        "both_treatments_definite": true,
+        "group_all_correct": true,
+        "single_all_correct": true,
+        "paired_service_saving_s": 4.93220407696208
+      },
+      {
+        "domain": "campus",
+        "regions_independently_assigned": false,
+        "both_treatments_definite": false,
+        "group_all_correct": null,
+        "single_all_correct": null,
+        "paired_service_saving_s": null
+      }
+    ]
+  },
+  "measured_range_result": {
+    "routes": [
+      {
+        "region": "v1-1",
+        "anchor_measured": true,
+        "close_measured": true,
+        "returned": true,
+        "local_model_requests": 0,
+        "matching_world": true,
+        "alignment": {
+          "ncc": 0.9708716869354248,
+          "delta_pixels": [
+            0,
+            0
+          ]
+        },
+        "registered_box": [
+          0.284,
+          0.281,
+          0.498,
+          0.761
+        ],
+        "fresh_reference_sha256": "cd21654afbd3a6d9bb05d4d1b1d9aeb501fab465505e1fb29519189b6b777ac4",
+        "anchor": {
+          "view": "anchor",
+          "native_returns": 321,
+          "scoped_returns": 95,
+          "occupied": 50,
+          "coarse_returns": 4,
+          "coarse_occupied": 4,
+          "released_numeric_only": true,
+          "packet_sha256": "16e6bf38356a4e9a57b442c6ae78bddbd771259b155e28c92e1c59653988673e",
+          "raw_image_sha256": "cd21654afbd3a6d9bb05d4d1b1d9aeb501fab465505e1fb29519189b6b777ac4"
+        },
+        "close": {
+          "view": "close",
+          "native_returns": 984,
+          "scoped_returns": 722,
+          "occupied": 28,
+          "coarse_returns": 17,
+          "coarse_occupied": 14,
+          "released_numeric_only": true,
+          "packet_sha256": "b62c74255946e4389f8d14b6d91b74eac052adf6ea52ae3789ed9ced464d2409",
+          "raw_image_sha256": "ed801165bdcd24252fd4fd13d0286c5350e1a50925bda9137a4215b3a8994991"
+        },
+        "outward_capture_s": 8.328821244009305,
+        "status": "measured",
+        "return_s": 9.121746747987345
+      },
+      {
+        "region": "v1-2",
+        "anchor_measured": true,
+        "close_measured": true,
+        "returned": true,
+        "local_model_requests": 0,
+        "matching_world": true,
+        "alignment": {
+          "ncc": 0.9921597838401794,
+          "delta_pixels": [
+            0,
+            0
+          ]
+        },
+        "registered_box": [
+          0.477,
+          0.322,
+          0.634,
+          0.694
+        ],
+        "fresh_reference_sha256": "255b48f4094a2bf5748a434cc275ec63a693650168cce7c765741de4af86a1e7",
+        "anchor": {
+          "view": "anchor",
+          "native_returns": 322,
+          "scoped_returns": 21,
+          "occupied": 16,
+          "coarse_returns": 1,
+          "coarse_occupied": 1,
+          "released_numeric_only": true,
+          "packet_sha256": "18a503a82396e84329ba46fda2a7adcfb4fb0059e16e76205c82240199e0f9e7",
+          "raw_image_sha256": "255b48f4094a2bf5748a434cc275ec63a693650168cce7c765741de4af86a1e7"
+        },
+        "close": {
+          "view": "close",
+          "native_returns": 416,
+          "scoped_returns": 233,
+          "occupied": 54,
+          "coarse_returns": 5,
+          "coarse_occupied": 5,
+          "released_numeric_only": true,
+          "packet_sha256": "392655d97893d15d4f4d560883ea0ca38376051523514977e38f0754dab213f5",
+          "raw_image_sha256": "375803aa44ff9156413d7716ec270a99d24381a834415d279eb2e5fc21f6e8aa"
+        },
+        "outward_capture_s": 6.122078368964139,
+        "status": "measured",
+        "return_s": 6.213824229023885
+      }
+    ],
+    "scored": [
+      {
+        "region": "v1-1",
+        "view": "anchor",
+        "target": "CP-03",
+        "raw_hits": 95,
+        "occupied_bins": 50,
+        "portal_hit_counts": [
+          8,
+          3,
+          2
+        ],
+        "obstacle_hits": 25,
+        "source_rgb_alignment": 0.9587760416666666,
+        "capture_rgb_alignment": 0.9587760416666666,
+        "positive_geometry_support": true,
+        "verified_return": true,
+        "packet_sha256": "16e6bf38356a4e9a57b442c6ae78bddbd771259b155e28c92e1c59653988673e"
+      },
+      {
+        "region": "v1-1",
+        "view": "close",
+        "target": "CP-03",
+        "raw_hits": 722,
+        "occupied_bins": 28,
+        "portal_hit_counts": [
+          39,
+          68,
+          0
+        ],
+        "obstacle_hits": 0,
+        "source_rgb_alignment": 0.9587760416666666,
+        "capture_rgb_alignment": 0.9869965277777778,
+        "positive_geometry_support": false,
+        "verified_return": true,
+        "packet_sha256": "b62c74255946e4389f8d14b6d91b74eac052adf6ea52ae3789ed9ced464d2409"
+      },
+      {
+        "region": "v1-2",
+        "view": "anchor",
+        "target": null,
+        "raw_hits": 21,
+        "occupied_bins": 16,
+        "portal_hit_counts": [],
+        "obstacle_hits": 0,
+        "source_rgb_alignment": 0.9590190972222222,
+        "capture_rgb_alignment": 0.9590190972222222,
+        "positive_geometry_support": false,
+        "verified_return": true,
+        "packet_sha256": "18a503a82396e84329ba46fda2a7adcfb4fb0059e16e76205c82240199e0f9e7"
+      },
+      {
+        "region": "v1-2",
+        "view": "close",
+        "target": null,
+        "raw_hits": 233,
+        "occupied_bins": 54,
+        "portal_hit_counts": [],
+        "obstacle_hits": 0,
+        "source_rgb_alignment": 0.9590190972222222,
+        "capture_rgb_alignment": 0.9434027777777778,
+        "positive_geometry_support": false,
+        "verified_return": true,
+        "packet_sha256": "392655d97893d15d4f4d560883ea0ca38376051523514977e38f0754dab213f5"
+      }
+    ],
+    "registered": 2,
+    "model_requests": 0,
+    "real_vehicle_motion": 0,
+    "interpretation": "A scoped numerical range packet can show actual physical surfaces. Correct branch inference is untested, an absent hit does not establish a clear portal, and these fresh resets do not supply the old run's missing range scan."
+  },
+  "registered_block_decision": {
+    "utc": "2026-11-28T14:49:21.474276+00:00",
+    "coordinator_pid": 3785886,
+    "stage": "registered-decision-point",
+    "scoped_mechanism_admitted": false,
+    "region_summary_sha256": "59791085a516fd82b660ba09ea32baad37b0b880acd7114dd308b9987e351b83"
+  }
 }

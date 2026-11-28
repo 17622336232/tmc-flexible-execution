@@ -105,15 +105,31 @@ def main():
     registration=optional("same-frame-region-assay01/registration.json")
     planned_assay=sum(len(c["order"]) for c in registration.get("cases",[]))
     mechanism=optional("scoped-mission-dev01/registration.json")
+    regional=optional("same-frame-region-assay01/summary.json")
+    decision=optional("registered-blocks.json")
+    measured=optional("condition-range-dev01/summary.json")
+    if terminal_external and not unavailable:
+        status+="原套餐中断保留，后续未发送位置已使用恢复后的同一服务。"
+    if decision.get("stage")=="registered-decision-point":
+        status+="第三批两种场景的提前交图都未满足登记条件，8 个后续强对照未发送。"
+        if not decision.get("scoped_mechanism_admitted"):
+            status+="单图实验未通过校园区域归属要求，2 个依赖它的整项也未发送。"
+    if measured:
+        scored_ranges=measured["scored"]
+        status+=(f"两条本机测距路线均回位。满足门框和障碍物同时可核实要求的原位扫描 "
+                 f"{sum(r['positive_geometry_support'] for r in scored_ranges if r['view']=='anchor')}/2，近处扫描 "
+                 f"{sum(r['positive_geometry_support'] for r in scored_ranges if r['view']=='close')}/2。")
     if planned_assay:
         status+=f"另行登记的单图多区域感知比较实发 {regional_sends}/{planned_assay} 次。"
     if unavailable:
         next_step="等待现有 Diff-VLA 套餐显示可用，再从未发送且已登记的位置恢复。"
     elif workers:
         next_step="跟踪正在进行的 "+workers[0]["cohort"]+" 批次，逐一保留原始收据并复核完整评分。"
+    elif measured:
+        next_step="已关闭的相机补图批次保留原判。接下来检查能否在判读现场照片期间执行任务本来就要求的下一段行程，先核验场景、照片归属及路线，再决定是否使用真实模型。"
     else:
         next_step="从各批次收据与原有门槛检查下一项尚未发送的作业，继续当前版本的开发分析。"
-    stage="paired native development and measured serial inference dependencies"
+    stage="paired native development and measured serial inference dependencies" if not measured else "source-bound evidence and mandatory inspection travel"
     doc.update(as_of_utc=timestamp,method_version=versions,
         new_dev=dict(scored_episodes=len(scored),strict_successes=sum(r["strict"] for r in scored),
         scored_sends=closed,in_flight_sends_at_snapshot=live_sends,closed_unscored_sends=stopped,
@@ -126,10 +142,12 @@ def main():
         scoped_wait_censoring=timing.get("service"),actual_offered_action_slots=slots,
         critical_path=optional("results/critical_path.json"),matched_sparse_and_generic=optional("results/actual_offer_planners.json"),
         task_roster_on_fresh_camera=optional("scoped-mission-dev01/preflight.json"),
+        region_assay_result=regional,measured_range_result=measured,
+        registered_block_decision=decision if decision.get("stage")=="registered-decision-point" else {},
         optional_development=dict(region_assay_registered_sends=planned_assay,region_assay_actual_sends=regional_sends,
             closed_mechanism_registered_arms=mechanism.get("bounded_online_order",[]),closed_mechanism_actual_sends=scoped_sends),
-        current_hypothesis="Test whether co-issuing a grounded photo with an ordinary move or judging several regions on one image can remove serial model service. Test public-scope assembly only with externally defined regions.",
-        registered_slots=planned_counts,stage=stage,phase="coordinating actual material handoff, ordinary movement and source-bound completion",
+        current_hypothesis=next_step,
+        registered_slots=planned_counts,stage=stage,phase=stage,
         pending_workers=workers,paired_rgb_assay=dict(sends=assay_sends,results=assay_results),
         accounted_sends=dict(historical_formal=3842,historical_revision_development=93,
           continued_native_development=totals,archived_rgb_assay=assay_sends,one_image_regions=regional_sends,
@@ -155,7 +173,8 @@ def main():
         table.append("| %s | %s | %s | 未交付 | %.2f | %.2f | %d |"%(labels.get(f["case"],f["case"]),
             labels.get(f["method"],f["method"]),f["code"],f["task_seconds"],f["restricted_if_counted_s"],f["actual_sends"]))
     upsert(Path("PROGRESS.md"),"## 持续研发最新实测",stat+"\n\n"+"\n".join(table))
-    upsert(Path("NEXT_ACTION.md"),"## 最近一次恢复位置",stat+"\n\n"+next_step+"在仓库根目录使用项目 Python 环境运行 `scripts/continuing_recovery.py` 可零请求列出第二批主对照断点，追加 `--block comparators` 查看强对照。确认同一套餐恢复后可用 `--run --restoration-evidence '实际恢复凭据或确认时间'` 恢复首个未发送位置。用 `scripts/continuing_native_report.py --config config/native_evidence_dev02.json` 独立重查，再运行 `scripts/continuing_checkpoint.py` 更新统计。")
+    recovery="在仓库项目环境中运行 `scripts/continuing_registered_blocks.py` 可核对全部已登记批次与额度状态。运行 `scripts/continuing_region_assay.py grade` 和 `scripts/continuing_condition_range.py grade` 可用已有原始数据独立复核两项诊断。"
+    upsert(Path("NEXT_ACTION.md"),"## 最近一次恢复位置",stat+"\n\n"+next_step+"\n\n"+recovery)
     manuscript=Path("docs/DEVELOPMENT_EVIDENCE_CN.md")
     if manuscript.exists():
         upsert(manuscript,"## 当前完整任务样本",f"截至 {timestamp[:19]} UTC，新的自然在线开发共有 {sum(bool(r['sends']) for r in data)} 个已启动回合，{len(scored)} 个已有完整评分，其中 {sum(r['strict'] for r in scored)} 个严格通过。全部已启动回合累计发送 {totals} 次。以下时间下限与决策重算使用恢复前封存的 16 个有评分回合。逐回合新结果和中断记录见[完整进度表](../PROGRESS.md)。")
