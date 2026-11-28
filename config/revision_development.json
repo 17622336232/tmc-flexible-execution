@@ -1,0 +1,52 @@
+{
+  "role": "exposed-development-only",
+  "registration": "before first dispatch on 2026-11-28",
+  "primary": "independent complete coverage and deadline-restricted whole-task time",
+  "backend": "cpu",
+  "model": "gpt-6.1-terra",
+  "reasoning_effort": "max",
+  "timeout_s": 360,
+  "request_limit": 24,
+  "equipment_count": 2,
+  "calibration": "outputs/protocol-v2-optimization/custom-final/calibrated_costs.json",
+  "cases": [
+    {
+      "id": "dev-cracks-prim",
+      "family": "cracks",
+      "seed": 881201,
+      "layout_seed": 581201,
+      "source_profile": "independent",
+      "early_fields": "identity",
+      "order": [
+        "original-gpt",
+        "conditional-async",
+        "conditional-a",
+        "conditional-planner"
+      ]
+    },
+    {
+      "id": "dev-locate-control",
+      "family": "locate_boxes",
+      "seed": 881202,
+      "layout_seed": 581202,
+      "source_profile": "single",
+      "order": [
+        "conditional-planner",
+        "conditional-a",
+        "conditional-async",
+        "original-gpt"
+      ]
+    }
+  ],
+  "rules": [
+    "All four arms get identical episode inputs and collection authority within case. No shared model response or cached grade.",
+    "First block is a development diagnosis, eight arms total. No significance testing on two scenes. Never retry a dispatched arm as a clean new sample.",
+    "If the shared endpoint fails before a usable response, halt further dispatch to that endpoint for diagnosis; continue independent replay. Do not expand if comparisons fail the research gates.",
+    "Second repeat block and independent tests require first block review for actual valid mechanism opportunities and endpoint stability; do not pool across code versions."
+  ],
+  "rounds": [
+    "1 joint compile, strict evidence transfer, scoped authority and original controller restoration",
+    "2 branchwise progress and re-planning with candidate costs; compare independent finite reference",
+    "3 only for a reproduced remaining defect; otherwise close route with decision report"
+  ]
+}

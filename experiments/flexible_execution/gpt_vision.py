@@ -11,10 +11,9 @@ from .task_ir import Condition, Requirement
 
 OUTCOMES = ("positive", "negative", "uncertain")
 
-INTERPRET = """Read the inspection instruction and return compact JSON. The supported
+INTENT_FORMAT = """Read the inspection instruction and return compact JSON. The supported
 form is one yes/no visual check per object, possibly with conditional report materials.
-For another task form return {"status":"unsupported","reason":"..."}. Use null for
-permission_quote unless the instruction explicitly allows acquisition before the result;
+Use null for permission_quote unless the instruction explicitly allows acquisition before the result;
 then copy the exact permission text. Do not give actions or inspection answers.
 {"status":"supported","object_scope":"short description of the set to inspect",
  "question":"the yes/no question for one object",
@@ -22,6 +21,8 @@ then copy the exact permission text. Do not give actions or inspection answers.
                "question":"which evidence is required?", "permission_quote":null}]}
 Use positive, negative and uncertain for outcomes. Unconditional material uses all three.
 """
+
+INTERPRET = INTENT_FORMAT + '\nFor another task form return {"status":"unsupported","reason":"..."}.'
 
 LOCATE = """Find the requested objects actually visible in the attached onboard photo.
 Return only JSON: {"targets":[{"description":"visible appearance", "bbox":[0.1,0.2,0.3,0.7],

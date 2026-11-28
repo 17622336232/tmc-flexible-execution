@@ -28,7 +28,7 @@ from .gpt_probe import _take_photo
 from .viewpoints import _candidates, measured_views, xyz
 
 
-LIVE_INTERPRET = INTERPRET + """
+MATERIAL_INSTRUCTIONS = """
 Use the canonical field identity for a visible object identifier. Preserve the
 distinction between materials to report conditionally and actions allowed before
 the result. An image is the backing observation; do not invent a material field
@@ -37,6 +37,7 @@ Use the inspection's canonical fact names where specified, including cracked,
 temperature, box_count, order_count, color, vehicle_present, restricted, blocked,
 and extinguisher_present. Untyped text should remain a question, not a fact name.
 """
+LIVE_INTERPRET = INTERPRET + MATERIAL_INSTRUCTIONS
 
 READ_MATERIAL = """Read a material from the new onboard photo only. Use the initial
 photo strictly as a reference to identify the same object using its attached
@@ -261,14 +262,15 @@ async def _inspect(backend, directory, trace, client, started, task, spec, poses
             await asyncio.sleep(.015)
         if not future.done():
             state = Snapshot(elapsed(), location, {}, {}, {})
+            policy = "adaptive-progress" if continuous and method == "conditional-a" else method
             with trace.measure("search", step_base, policy=method):
-                choice = select(task, state, method, log, ranked_policy=ranked_policy)
+                choice = select(task, state, policy, log, ranked_policy=ranked_policy)
             if continuous:
                 log("pending_strategy", query=spec.id, policy=method,
                     selection=[action.skill.id for action in choice.prepare] if choice else [],
                     has_independent_candidate=bool(independent))
             if (choice and not future.done()
-                    and continuation_check(method)(task, replace(state, at=elapsed()), choice.prepare)[0]):
+                    and continuation_check(policy)(task, replace(state, at=elapsed()), choice.prepare)[0]):
                 for action in choice.prepare:
                     if future.done() or elapsed() + action.seconds + task.report_seconds >= task.deadline:
                         log("candidate_rejected", candidate=action.skill.id, reason="reply or resource state changed")
@@ -279,6 +281,24 @@ async def _inspect(backend, directory, trace, client, started, task, spec, poses
                         photos.append((action, observed))
                     else:
                         break
+                # A raw image can wait for verification. It cannot satisfy a
+                # requirement yet. Exclude duplicate pending reads of its fields.
+                if policy == "adaptive-progress":
+                    while not future.done() and location in poses and elapsed() < spec.latest_ready:
+                        pending_fields = {field for capture_action, _ in photos for field in capture_action.skill.covers}
+                        available = {s.id: s.attempts for s in task.skills if set(s.covers) <= pending_fields}
+                        snapshot = Snapshot(elapsed(), location, {}, {}, {**attempts, **available})
+                        with trace.measure("search", step_base, policy=policy):
+                            follow = select(task, snapshot, policy, log, ranked_policy=ranked_policy)
+                        if not follow or future.done():
+                            break
+                        action = follow.prepare[0]
+                        if not continuation_check(policy)(task, replace(snapshot, at=elapsed()), (action,))[0]:
+                            break
+                        attempts[action.skill.id] = attempts.get(action.skill.id, 0) + 1
+                        observed = await capture(action.site, action.skill.id, poses[action.site], first_target.id)
+                        if observed:
+                            photos.append((action, observed))
             elif method != "conditional-serial" and independent and not future.done():
                 other, goal = independent[0]
                 next_pose = goal

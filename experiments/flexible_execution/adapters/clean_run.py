@@ -28,7 +28,7 @@ from ..timeline import Timeline, summarize
 from .gpt_probe import run_paired, run_probe
 
 
-METHOD_MODES = {"serial": "ACTUAL_GPT_CLEAN_SERIAL", "async-probe": "ACTUAL_GPT_FROZEN_QUERY_INTEGRATION_PROBE",
+METHOD_MODES = {"original-gpt": "UPSTREAM_GPT_HASH_PINNED", "serial": "ACTUAL_GPT_CLEAN_SERIAL", "async-probe": "ACTUAL_GPT_FROZEN_QUERY_INTEGRATION_PROBE",
                 **PAIRED_MODES, **CONDITIONAL_MODES}
 
 
@@ -92,10 +92,12 @@ def main(argv=None):
         parser.error("The logical job duration must cover the attempt duration")
     conditional = args.method in CONDITIONAL_MODES
     if conditional != bool(args.cost_config) or (
-            (args.early_fields or args.collection_rule or args.handoff_at_observation or args.compile_task_program
+            (args.handoff_at_observation or args.compile_task_program
              or args.protocol_v2)
             and not conditional):
         parser.error("Conditional methods require a cost file and own the optional development grant")
+    if (args.early_fields or args.collection_rule) and not (conditional or args.method == "original-gpt"):
+        parser.error("Collection clauses require a scoped inspection arm")
     if args.scene_fingerprint and (args.layout_seed is None or len(args.scene_fingerprint) != 64
                                    or any(char not in "0123456789abcdef" for char in args.scene_fingerprint)):
         parser.error("A scene fingerprint requires a registered layout and SHA-256 digest")
@@ -105,7 +107,7 @@ def main(argv=None):
     if args.study_task:
         from ..requirement_program import parse
 
-        if not args.compile_task_program:
+        if not args.compile_task_program and args.method != "original-gpt":
             parser.error("Custom tasks use the shared language-to-program front end")
         study_task = json.loads(args.study_task.read_text(encoding="utf8"))
         if set(study_task) != {"instruction", "oracle_requirement_program"} or not isinstance(study_task["instruction"], str):
@@ -200,18 +202,20 @@ def main(argv=None):
         trace = Timeline(directory / "timeline.jsonl")
         client = ModelClient(directory / "model_calls.jsonl", credential_store=credentials, request_budget=budget)
         execution = {"serial": run_agent, "async-probe": run_probe}.get(args.method)
+        if args.method == "original-gpt":
+            from .original_controller import run as execution
         if conditional:
             execution = partial(run_live, method=args.method, costs=costs, hold_at_view=args.handoff_at_observation,
                                 ranked_policy=profile, use_program=args.compile_task_program,
                                 frontend_reference=args.frontend_reference, scene_sha=args.scene_fingerprint,
                                 protocol_v2=args.protocol_v2)
-            if clause:
-                original_hash = sha256(task.encode("utf8")).hexdigest()
-                task = task + "\n" + clause
-                write_json(root / "clean_task_scope.json", {"original_task_sha256": original_hash,
-                           "collection_clause": clause, "authorized_task": task})
         elif execution is None:
             execution = partial(run_paired, during_pending=args.method == "paired-async")
+        if clause:
+            original_hash = sha256(task.encode("utf8")).hexdigest()
+            task = task + "\n" + clause
+            write_json(root / "clean_task_scope.json", {"original_task_sha256": original_hash,
+                       "collection_clause": clause, "authorized_task": task})
         started = time.monotonic()
         clock = {"started_wall": time.time(), "allowance_seconds": timeout}
         write_json(root / "job_clock.json", clock)

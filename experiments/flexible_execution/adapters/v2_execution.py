@@ -15,12 +15,12 @@ from experiments.task_attack.runtime import write_json
 from .. import shared_frontend
 from ..evidence import Frame
 from ..frontend_evidence import project
-from ..gpt_vision import LOCATE, locate_targets, parse_intent
+from ..gpt_vision import INTENT_FORMAT, LOCATE, locate_targets, parse_intent
 from ..live_planning import STREAM_METHODS
 from ..material_schema import INSPECTION_FIELDS, canonical_record
 from ..requirement_program import COMPILE, check_submission, parse
 from .gpt_probe import _take_photo
-from .live_inspection import (LIVE_INTERPRET, MAX_VIEWPOINTS, _archive, _inspect, _safe_pose,
+from .live_inspection import (MATERIAL_INSTRUCTIONS, MAX_VIEWPOINTS, _archive, _inspect, _safe_pose,
                               _worlds, submission_guard)
 from .viewpoints import _candidates, measured_views, xyz
 
@@ -34,7 +34,10 @@ typed part even when only one predicate can be scheduled early.
 Rules for program:
 """ + COMPILE + """
 Rules for conditional:
-""" + LIVE_INTERPRET
+""" + INTENT_FORMAT + MATERIAL_INSTRUCTIONS + """
+For a task outside this optional interface set conditional to JSON null.
+Do not remove a filter, comparison, scope or reporting field from program.
+"""
 
 
 def compile_requirements(model, instruction):
@@ -45,6 +48,10 @@ def compile_requirements(model, instruction):
     if any(INSPECTION_FIELDS.get(field) != kind for field, kind in program.fields.items()):
         raise ValueError("The combined compiler declared an unsupported observation field")
     conditional = draft["conditional"]
+    if (isinstance(conditional, dict) and set(conditional) <= {"status", "reason"}
+            and conditional.get("status") == "unsupported"
+            and isinstance(conditional.get("reason", ""), str)):
+        conditional = None
     return program, parse_intent(conditional, instruction) if conditional is not None else None
 
 
