@@ -161,6 +161,7 @@ def main():
     continuation=native_development("native-reply-continuation-dev03")
     reply_permission=native_development("native-reply-permission-dev04")
     resolved_scope=native_development("native-resolved-scope-dev05")
+    shared_source=native_development("native-shared-source-dev06")
     clock_prior=optional("native-service-history-dev01.json")
     native_public=optional("native-public-preflight-dev01/summary.json")
     joint_slots,joint_sends,joint_settled,joint_result=(joint[k] for k in ("slots","sends","settled","result"))
@@ -325,6 +326,14 @@ def main():
     if native_public:
         verified=sum(all(x["data"]["checks"].values()) for x in native_public["rooms"].values())
         status+=f"公开房屋复用原版执行器的实际取图、转向和回位预检 {verified}/{len(native_public['rooms'])}，新增模型请求 0 次。"
+    if shared_source["slots"]:
+        status+=(f"原图复用与末次判读直接交付的跨场景对照已结算 {shared_source['settled']}/{len(shared_source['slots'])}，"
+                 f"实发 {shared_source['sends']} 次。")
+    if shared_source["result"]:
+        proof=shared_source["result"]
+        complete_chain=sum(any(p["verified_complete_side_chain"] for p in r.get("pending_captures",()))
+                           for r in proof["rows"])
+        status+=f"严格整项通过 {proof['strict']} 个，整项引用等待中同一原图的轨迹 {complete_chain} 个。"
     if ordinary_workers:
         status+="当前首轮答复或动作测量进程 "+", ".join(str(w["pid"]) for w in ordinary_workers)+"。"
     if unavailable:
@@ -333,6 +342,12 @@ def main():
         next_step="跟踪正在进行的 "+workers[0]["cohort"]+" 批次，逐一保留原始收据并复核完整评分。"
     elif pending_slots and not pending_audit:
         next_step=("收齐快门时序消融并封存。核验派发、取图、回包解锁、同图合法合问与最终报告是否使用同一照片。")
+    elif shared_source["slots"] and not shared_source["result"]:
+        next_step=("核对仓库证据复用和直接交付是否减少额外调用。"
+                   "继续收齐同一公开房屋中的原版、串行、预取、通用规划和联合版，封存后独立验收。")
+    elif shared_source["result"]:
+        next_step=("复核仓库实际原图是否贯穿两项判读和完整报告，分析公开房屋五种执行的关键路径。"
+                   "先量出公共优化、共享证据与服务长尾各自的贡献，依据开发证据设计差异明显的小规模跨任务验证。")
     elif resolved_scope["slots"] and not resolved_scope["result"]:
         next_step=("核对真实首轮的原文范围与来源绑定，等待两条相反权限的完整任务结算。"
                    "核验新旧照片、实际发问、严格报告以及历史时间预算所改变的执行选择。")
@@ -429,6 +444,7 @@ def main():
         native_joint_execution=joint,native_pending_photo=pending,native_reply_continuation=continuation,
         native_reply_permission=reply_permission,native_resolved_scope=resolved_scope,
         native_service_history=clock_prior.get("profile",{}),native_public_preflight=native_public,
+        native_shared_source=shared_source,
         adaptive_cost_development=dict(clock=clock_audit,cross_source_calibration=cross_source,
             native_natural=natural_probe,cost_scenarios=cost_replay.get("comparisons",0),
             node_budget={k:v for k,v in permission_cache.items() if k!="rows"},
@@ -454,7 +470,8 @@ def main():
           natural_ordinary_gate=natural_probe.get("closed",0),
           natural_bound_followup=native_followup.get("actual_sends",0),native_joint_closed_loop=joint_sends,
           native_pending_photo=pending_sends,native_reply_continuation=continuation["sends"],
-          native_reply_permission=reply_permission["sends"],native_resolved_scope=resolved_scope["sends"]),
+          native_reply_permission=reply_permission["sends"],native_resolved_scope=resolved_scope["sends"],
+          native_shared_source=shared_source["sends"]),
         next=next_step)
     save(Path("RESEARCH_STATE.json"),doc)
     tally="；".join(f"{k} 主对照 {v['primary']}/{planned_counts[k]['primary']}、强对照 {v['comparators']}/{planned_counts[k]['comparators']}" for k,v in cohorts.items())
@@ -502,6 +519,8 @@ def main():
         recovery+="用 `python scripts/continuing_native_request_history.py` 零请求核对长度、超时和准确性的历史估计。"
     if native_public:
         recovery+="用 `python scripts/continuing_native_room_preflight.py` 核对两个原已暴露的公开房屋和实际相机动作。"
+    if shared_source["slots"]:
+        recovery+="用 `python scripts/continuing_native_joint_execution.py status --study native-shared-source-dev06` 核对登记。若进程已退出且没有外部限制，按同版本的 `run --study native-shared-source-dev06` 从未启动位置续跑。收齐后的 `grade --study native-shared-source-dev06` 无新增请求。"
     upsert(Path("NEXT_ACTION.md"),"## 最近一次恢复位置",stat+"\n\n"+next_step+"\n\n"+recovery)
     manuscript=Path("docs/DEVELOPMENT_EVIDENCE_CN.md")
     if manuscript.exists():

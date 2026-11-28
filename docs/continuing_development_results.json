@@ -13789,6 +13789,47 @@
     "registration_sha256": "d877c668f70023f5c41868727b0787d78c2109fbaa7cc706cec814cfe87eb2e4",
     "sealed_sha256": "23cb65933153d70932afa684ce318386a7f0119174a3ad386b6560a07fa93a5a"
   },
+  "native_resolved_scope_terminal_audit": {
+    "new_requests": 0,
+    "sealed_sha256": "23cb65933153d70932afa684ce318386a7f0119174a3ad386b6560a07fa93a5a",
+    "rows": [
+      {
+        "case": "warehouse-resolved-permitted",
+        "method": "joint",
+        "verifiable": true,
+        "expected_fields": 4,
+        "independently_correct_fields": 4,
+        "all_correct_before_report": true,
+        "findings_ready_s": 64.11960193200503,
+        "final_pose_ok": true,
+        "report_only": [
+          {
+            "service_s": 119.9911437939736,
+            "error": {
+              "type": "TransportError",
+              "code": "timeout",
+              "status": null
+            }
+          }
+        ],
+        "submitted_with_last_reading": false,
+        "strict": false
+      },
+      {
+        "case": "warehouse-resolved-prohibited",
+        "method": "joint",
+        "verifiable": true,
+        "expected_fields": 4,
+        "independently_correct_fields": 3,
+        "all_correct_before_report": false,
+        "findings_ready_s": 40.62822999502532,
+        "final_pose_ok": true,
+        "report_only": [],
+        "submitted_with_last_reading": false,
+        "strict": false
+      }
+    ]
+  },
   "native_settled_service_history": {
     "prior_sources": [
       "native-joint-execution-dev01",

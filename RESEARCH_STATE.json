@@ -3,7 +3,7 @@
   "stage": "native controller closed-loop matched development",
   "resumed_remote": "94bd1e78953164dce48ec38c8cc15dbd010f2e56",
   "resumed_local": "90f390c8ee332c866f4204dee628d447f8ddab2c",
-  "as_of_utc": "2026-11-28T18:39:10+00:00",
+  "as_of_utc": "2026-11-28T18:49:06+00:00",
   "method_version": {
     "native-views-dev01": "2e8e26cb8f0099bb68d02e5aa1c1e9569423706ec413227f9d9aa7714ffcef2b",
     "native-evidence-dev02": "6c5dab53a9faf9d2de88df4c2d988619c066176423a1223341f30e75b84c2577",
@@ -46,7 +46,7 @@
   "pending_workers": [],
   "account_remaining_requests": null,
   "hardware_motion_authorized": false,
-  "current_hypothesis": "保留本轮完整任务的全部通过与失败。继续把同一个自主执行器接到已暴露的公开房屋，以真实动作时钟和独立视觉验收验证不同场景下的共同方法。",
+  "current_hypothesis": "核对仓库证据复用和直接交付是否减少额外调用。继续收齐同一公开房屋中的原版、串行、预取、通用规划和联合版，封存后独立验收。",
   "validated": [
     "93 prior sends attributed to six roles",
     "with original requests fixed the nonrequest ceiling is 10.50% on cracks and 5.14% on inventory",
@@ -55,7 +55,7 @@
   "rejected": [
     "fixed conservative OCR has zero detections on 64 sampled historical image/ROI questions; 31 had independently assigned target identity"
   ],
-  "next": "保留本轮完整任务的全部通过与失败。继续把同一个自主执行器接到已暴露的公开房屋，以真实动作时钟和独立视觉验收验证不同场景下的共同方法。",
+  "next": "核对仓库证据复用和直接交付是否减少额外调用。继续收齐同一公开房屋中的原版、串行、预取、通用规划和联合版，封存后独立验收。",
   "phase": "native controller closed-loop matched development",
   "paired_rgb_assay": {
     "sends": 18,
@@ -87,7 +87,8 @@
     "native_pending_photo": 4,
     "native_reply_continuation": 2,
     "native_reply_permission": 7,
-    "native_resolved_scope": 9
+    "native_resolved_scope": 9,
+    "native_shared_source": 9
   },
   "closed_external_attempts": [
     {
@@ -2033,7 +2034,23 @@
         }
       ]
     },
-    "workers": []
+    "workers": [
+      {
+        "pid": 4028783,
+        "script": "continuing_native_joint_execution.py",
+        "mode": "run"
+      },
+      {
+        "pid": 4034854,
+        "script": "continuing_native_joint_execution.py",
+        "mode": "worker"
+      },
+      {
+        "pid": 4034867,
+        "script": "continuing_native_joint_execution.py",
+        "mode": "worker"
+      }
+    ]
   },
   "adaptive_cost_development": {
     "clock": {
@@ -3771,5 +3788,67 @@
         "sha256": "2e2c4aeda0ae8fddf9696610bd8c1034a59cc8c94664889900777f6c1cd295c1"
       }
     }
+  },
+  "native_shared_source": {
+    "slots": [
+      {
+        "case": "warehouse-shared-source",
+        "method": "joint",
+        "settled": true,
+        "started": true,
+        "sends": 4,
+        "endpoint_block": null,
+        "pid": 4028828
+      },
+      {
+        "case": "house-56-native-relay",
+        "method": "original-gpt",
+        "settled": true,
+        "started": true,
+        "sends": 2,
+        "endpoint_block": null,
+        "pid": 4030093
+      },
+      {
+        "case": "house-56-native-relay",
+        "method": "generic",
+        "settled": true,
+        "started": true,
+        "sends": 2,
+        "endpoint_block": null,
+        "pid": 4032525
+      },
+      {
+        "case": "house-56-native-relay",
+        "method": "joint",
+        "settled": false,
+        "started": true,
+        "sends": 1,
+        "endpoint_block": null,
+        "pid": 4034854
+      },
+      {
+        "case": "house-56-native-relay",
+        "method": "common-serial",
+        "settled": false,
+        "started": false,
+        "sends": 0,
+        "endpoint_block": null,
+        "pid": null
+      },
+      {
+        "case": "house-56-native-relay",
+        "method": "strong-prefetch",
+        "settled": false,
+        "started": false,
+        "sends": 0,
+        "endpoint_block": null,
+        "pid": null
+      }
+    ],
+    "sends": 9,
+    "settled": 3,
+    "result": {},
+    "audit": {}
   }
 }

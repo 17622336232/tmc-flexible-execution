@@ -1,6 +1,7 @@
 """Run source-scoped scheduling inside the ordinary GPT task control loop."""
 from concurrent.futures import ThreadPoolExecutor
 from hashlib import sha256
+from itertools import product
 from math import isfinite
 from statistics import median
 from time import monotonic, sleep
@@ -34,6 +35,7 @@ class PendingCamera:
         self.backend=backend
         self.trace=trace
         self.pending=None
+        self.delivered_stamp=None
 
     def capture(self, step, goal):
         started=monotonic()
@@ -56,8 +58,10 @@ class PendingCamera:
 
     def observe(self):
         pending,self.pending=self.pending,None
+        self.delivered_stamp=None
         scene=self.backend.scene.get("catalog",{}).get("scene_conditions",{})
         if pending is not None and not scene.get("dynamic") and scene.get("state_version")==pending[2]:
+            self.delivered_stamp=pending[0]["ros_stamp"]
             return pending[:2]
         return self.backend.observe()
 
@@ -74,6 +78,7 @@ class NativeJointExecution:
         self.prompt=upstream().SYSTEM
         self.records={}
         self.photos={}
+        self.retained={}
         self.scene=None
         self.anchor=None
         self.enabled=self.observer.plan is not None
@@ -146,7 +151,10 @@ class NativeJointExecution:
             self.enabled=False
             return None
         self.observer.anchor=self.anchor
-        views=source_map(self.observer.plan,self.anchor,names)
+        if self.camera is not None and self.camera.delivered_stamp is not None:
+            self.retained[photo]=({**current,"capture_ros":self.camera.delivered_stamp},by_id[photo][1])
+        by_id.update(self.retained)
+        views=source_map(self.observer.plan,self.anchor,[meta for meta,_ in by_id.values()])
         if photo not in views:
             self.enabled=False
             return None
@@ -245,7 +253,8 @@ class NativeJointExecution:
                 matches=[n for n,v in views.items() if v==field.view]
                 if not matches:
                     raise ValueError("No source image for the scheduled reading")
-                chosen[i]=current if current in matches else matches[-1]
+                retained=next((name for name in self.retained if name in matches),None)
+                chosen[i]=retained or (current if current in matches else matches[-1])
         return chosen
 
     def bind(self, reply, scope, step):
@@ -336,8 +345,21 @@ class NativeJointExecution:
             "rule":"Record new findings only from the listed photos. A new result cannot authorize a dependent finding in this same reply. Use the exact named subject and Boolean facts.visible. You may submit in this reply if the listed findings complete all required work, you are already at the final pose, and the report cites every confirmed source."}}
         if complete:
             packet["this_request_scope"]["rule"]+=" All active checks have now returned. Submit the complete report from confirmed records."
+        elif selected and here==self.observer.plan.finish and move is None and all(
+            not released(self.observer.plan,{**self.observer.prior,**dict(zip(selected,values))})
+            for values in product((False,True),repeat=len(selected))
+        ):
+            packet["this_request_scope"]["complete_after_boolean_results"]=True
+            packet["this_request_scope"]["rule"]+=(
+                " These are the last required readings, whatever their Boolean answers. "
+                "If all are resolved, submit the complete report in this same reply using the newly "
+                "returned records and all confirmed sources. The actual final viewpoint is already "
+                "correct. Do not take a separate record-only turn to prepare a report. "
+                "If any answer remains uncertain, indicate uncertainty and continue only as needed."
+            )
         with_scope={*selected.values(),current}
-        scoped=[(name,meta,blob) for name,(meta,blob) in by_id.items() if name in with_scope]
+        scoped=[(name,meta,blob) for name,(meta,blob) in by_id.items() if name in with_scope and name!=current]
+        scoped.append((current,*by_id[current]))
         packet["recent_images"]=[meta for name,meta,_ in scoped if name!=current]
         attachments=[blob for _,_,blob in scoped]
         captured=len(set(selected.values()))

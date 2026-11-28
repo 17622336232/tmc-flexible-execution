@@ -29,7 +29,7 @@ class Camera:
         if self.side.is_set():
             self.side_photo.set()
         geo=dict(position=self.position,yaw=self.yaw)
-        frame=dict(**geo,ros_stamp=self.observations,data=("view-"+str(self.yaw)).encode())
+        frame=dict(**geo,ros_stamp=self.observations,data=(f"view-{self.yaw}-{self.observations}").encode())
         return frame,geo
 
     def move(self, goal):
@@ -131,6 +131,39 @@ class NativeJointExecutionTest(unittest.TestCase):
             event=next(e for e in trace_rows if e["event"]=="joint_continuation_admitted")
             self.assertEqual(event["adopted_facts"],[0])
             self.assertEqual([r["field"] for r in event["remaining"]],["蓝色货箱","白色货箱"])
+
+    def test_split_readings_reuse_early_frame_and_submit_in_last_reply(self):
+        camera=Camera()
+
+        class SplitModel(ReplyModel):
+            def request(self, prompt,payload,images,attempt_limit=1):
+                scope=payload["this_request_scope"]
+                asked=scope["open_for_reading"]
+                if [f["field"] for f in asked]==["红色货箱"]:
+                    return super().request(prompt,payload,images,attempt_limit)
+                self.calls+=1
+                self.requests.append((asked,images))
+                field,=asked
+                item=dict(object_id=field["field"],facts=dict(visible=field["field"]!="白色货箱"),
+                          evidence_image_id=field["evidence_image_id"])
+                if scope.get("complete_after_boolean_results"):
+                    return dict(action=dict(type="submit"),records=[item],
+                                report=dict(outcome="accepted",records=scope["observed_facts"]+[item]))
+                return dict(action=dict(type="record"),records=[item])
+
+        model=SplitModel(camera,first_wait=camera.side_photo)
+        with TemporaryDirectory() as folder:
+            d=Path(folder)
+            trace=Timeline(d/"timeline.jsonl")
+            report,stats=run_joint(camera,TASK,d,lambda *a,**k:None,150.,model=model,trace=trace,
+                                   mode="joint",prices={**PRICES,"same_s":68},retain_pending_photo=True)
+            self.assertEqual(report["outcome"],"accepted")
+            self.assertEqual(stats["calls"],3)
+            sources=[r["evidence_image_id"] for r in report["records"] if r["object_id"]!="红色货箱"]
+            self.assertEqual(sources,["onboard_0002","onboard_0002"])
+            reference=(d/"onboard_0002.jpg").read_bytes()
+            self.assertIn(reference,[b["data"] for b in model.requests[-1][1]])
+            self.assertNotEqual(reference,model.requests[-1][1][-1]["data"])
 
 
 if __name__=="__main__":

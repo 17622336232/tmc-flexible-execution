@@ -1,6 +1,8 @@
 """Run and independently score a capped set of complete native closed-loop development tasks."""
 import argparse
+from contextlib import contextmanager
 import fcntl
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -11,6 +13,7 @@ from experiments.flexible_execution.request_budget import RequestBudget
 from experiments.flexible_execution.revision_audit import digest,read,save
 from experiments.flexible_execution.timeline import Timeline,read_trace_rows
 from experiments.task_attack.model import EXTERNAL_RESPONSE_CODES,ModelClient
+from experiments.task_attack.runtime import append_json
 from research.flexible_scheduling.native_joint_execution import run_joint
 from research.flexible_scheduling.natural_frontier import discover,source_map,released
 from scripts.continuing_crossworld_views import assert_snapshot,copied_renderer
@@ -37,6 +40,14 @@ def register():
         prior=Path(cfg["request_history"])
         history=read(prior)["samples"]
         sources.append(prior)
+    rooms={}
+    if cfg.get("room_preflight"):
+        from scripts.continuing_room_event_calibration import CAL,prepare
+        _,runtime=prepare()
+        p=Path(cfg["room_preflight"])
+        rooms=read(p)["rooms"]
+        room_costs=read(CAL/"summary.json")
+        sources.extend([p,CAL/"summary.json"])
     if not follow["independent_correct_combination"]:
         raise ValueError("Prior native evidence/permission bridge did not pass")
     cases=[]
@@ -45,6 +56,17 @@ def register():
         if plan is None or set(case["score_predicates"])!={f.name for f in plan.fields}:
             raise ValueError("A declared native task or its independent scoring catalogue is incomplete")
         i=case.get("calibration_case",case["id"])
+        cross_cost=max(c["observations"]["joint"]["service_s"] for c in cross["cases"])
+        if case.get("platform")=="procthor":
+            room_clock=rooms[i]["data"]
+            if not all(room_clock["checks"].values()):
+                raise ValueError("The public room camera has not passed its physical preflight")
+            prices=dict(travel_s=[[0,room_clock["turn_s"]],[room_clock["return_s"],0]],photo_s=room_clock["photo_s"],
+                        single_s=room_costs["single_s"],same_s=room_costs["pair_s"],cross_s=cross_cost,cross_enabled=True)
+            if history:
+                prices.update(per_send_s=cfg["per_send_s"],request_history=history)
+            cases.append({**case,"runtime":runtime,"house":room_clock["house"],"world":room_clock["world"],"prices":prices})
+            continue
         original=next(v for v in read(clock/"registration.json")["cases"] if v["case"]==i)
         measure=next(v for v in motion["cases"] if v["case"]==i)
         if not measure["world_matches"] or not measure["phases"] or measure["phases"][0]["view"]!="side":
@@ -52,8 +74,7 @@ def register():
         service=next(v["service_s"] for v in first["rows"] if v["case"]==i)
         d=measure["phases"][0]
         prices=dict(travel_s=[[0,d["motion_s"]],[d["motion_s"],0]],photo_s=d["after_move_capture_s"],
-                    single_s=service,same_s=follow["live_service_s"],cross_s=max(
-                        c["observations"]["joint"]["service_s"] for c in cross["cases"]),cross_enabled=True)
+                    single_s=service,same_s=follow["live_service_s"],cross_s=cross_cost,cross_enabled=True)
         if history:
             prices.update(per_send_s=cfg["per_send_s"],request_history=history)
         cases.append({**case,"settings":original["settings"],"world":original["world"],"prices":prices})
@@ -62,6 +83,9 @@ def register():
            *(core/(n+".py") for n in ("native_joint_execution","native_continuation","native_condition_resolution",
               "native_service_estimate","natural_frontier","native_frontier_adapter",
               "event_workflow","event_policy","event_lookahead","cross_source_workflow","priced_cross_source") if (core/(n+".py")).is_file())]
+    if rooms:
+        files.extend(Path("experiments/flexible_execution")/p for p in (
+            "adapters/native_room.py","public_visual.py","public_audit.py","public_task.py"))
     ROOT.mkdir(exist_ok=True)
     reg=dict(config=digest(CFG),cases=cases,code={str(f):digest(f) for f in files},
              sources={str(c):digest(c) for c in sources})
@@ -70,15 +94,12 @@ def register():
 
 
 def execute(cfg,case,method,ep):
-    from experiments.task_attack_integrity.run import main as simulate
     from uav_bridge.chatgpt_auth import CredentialStore
-    args=["--policy","clean","--backend","cpu","--headless","--no-rviz","--ros-port","11912","--gazebo-port","11913",
-          "--episode-timeout",str(cfg["deadline_s"]),"--output",str(ep)]
-    for k,v in case["settings"].items():
-        args += ["--"+k.replace("_","-"),str(v)]
+    public=case.get("platform")=="procthor"
+
     def controller(backend, ignored_task, folder,event,timeout):
         # The controller sees only the independently registered natural-language request.
-        if geometry_hash(ep)!=case["world"]:
+        if not public and geometry_hash(ep)!=case["world"]:
             raise ValueError("The native world differs from the paired setup")
         trace=Timeline(folder/"timeline.jsonl")
         class MeteredModel(ModelClient):
@@ -98,14 +119,60 @@ def execute(cfg,case,method,ep):
                              and method!="joint-late-shutter",propose_work=cfg.get("propose_work",False),
                              native_reply_contract=cfg.get("native_reply_contract",False))
         finally:
-            state=backend.adapter.snapshot()
+            state=backend.snapshot() if public else backend.adapter.snapshot()
             save(ep/"joint_terminal.json",dict(task_s=monotonic()-started,position=state["position"],yaw=state["yaw"],
                 calls=client.calls,endpoint_block=getattr(client.external_error,"code",None)))
-    simulate(args,agent_runner=controller,archive_external_rgb=False)
+    if public:
+        execute_public(cfg,case,ep,controller)
+    else:
+        from experiments.task_attack_integrity.run import main as simulate
+        args=["--policy","clean","--backend","cpu","--headless","--no-rviz","--ros-port","11912","--gazebo-port","11913",
+              "--episode-timeout",str(cfg["deadline_s"]),"--output",str(ep)]
+        for k,v in case["settings"].items():
+            args += ["--"+k.replace("_","-"),str(v)]
+        simulate(args,agent_runner=controller,archive_external_rgb=False)
+
+
+def execute_public(cfg,case,ep,controller):
+    from experiments.flexible_execution.adapters.native_room import NativeRoomBackend
+    from experiments.flexible_execution.public_visual import _house,open_controller
+    runtime=case["runtime"]
+    ep.mkdir()
+    robot=ep/"private/robot"
+    robot.mkdir(parents=True)
+    instance=None
+    backend=None
+    result={}
+    try:
+        house,world=_house(Path(runtime["archive"]),case["house"])
+        if world!=case["world"]:
+            raise ValueError("The official house differs from its camera preflight")
+        save(ep/"room_manifest.json",dict(house=case["house"],world=world))
+        instance=open_controller(house,Path(runtime["build_dir"]),"opengl",os.environ["DISPLAY"],segmentation=True)
+        backend=NativeRoomBackend(instance)
+        def event(name,**data):
+            append_json(robot/"native_events.jsonl",dict(event=name,**data))
+        report,metrics=controller(backend,None,robot,event,cfg["deadline_s"])
+        result.update(report=report,robot_metrics=metrics)
+    except Exception as error:
+        result["error"]=dict(type=type(error).__name__,code=getattr(error,"code",None),message=str(error)[:600])
+    finally:
+        try:
+            if backend is not None:
+                backend.archive_scoring(ep,case["score_predicates"])
+        except (OSError,ValueError,RuntimeError,KeyError) as error:
+            result["referee_error"]=dict(type=type(error).__name__,message=str(error)[:600])
+        finally:
+            try:
+                if instance is not None:
+                    instance.stop()
+            finally:
+                save(ep/"result.json",result)
 
 
 def signature(ep):
     files=[ep/"result.json",ep/"joint_terminal.json",ep/"private/truth.json",ep/"inspection.world",
+           ep/"room_manifest.json",ep/"scoring_sources.json",*((ep/"scoring").glob("*")),
            *((ep/"private/robot").glob("*.json*")),
            *((ep/"private/robot").glob("onboard_*.jpg"))]
     return {p.relative_to(ep).as_posix():digest(p) for p in files if p.is_file()}
@@ -138,12 +205,15 @@ def collect(cfg,reg):
                     raise SystemExit("Inspect unsettled episode or recorded service restriction before sending")
                 ep.parent.mkdir(exist_ok=True)
                 save(start,dict(case=case["id"],method=method,registration=digest(ROOT/"registration.json")))
-                with ep.with_suffix(".log").open("a") as out:
-                    command=[sys.executable,str(SOURCE),"worker","--study",cfg["id"],
-                             "--case",case["id"],"--method",method]
-                    p=subprocess.Popen(command,stdout=out,stderr=subprocess.STDOUT)
-                    save(ep.with_suffix(".worker.json"),dict(pid=p.pid))
-                    p.wait()
+                args=["worker","--study",cfg["id"],"--case",case["id"],"--method",method]
+                if case.get("platform")=="procthor":
+                    from scripts.continuing_room_event_calibration import launch_local
+                    p=launch_local(case["runtime"],case,SOURCE,args,ep.with_suffix(".log"))
+                else:
+                    with ep.with_suffix(".log").open("a") as out:
+                        p=subprocess.Popen([sys.executable,str(SOURCE),*args],stdout=out,stderr=subprocess.STDOUT)
+                save(ep.with_suffix(".worker.json"),dict(pid=p.pid))
+                p.wait()
                 if not (ep/"result.json").is_file():
                     raise SystemExit("Keep the original episode startup failure")
             terminal=read(ep/"joint_terminal.json") if (ep/"joint_terminal.json").is_file() else {}
@@ -164,6 +234,33 @@ def evidence_claims(records):
             name,frame,value=row.get("object_id"),row.get("evidence_image_id"),row["facts"].get("visible")
             if isinstance(name,str) and isinstance(frame,str) and type(value) is bool:
                 yield name,frame,value
+
+
+@contextmanager
+def independent_observations(case, ep):
+    robot=ep/"private/robot"
+    if case.get("platform")=="procthor":
+        from experiments.flexible_execution.public_audit import _grade_segmentation
+        observed=read(ep/"scoring_sources.json")
+        def assess(image,field):
+            if digest(robot/(image+".jpg"))!=observed.get(image):
+                raise ValueError("Public referee RGB binding failed")
+            name=image+"_"+case["score_predicates"][field]
+            return _grade_segmentation(ep/"scoring",name)=="positive"
+        yield assess
+        return
+    verifiers={}
+    with copied_renderer(ep) as (scene,renderer):
+        truth=read(ep/"private/truth.json")["devices"]
+        def assess(image, field):
+            if image not in verifiers:
+                photo=robot/(image+".jpg")
+                verifiers[image]=visual_instances(scene,renderer,read(photo.with_suffix(".json")),photo,truth)
+            alignment,pixels=verifiers[image]
+            category=case["score_predicates"][field]
+            value=max(pixels.get(category,{}).values(),default=0)>=36
+            return value if alignment>=.90 else None
+        yield assess
 
 
 def runtime_bindings(ep, plan, poses):
@@ -222,11 +319,11 @@ def score(cfg,case,method,ep):
     robot=ep/"private/robot"
     files=sorted(robot.glob("onboard_[0-9]*.json"))
     row=dict(case=case["id"],method=method,sends=terminal.get("calls",0),whole_s=terminal.get("task_s"),
-             strict=False,restricted_s=cfg["deadline_s"],error=result.get("error"))
+             strict=False,restricted_s=cfg["deadline_s"],error=result.get("error") or result.get("referee_error"))
     ledger=read_trace_rows(robot/"sends.jsonl")[0] if (robot/"sends.jsonl").is_file() else []
     if len(ledger)!=row["sends"]:
         raise ValueError("Native send reservation and terminal count differ")
-    if not files:
+    if not files or result.get("referee_error"):
         return row
     plan=discover(case.get("referee_task",case["instruction"]))
     frames=[read(p) for p in files]
@@ -237,19 +334,9 @@ def score(cfg,case,method,ep):
         raise ValueError("Native transport dispatch count differs from reservation")
     expected=[]
     values={}
-    verifiers={}
     report=result.get("report") or {}
     claimed=list(evidence_claims(report.get("records") or []))
-    with copied_renderer(ep) as (scene,renderer):
-        truth=read(ep/"private/truth.json")["devices"]
-        def assess(image, field):
-            if image not in verifiers:
-                photo=robot/(image+".jpg")
-                verifiers[image]=visual_instances(scene,renderer,read(photo.with_suffix(".json")),photo,truth)
-            alignment,pixels=verifiers[image]
-            category=case["score_predicates"][field]
-            value=max(pixels.get(category,{}).values(),default=0)>=36
-            return value if alignment>=.90 else None
+    with independent_observations(case,ep) as assess:
         for i,f in enumerate(plan.fields):
             if i not in released(plan,values):
                 continue
@@ -337,7 +424,8 @@ if __name__=="__main__":
     p=argparse.ArgumentParser()
     p.add_argument("mode",choices=("run","worker","grade","status"))
     p.add_argument("--study",choices=("native-joint-execution-dev01","native-pending-photo-dev02",
-                   "native-reply-continuation-dev03","native-reply-permission-dev04","native-resolved-scope-dev05"),
+                   "native-reply-continuation-dev03","native-reply-permission-dev04","native-resolved-scope-dev05",
+                   "native-shared-source-dev06"),
                    default="native-joint-execution-dev01")
     p.add_argument("--case")
     p.add_argument("--method")
