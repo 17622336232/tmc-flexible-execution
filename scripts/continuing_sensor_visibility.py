@@ -120,20 +120,27 @@ def grade_episode(ep,renderer,names,case):
         for field,frames in fields.items():
             for frame in frames:
                 count,mae,rate=views[frame]
-                station=("equipment_" if field=="cracked" else "warehouse_")+"station_%02d"%idx
+                domain={"cracked":"equipment","box_count":"warehouse","blocked":"campus"}.get(field)
+                if domain is None:
+                    continue
+                station=domain+"_station_%02d"%idx
                 if field=="cracked":
                     parts=[("door",station,"door_surface"),("identity",station,"reference_identity")]
                 elif field=="box_count":
                     parts=[("identity","panel_%02d"%idx,"front")]
                     # If there are no boxes, visibility of the whole shelf cannot be certified by a count of zero.
                     parts.extend(("box_%d"%i,station,"cargo_%d"%i) for i in range(dev["box_count"]))
-                else:
-                    continue
+                elif field=="blocked":
+                    identity=(station,"reference_identity") if (station,"reference_identity") in names else ("panel_%02d"%idx,"front")
+                    parts=[("identity",*identity),("left_post",station,"exit_post_-0.5"),
+                           ("right_post",station,"exit_post_0.5"),("lintel",station,"exit_lintel")]
+                    parts.extend(("obstruction_"+v,station,v) for v in dev["approach_obstructions"])
                 pixels={role:int(count[names[obj,part]]) for role,obj,part in parts}
                 records.append(dict(case=case,method=ep.name,object_id=ident,field=field,source=frame,
                     mean_rgb_absolute_difference=mae,fraction_pixels_within_18=rate,
                     source_pixels=pixels,minimum_source_pixels=min(pixels.values()),
-                    zero_item_requires_separate_coverage=field=="box_count" and dev["box_count"]==0))
+                    zero_item_requires_separate_coverage=(field=="box_count" and dev["box_count"]==0 or
+                                                         field=="blocked" and not dev["blocked"])))
     return records
 
 

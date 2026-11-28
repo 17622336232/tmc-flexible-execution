@@ -297,10 +297,11 @@ def main():
         from scripts.continuing_recovery import interruptions,acknowledged
         primary={(c["id"],m) for c in config["cases"] for m in c["primary"]}
         completed={(r["case"],r["method"]) for r in runs}
-        external=interruptions(root,config)
+        undelivered=interruptions(root,config,include_other=True)
+        external=[f for f in undelivered if f["kind"]=="external-service-limit"]
         if external and not acknowledged(root,external):
             raise ValueError("The endpoint limit has no confirmed restoration")
-        unavailable={(f["case"],f["method"]) for f in external}
+        unavailable={(f["case"],f["method"]) for f in undelivered}
         admissible=comparator_witnesses(config,proofs)
         spatial=[]
         if config.get("admission")=="coordinated-motion-material":
@@ -319,9 +320,13 @@ def main():
                   proven_photos=[p["sha256"] for p in admissible],
                   primary_result_sha256=sorted(r["receipt_sha256"] for r in runs if (r["case"],r["method"]) in primary))
         frozen=root/"comparator_gate.json"
-        if external:
+        primary_external=[f for f in external if (f["case"],f["method"]) in primary]
+        if primary_external:
             gate["reason"]="Primary slots are terminal; retain the externally interrupted no-delivery outcome. The registered controller demonstrated early acquisition, later consumption, and correct grounded fields."
-            gate["externally_interrupted_receipts"]=[f["receipt_sha256"] for f in external]
+            gate["externally_interrupted_receipts"]=[f["receipt_sha256"] for f in primary_external]
+        primary_errors=[f["receipt_sha256"] for f in undelivered if f["kind"]!="external-service-limit" and (f["case"],f["method"]) in primary]
+        if primary_errors:
+            gate["other_undelivered_primary_receipts"]=primary_errors
         if config.get("admission")=="coordinated-motion-material":
             gate["reason"]="Terminal primary slots. A source-bound pre-acquired image was jointly requested with a completed authorized movement, supplied to the next ordinary GPT request, and supported an independently verified field."
             gate["post_task_surface_witnesses"]=spatial

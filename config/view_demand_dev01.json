@@ -1,0 +1,9 @@
+{
+  "id": "view-demand-dev01",
+  "question": "Do estimates of which lawful photograph the genuine controller will request improve on a constant prior and mission-type-only calibration?",
+  "training": "Only actual admissible offers and definite valid ordinary replies from config/pre_recovery_native_exposures.json. A valid explicit id in the ordinary response or its action counts as expressed demand. An unrecognized placement stays separately identifiable. Missing, malformed, contradictory, or interrupted responses have no training labels. No simulated truth, future moves, object labels or semantic correctness enter training.",
+  "features": ["declared_box_count_task","log_source_region_area","log_one_plus_luminance_gradient","log_one_plus_trip_over_predicted_wait"],
+  "fit": "One fixed CPU logistic regression with C=1, balanced total weight per layout and decision, standardized with training-fold weights. No hyperparameter or seed selection. Use a Laplace-smoothed constant if a fold has one class. Compare a fixed probability 0.5, training prevalence, and the same estimator with the declared-task feature alone.",
+  "validation": "Leave each pre-recovery layout out as a unit. Separately seal the full fit and source digests before any campus-access-03 request if still unstarted. Evaluate all eligible terminal offers on that registered campus source, including zero or unobserved opportunities. Equipment-03 is already in progress and is descriptive only. Zero deployed experimental ranker actions.",
+  "outcomes": "Per-layout and equal-layout/decision weighted Brier and log loss. Count whether the top-ranked of two was actually requested when exactly one was named. No online time, safety, or success inferred from a prediction of image demand. Preserve null metrics if no eligible campus examples."
+}

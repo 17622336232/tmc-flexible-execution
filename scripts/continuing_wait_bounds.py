@@ -92,16 +92,22 @@ def action_slots(dest):
                 if picked is None:
                     picked=[decision.get("use_view")]
                 selected=sorted(offers.intersection([s for s in picked if isinstance(s,str)])) if isinstance(picked,list) and len(picked)<=2 else []
+                action_data=decision.get("action") or {}
+                nested=action_data.get("use_views")
+                if nested is None:
+                    nested=[action_data.get("use_view")]
+                nested_ids=sorted(offers.intersection([s for s in nested if isinstance(s,str)])) if isinstance(nested,list) and len(nested)<=2 else []
                 after=log[i+1] if i+1<len(log) else {}
                 following=((after.get("output") or {}).get("action") or {}).get("type")
                 rows.append(dict(cohort=base.name, case=path.parents[3].name, method=path.parents[2].name,
                         log_sha256=checksum, attempt=r["logical_job_attempt"], offered=len(offers),
-                        selected=selected, actual_action=action, following_actual_action=following,
+                        selected=selected, nested_only_valid_ids=nested_ids if not selected else [],actual_action=action, following_actual_action=following,
                         supplied_next=[f["image_id"] for f in (after.get("input") or {}).get("recent_images",[]) if f["image_id"].startswith("onboard_side_")]))
     if rows:
         write_table(dest/"offered_action_slots.csv",rows)
     picked=[r for r in rows if r["selected"]]
     return dict(turns_with_offer=len(rows), turns_with_selected_offer=len(picked),
+                valid_extra_requests_only_inside_action=sum(bool(r["nested_only_valid_ids"]) for r in rows),
                 actions_when_selected=dict(Counter(r["actual_action"] for r in picked)),
                 following_ordinary_actions=dict(Counter(r["following_actual_action"] for r in picked)))
 

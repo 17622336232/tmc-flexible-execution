@@ -3,12 +3,14 @@
 <!-- continuing-snapshot -->
 ## 最近一次恢复位置
 
-UTC 2026-11-28T14:07:17。native-views-dev01 主对照 6/6、强对照 6/6；native-evidence-dev02 主对照 5/6、强对照 1/6；coordinated-handoff-dev03 主对照 0/6、强对照 0/8 已取得完整评分。严格通过 12/18。新完整任务累计实发 99 次，其中取得评分的回合 93 次。独立核对提前交图 4 次，其中 2 张支持正确字段，最终报告直接引用提前图 0 次。单独的历史照片感知试验实发 18 次。总控 3780030，cracked-row-02 / evidence-planner，心跳 2026-11-28T14:07:14.567954+00:00。已另做 8 次零模型仿真路线检查，完成读号并回位为正面 2/4、同距离沿原方向 0/4。已有 9 次普通回复选了补图，其中 8 次下一轮选移动。另行登记的单图多区域感知比较实发 0/6 次。
+UTC 2026-11-28T14:26:39。native-views-dev01 主对照 6/6、强对照 6/6；native-evidence-dev02 主对照 5/6、强对照 5/6；coordinated-handoff-dev03 主对照 1/6、强对照 0/8 已取得完整评分。严格通过 17/23。新完整任务累计实发 133 次，其中取得评分的回合 121 次。独立核对提前交图 5 次，其中 2 张支持正确字段，最终报告直接引用提前图 0 次。单独的历史照片感知试验实发 18 次。总控 3793943，equipment-inspection-03 / coordinated-deferred，心跳 2026-11-28T14:26:37.678723+00:00。另有 1 个运行错误未交付，保留 5 次发送。已另做 8 次零模型仿真路线检查，完成读号并回位为正面 2/4、同距离沿原方向 0/4。已有 9 次普通回复选了补图，其中 8 次下一轮选移动。另行登记的单图多区域感知比较实发 0/6 次。
 
-跟踪正在进行的 native-evidence-dev02 批次，逐一保留原始收据并复核完整评分。在仓库根目录使用项目 Python 环境运行 `scripts/continuing_recovery.py` 可零请求列出第二批主对照断点，追加 `--block comparators` 查看强对照。确认同一套餐恢复后可用 `--run --restoration-evidence '实际恢复凭据或确认时间'` 恢复首个未发送位置。用 `scripts/continuing_native_report.py --config config/native_evidence_dev02.json` 独立重查，再运行 `scripts/continuing_checkpoint.py` 更新统计。
+跟踪正在进行的 coordinated-handoff-dev03 批次，逐一保留原始收据并复核完整评分。在仓库根目录使用项目 Python 环境运行 `scripts/continuing_recovery.py` 可零请求列出第二批主对照断点，追加 `--block comparators` 查看强对照。确认同一套餐恢复后可用 `--run --restoration-evidence '实际恢复凭据或确认时间'` 恢复首个未发送位置。用 `scripts/continuing_native_report.py --config config/native_evidence_dev02.json` 独立重查，再运行 `scripts/continuing_checkpoint.py` 更新统计。
 <!-- /continuing-snapshot -->
 
 状态为 RESEARCH_IN_PROGRESS。旧 456 回合和 11 个开发回合均封存。先读取 RESEARCH_STATE.json、最新迭代记录和新研究目录的账本；后续开发不沿用旧的三轮上限。
+
+整个已登记开发序列的只读入口为 `python scripts/continuing_registered_blocks.py`。运行模式添加 `--run`，会核对已消耗的收据、接管仍在跑的同一批次，并按原证据门槛继续尚未发送的位置。总控状态保存在 `outputs/continuing/registered-blocks.json`。若出现新的套餐限制会保留所有已发送请求；恢复证据仍由原断点程序登记。
 
 11:10 UTC 的套餐限制保留原始收据。14:00 UTC 经官方用量页核对，Diff-VLA 已启用现有套餐，新周期在该中断后开始。已从原工作副本 `b15c49c` 启动第二批此前尚未发送的货位主对照 `evidence-deferred`，首条真实回复成功返回。后续以本页顶端的回合计数和心跳为准。第二批的强对照按原门槛核验。第三批 `config/coordinated_handoff_dev03.json` 单独保存。在项目 Python 环境中运行下面的命令可核验登记、回算调度机会及生成四个布局的实拍对照图，均不发模型请求。
 

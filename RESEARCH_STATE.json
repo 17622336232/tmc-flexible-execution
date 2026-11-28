@@ -3,7 +3,7 @@
   "stage": "paired native development and measured serial inference dependencies",
   "resumed_remote": "94bd1e78953164dce48ec38c8cc15dbd010f2e56",
   "resumed_local": "90f390c8ee332c866f4204dee628d447f8ddab2c",
-  "as_of_utc": "2026-11-28T14:07:17+00:00",
+  "as_of_utc": "2026-11-28T14:26:39+00:00",
   "method_version": {
     "native-views-dev01": "2e8e26cb8f0099bb68d02e5aa1c1e9569423706ec413227f9d9aa7714ffcef2b",
     "native-evidence-dev02": "6c5dab53a9faf9d2de88df4c2d988619c066176423a1223341f30e75b84c2577",
@@ -18,12 +18,12 @@
     "sends": 93
   },
   "new_dev": {
-    "scored_episodes": 18,
-    "strict_successes": 12,
-    "scored_sends": 93,
-    "in_flight_sends_at_snapshot": 2,
-    "closed_unscored_sends": 4,
-    "started_episodes": 20,
+    "scored_episodes": 23,
+    "strict_successes": 17,
+    "scored_sends": 121,
+    "in_flight_sends_at_snapshot": 3,
+    "closed_unscored_sends": 9,
+    "started_episodes": 26,
     "blocks_completed": {
       "native-views-dev01": {
         "primary": 6,
@@ -31,29 +31,29 @@
       },
       "native-evidence-dev02": {
         "primary": 5,
-        "comparators": 1
+        "comparators": 5
       },
       "coordinated-handoff-dev03": {
-        "primary": 0,
+        "primary": 1,
         "comparators": 0
       }
     },
-    "early_source_verified_handoffs": 4,
+    "early_source_verified_handoffs": 5,
     "early_photos_supporting_correct_fields": 2,
     "early_photos_cited_in_final": 0,
     "early_field_violations": 0
   },
   "pending_workers": [
     {
-      "utc": "2026-11-28T14:07:14.567954+00:00",
+      "utc": "2026-11-28T14:26:37.678723+00:00",
       "state": "running",
-      "controller_pid": 3780030,
-      "worker_pid": 3782284,
-      "case": "cracked-row-02",
-      "method": "evidence-planner",
+      "controller_pid": 3793943,
+      "worker_pid": 3795880,
+      "case": "equipment-inspection-03",
+      "method": "coordinated-deferred",
       "sends": 2,
-      "cohort": "native-evidence-dev02",
-      "heartbeat": "outputs/continuing/native-evidence-dev02/heartbeat.json"
+      "cohort": "coordinated-handoff-dev03",
+      "heartbeat": "outputs/continuing/coordinated-handoff-dev03/heartbeat.json"
     }
   ],
   "account_remaining_requests": null,
@@ -67,7 +67,7 @@
   "rejected": [
     "fixed conservative OCR has zero detections on 64 sampled historical image/ROI questions; 31 had independently assigned target identity"
   ],
-  "next": "跟踪正在进行的 native-evidence-dev02 批次，逐一保留原始收据并复核完整评分。",
+  "next": "跟踪正在进行的 coordinated-handoff-dev03 批次，逐一保留原始收据并复核完整评分。",
   "phase": "coordinating actual material handoff, ordinary movement and source-bound completion",
   "paired_rgb_assay": {
     "sends": 18,
@@ -84,7 +84,7 @@
   "accounted_sends": {
     "historical_formal": 3842,
     "historical_revision_development": 93,
-    "continued_native_development": 99,
+    "continued_native_development": 133,
     "archived_rgb_assay": 18,
     "one_image_regions": 0,
     "explicit_roster_mechanism": 0
@@ -105,7 +105,9 @@
       "receipt_sha256": "0f71cc1c59cfc4024421f76d196fad46080b40afdb90760e2863b48455468d3e",
       "model_log_sha256": "08305d2bce45db0edd4409385eedd16a01a62662429b8d612b280718a2bbf627",
       "result_sha256": "53b5482604ff11ee3b63173e76b61b86d904784e0c4e46d4301b56b9bb4b2912",
-      "end_utc": "2026-11-28T11:10:57.187335+00:00"
+      "end_utc": "2026-11-28T11:10:57.187335+00:00",
+      "kind": "external-service-limit",
+      "error_type": "TransportError"
     }
   ],
   "unresolved_endpoint_limits": [],
@@ -211,6 +213,7 @@
   "actual_offered_action_slots": {
     "turns_with_offer": 19,
     "turns_with_selected_offer": 9,
+    "valid_extra_requests_only_inside_action": 2,
     "actions_when_selected": {
       "observe": 9
     },
@@ -340,5 +343,26 @@
       "evidence-deferred"
     ],
     "closed_mechanism_actual_sends": 0
-  }
+  },
+  "other_closed_undelivered_attempts": [
+    {
+      "cohort": "native-evidence-dev02",
+      "case": "cracked-row-02",
+      "method": "evidence-async",
+      "block": "comparators",
+      "code": "unsupported_output",
+      "actual_sends": 5,
+      "valid_replies": 4,
+      "task_seconds": 162.44841104897205,
+      "restricted_if_counted_s": 360,
+      "report_submitted": false,
+      "retry_after": null,
+      "receipt_sha256": "b2cb874e64f7fe02afc92a77242ad8825a33514fd3d7b3c34fdc72799bcbd791",
+      "model_log_sha256": "1b8aede4274a47e2da03444819fc65be425a2a515e8818dec49a4cf7bed0ccc7",
+      "result_sha256": "0d7019954b67cd2445f35c9c3f944c1dfa21070912d54ab7f74bccb6e5adcff9",
+      "end_utc": "2026-11-28T14:12:47.549699+00:00",
+      "kind": "undelivered-run-error",
+      "error_type": "TransportError"
+    }
+  ]
 }

@@ -12,7 +12,7 @@ from experiments.flexible_execution.revision_audit import read,save,digest
 from experiments.flexible_execution.timeline import read_trace_rows
 
 
-def interruptions(root,config):
+def interruptions(root,config,*,include_other=False):
     failures=[]
     for group in ("primary","comparators"):
         for case,arm in planned(config,group):
@@ -20,17 +20,21 @@ def interruptions(root,config):
             if not receipt.exists():
                 continue
             outcome=read(receipt)
-            if not outcome.get("endpoint_block"):
+            external=outcome.get("endpoint_block")
+            if not external and not (include_other and outcome.get("state") in ("interrupted-after-dispatch","closed-failure") and outcome.get("sends")):
                 continue
             ep=root/case["id"]/arm
             calls=read_trace_rows(ep/"private/robot/model_calls.jsonl")[0]
             ledger=read_trace_rows(ep/"request_attempts.jsonl")[0]
             result=read(ep/"result.json")
-            code=outcome["endpoint_block"]
-            if (len(ledger)!=len(calls) or outcome["sends"]!=len(ledger) or
-                    (result.get("error") or {}).get("code")!=code or
-                    (calls[-1].get("error") or {}).get("code")!=code or result.get("report") is not None):
-                raise ValueError("Endpoint failure differs across the raw receipt, service and result")
+            failure=result.get("error") or {}
+            code=external or failure.get("code") or failure.get("type") or "no_report_delivered"
+            if (len(ledger)!=len(calls) or outcome["sends"]!=len(ledger) or not ledger or result.get("report") is not None
+                    or result.get("score",{}).get("correct") is not False):
+                raise ValueError("Undelivered attempt differs across the raw receipt, service and result")
+            if external or failure.get("code") in (outcome.get("errors") or []):
+                if failure.get("code")!=code or (calls[-1].get("error") or {}).get("code")!=code:
+                    raise ValueError("Terminal service code differs across the receipt, model log and final attempt")
             for n,(call,entry) in enumerate(zip(calls,ledger),1):
                 names=[x["image_id"] for x in call["input"]["recent_images"]]+[call["input"]["current_image_id"]]
                 hashes=[digest(ep/"private/robot"/(name+".jpg")) for name in names]
@@ -42,6 +46,9 @@ def interruptions(root,config):
                    report_submitted=False,retry_after=None,receipt_sha256=digest(receipt),
                    model_log_sha256=digest(ep/"private/robot/model_calls.jsonl"),result_sha256=digest(ep/"result.json"),
                    end_utc=outcome["end_utc"]))
+            if include_other:
+                failures[-1].update(kind="external-service-limit" if external else "undelivered-run-error",
+                                    error_type=failure.get("type"))
     return failures
 
 

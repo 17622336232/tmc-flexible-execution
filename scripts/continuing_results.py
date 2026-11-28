@@ -109,14 +109,64 @@ def figure(episodes):
             if not r["passed"]:
                 ax.barh(i,r["restricted_s"]-min(r["whole_s"],r["restricted_s"]),left=min(r["whole_s"],r["restricted_s"]),
                         height=.59,facecolor="none",edgecolor="#b36d40",hatch="///",lw=.7)
-            ax.text(r["whole_s"]+3,i,f"{r['whole_s']:.0f} s",va="center",fontsize=8)
+            detail=" · "+r["failure_label"] if r.get("failure_label") else ""
+            ax.text(r["whole_s"]+3,i,f"{r['whole_s']:.0f} s"+detail,va="center",fontsize=8)
         ax.set_yticks(range(len(order)),order)
         ax.invert_yaxis();ax.set_xlim(0,390)
         ax.set_title(case+"  |  "+group,loc="left",fontsize=10)
         ax.spines[["top","right"]].set_visible(False)
-        ax.set_xlabel("Task wall time (s); hatched extension is the deadline penalty for failure",fontsize=8)
+        ax.set_xlabel("Task wall time (s). Hatching extends failed deliveries to the deadline.",fontsize=8)
     fig.tight_layout()
     fig.savefig(OUT/"paired_task_times.png",dpi=145)
+    plt.close(fig)
+
+
+def all_started_pairs(episodes,stopped):
+    by_case=defaultdict(dict)
+    for r in episodes:
+        by_case[r["case"]][r["method"]]=dict(strict=r["passed"],restricted=r["restricted_s"],external=None)
+    for f in stopped:
+        by_case[f["case"]][family(f["method"])]=dict(strict=False,restricted=f["restricted_if_counted_s"],external=f["code"])
+    rows=[]
+    for case,methods in by_case.items():
+        if "Proposed" not in methods:
+            continue
+        p=methods["Proposed"]
+        for name,b in methods.items():
+            if name=="Proposed":
+                continue
+            rows.append(dict(case=case,baseline=name,proposed_delivered=p["strict"],baseline_delivered=b["strict"],
+                     delta_deadline_restricted_s=p["restricted"]-b["restricted"],proposed_interruption=p["external"],
+                     baseline_interruption=b["external"],both_algorithm_outcomes_scored=not (p["external"] or b["external"])))
+    return rows
+
+
+def fixed_service_figure():
+    path=OUT/"critical_path.json"
+    if not path.is_file():
+        return
+    pairs=sorted(read(path)["paired_strict_device_tasks"],key=lambda r:r["case"])
+    if not pairs:
+        return
+    fig,axes=plt.subplots(len(pairs),1,figsize=(7.2,2.18*len(pairs)),squeeze=False,layout="constrained")
+    for index,(ax,r) in enumerate(zip(axes[:,0],pairs),1):
+        target=r["target_wall_s"]
+        ax.axvline(target,color="#994219",lw=1.35,ls="--",zorder=3)
+        ax.text(target+.8,1.56,f"20% target  {target:.1f} s",color="#783716",fontsize=8)
+        ax.set_title(f"Equipment layout {index}",loc="left",fontsize=10,fontweight="bold")
+        for y,total,model in ((1,r["original_time_s"],r["original_fixed_transport_s"]),
+                              (0,r["observed_proposed_time_s"],r["proposed_fixed_transport_s"])):
+            ax.barh(y,model,height=.52,color="#276777",label="Model transport" if y==1 else None)
+            ax.barh(y,total-model,height=.52,left=model,color="#bdd4da",label="Remaining task time" if y==1 else None)
+            ax.text(model/2,y,f"{model:.1f} s",ha="center",va="center",color="white",fontsize=9)
+            ax.text(total+1.6,y,f"{total:.1f} s total",va="center",fontsize=8)
+        ax.set(yticks=[1,0],yticklabels=["Original GPT","Proposed"],xlim=(0,204),ylim=(-.55,1.90))
+        ax.spines[["top","right","left"]].set_visible(False);ax.tick_params(axis="y",length=0)
+        ax.set_xlabel("Wall time (seconds)",fontsize=8)
+    handles,labels=axes[0,0].get_legend_handles_labels()
+    fig.legend(handles,labels,loc="outside lower center",ncol=2,frameon=False,fontsize=8)
+    for ext in ("png","pdf"):
+        fig.savefig(OUT/("fixed_transport_floors."+ext),dpi=180,bbox_inches="tight")
     plt.close(fig)
 
 
@@ -126,7 +176,7 @@ def main():
     if episodes:write_table(OUT/"task_results.csv",episodes)
     if measures:write_table(OUT/"resources_latency.csv",measures)
     if paired:write_table(OUT/"paired_differences.csv",paired)
-    figure(episodes)
+    fixed_service_figure()
     assay_path=OUT.parent/"paired-rgb-assay01/summary.json"
     scene_path=OUT.parent/"camera-pairs/summary.json"
     brief=dict(role="development-only",cohorts={},perception=read(assay_path) if assay_path.exists() else None,
@@ -135,16 +185,29 @@ def main():
                             "Repeated methods in one layout are paired, not independent houses",
                             "Partial process windows; summed RSS may double-count shared pages; alive CPU is a snapshot",
                             "Motion overlap is an interval observation, not causal credit"])
+    sensitivity=[]
+    plotted=list(episodes)
     for g in COHORTS:
         batch=[r for r in episodes if r["cohort"]==g]
         name={"native-views-dev01":"native_views_dev01","native-evidence-dev02":"native_evidence_dev02",
               "coordinated-handoff-dev03":"coordinated_handoff_dev03"}[g]
         config=read(Path("config")/(name+".json"))
-        stopped=interruptions(OUT.parent/g,config)
+        stopped=interruptions(OUT.parent/g,config,include_other=True)
+        for f in stopped:
+            plotted.append(dict(cohort=g,case=f["case"],method=family(f["method"]),whole_s=f["task_seconds"],
+                passed=False,restricted_s=f["restricted_if_counted_s"],
+                failure_label="service limit" if f["kind"]=="external-service-limit" else "run error"))
+        all_pairs=all_started_pairs(batch,stopped)
+        sensitivity.extend(dict(cohort=g,**p) for p in all_pairs)
         brief["cohorts"][g]=dict(scored=len(batch),strict=sum(r["passed"] for r in batch),sends=sum(r["requests"] for r in batch),
                                 started=len(batch)+len(stopped),all_started_sends=sum(r["requests"] for r in batch)+sum(f["actual_sends"] for f in stopped),
-                                service_interrupted=stopped,
-                                episodes=batch,paired=[p for p in paired if p["cohort"]==g])
+                                service_interrupted=[s for s in stopped if s["kind"]=="external-service-limit"],
+                                other_undelivered=[s for s in stopped if s["kind"]!="external-service-limit"],
+                                episodes=batch,paired=[p for p in paired if p["cohort"]==g],all_started_delivery_pairs=all_pairs)
+    if sensitivity:
+        write_table(OUT/"all_started_delivery_pairs.csv",sensitivity)
+    if plotted:
+        figure(plotted)
     for name,file in {
         "prefix_audit":OUT/"record_sufficiency_prefixes.json",
         "static_crossworld_views":OUT.parent/"archived-views-crossworld01/summary.json",
@@ -156,8 +219,12 @@ def main():
         "observed_query_concurrency":OUT.parent/"observed-queries/summary.json",
         "censored_specialized_service":OUT.parent/"observed-queries/wait_bounds.json",
         "real_offer_planners":OUT/"actual_offer_planners.json",
+        "frozen_ranker_relative_order":OUT/"old_ranker_on_actual_offers.json",
+        "learned_demand_on_real_training_decisions":OUT.parent/"view-demand-dev01/training_summary.json",
+        "frozen_demand_on_future_campus":OUT.parent/"view-demand-dev01/campus_summary.json",
         "fixed_transport_critical_path":OUT/"critical_path.json",
         "same_photo_claim_comparison":OUT.parent/"same-image-claims/summary.json",
+        "observed_camera_interface":OUT/"actual_camera_interface.json",
         "public_roster_on_fresh_camera":OUT.parent/"scoped-mission-dev01/preflight.json",
     }.items():
         if file.is_file():
