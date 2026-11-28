@@ -3,12 +3,21 @@
 <!-- continuing-snapshot -->
 ## 最近一次恢复位置
 
-UTC 2026-11-28T12:55:54。native-views-dev01 主对照 6/6、强对照 6/6；native-evidence-dev02 主对照 4/6、强对照 0/6 已取得完整评分。严格通过 10/16。新完整任务累计实发 88 次，其中取得评分的回合 84 次。独立核对提前交图 3 次，其中 1 张支持正确字段，最终报告直接引用提前图 0 次。单独的历史照片感知试验实发 18 次。当前完整任务总控已退出，最后心跳 2026-11-28T11:10:57.188369+00:00。有 1 回合因套餐限额中断，已发 4 次。服务未返回重置时间。已另做 8 次零模型仿真路线检查，完成读号并回位为正面 2/4、同距离沿原方向 0/4。
+UTC 2026-11-28T13:30:04。native-views-dev01 主对照 6/6、强对照 6/6；native-evidence-dev02 主对照 4/6、强对照 0/6；coordinated-handoff-dev03 主对照 0/6、强对照 0/8 已取得完整评分。严格通过 10/16。新完整任务累计实发 88 次，其中取得评分的回合 84 次。独立核对提前交图 3 次，其中 1 张支持正确字段，最终报告直接引用提前图 0 次。单独的历史照片感知试验实发 18 次。当前完整任务总控已退出，最后心跳 2026-11-28T11:10:57.188369+00:00。有 1 回合因套餐限额中断，已发 4 次。服务未返回重置时间。已另做 8 次零模型仿真路线检查，完成读号并回位为正面 2/4、同距离沿原方向 0/4。已有 9 次普通回复选了补图，均先观察，其中 8 次下一轮才选移动。新登记的同轮取图与导航尚待实测。
 
 在仓库根目录，用下文相同的 Python 环境运行 `scripts/continuing_recovery.py` 零请求列出断点。账户端确认同一套餐恢复后，运行 `scripts/continuing_recovery.py --run --restoration-evidence '这里填实际恢复凭据或确认时间'`，只启动预登记且尚未发送的主对照。保留中断回合。用 `scripts/continuing_native_report.py --config config/native_evidence_dev02.json` 独立重查，再运行 `scripts/continuing_checkpoint.py` 更新统计。
 <!-- /continuing-snapshot -->
 
 状态为 RESEARCH_IN_PROGRESS。旧 456 回合和 11 个开发回合均封存。先读取 RESEARCH_STATE.json、最新迭代记录和新研究目录的账本；后续开发不沿用旧的三轮上限。
+
+当前套餐限制仍有原始收据，账户可用次数和重置时刻未知。零请求恢复检查会核对旧运行时指纹，并自动选择实际启动版本 `b15c49c` 的工作副本。第二批尚未发送的唯一主对照是新货位的 `evidence-deferred`。第二批的剩余强对照按原门槛另行核验。之后的 `config/coordinated_handoff_dev03.json` 单独保存，不能合并估计旧版本的收益。在项目 Python 环境中运行下面的命令可以分别核验登记、回算调度机会及生成四个布局的实拍对照图，均不发模型请求。
+
+```bash
+python -m experiments.flexible_execution.continuing_jobs --config config/coordinated_handoff_dev03.json
+python scripts/continuing_wait_bounds.py
+python scripts/continuing_scope_replay.py
+python scripts/continuing_camera_figure.py
+```
 
 11 个旧开发回合的 93 次请求已拆解；64 份历史读号样本已做拒答式 OCR 诊断。新批次使用相同场景、360 秒任务期限及每回合至多 24 次真实请求。首个裂纹回合已通过。两张提前拍摄的照片进入后续普通判断，最终报告引用另两张常规照片。应逐张核对原图哈希、实发时间、许可、是否进入请求和最终报告分别引用了什么。
 

@@ -2,9 +2,12 @@
 import argparse
 from hashlib import sha256
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 
-from experiments.flexible_execution.continuing_jobs import command, planned, receipt_path, run, runtime_fingerprint
+from experiments.flexible_execution.continuing_jobs import command, planned, receipt_path, unresolved_service_limits
 from experiments.flexible_execution.revision_audit import read,save,digest
 from experiments.flexible_execution.timeline import read_trace_rows
 
@@ -80,6 +83,24 @@ def continuation(config,root,block,pending,config_hash):
     return new
 
 
+def frozen_runtime(config,config_path,root):
+    shared=root.parent.parent.resolve()
+    listed=subprocess.check_output(["git","worktree","list","--porcelain"],text=True)
+    candidates=[Path.cwd(),*(Path(line[9:]) for line in listed.splitlines() if line.startswith("worktree "))]
+    registered={read(p).get("git") for p in root.glob("*/*.receipt.json") if read(p).get("source_sha256")==config["runtime_sha256"]}
+    # Prefer the actual known launch commit when a maintained copy exists.
+    def pinned(p):
+        rev=subprocess.run(["git","rev-parse","HEAD"],cwd=p,capture_output=True,text=True)
+        return rev.returncode==0 and rev.stdout.strip() in registered
+    possible=[p for p in dict.fromkeys(candidates) if p.is_dir() and (p/"outputs").resolve()==shared]
+    for cwd in sorted(possible,key=lambda p:not pinned(p)):
+        env={**os.environ,"PYTHONPATH":os.pathsep.join(map(str,(cwd/"bridge",cwd)))}
+        source=subprocess.run([sys.executable,"-c","from pathlib import Path; from experiments.flexible_execution.continuing_jobs import runtime_fingerprint; from experiments.flexible_execution.revision_audit import read; import sys; print(runtime_fingerprint(read(Path(sys.argv[1]))))",str(config_path.resolve())],cwd=cwd,env=env,capture_output=True,text=True)
+        if source.returncode==0 and source.stdout.strip()==config["runtime_sha256"]:
+            return cwd,env
+    raise ValueError("The actual registered worker source is unavailable in the worktrees sharing these receipts")
+
+
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("--config",type=Path,default=Path("config/native_evidence_dev02.json"))
@@ -91,8 +112,10 @@ def main():
     root=Path("outputs/continuing")/config["id"]
     failures=interruptions(root,config)
     pending=remaining(config,root,args.block)
+    worker_dir,worker_env=frozen_runtime(config,args.config,root)
     info=dict(cohort=config["id"],block=args.block,interruptions=failures,pending=pending,
-              availability_confirmed=acknowledged(root,failures),extra_charge=0,requests_made_by_inspection=0)
+              availability_confirmed=acknowledged(root,failures),worker_tree_commit=subprocess.check_output(
+                  ["git","rev-parse","HEAD"],cwd=worker_dir,text=True).strip(),requests_made_by_inspection=0)
     print(json.dumps(info,ensure_ascii=False))
     target=root/"recovery"
     target.mkdir(parents=True,exist_ok=True)
@@ -101,19 +124,21 @@ def main():
         return
     if failures and not info["availability_confirmed"] and not (args.restoration_evidence or "").strip():
         raise SystemExit("The authorized endpoint still has a recorded limit. Wait for verified service restoration.")
-    if config["runtime_sha256"]!=runtime_fingerprint(config):
-        raise SystemExit("Restore the registered worker source fingerprint before continuation.")
     if failures and not info["availability_confirmed"]:
         refs=sorted(f["receipt_sha256"] for f in failures)
         name=sha256(json.dumps(refs).encode()).hexdigest()[:16]
         save(target/("restoration-"+name+".json"),dict(evidence=args.restoration_evidence.strip(),interrupted_receipt_sha256=refs))
+    limits=unresolved_service_limits(root.parent)
+    if limits:
+        raise SystemExit("A recorded limit remains on this plan: "+str(limits))
     suffix=continuation(config,root,args.block,pending,digest(args.config))
     token=sha256(json.dumps(suffix,sort_keys=True).encode()).hexdigest()[:16]
     path=target/("registered-"+args.block+"-"+token+".json")
     if path.exists() and read(path)!=suffix:
         raise ValueError("Suffix manifest conflict")
     save(path,suffix)
-    run(path,args.block)
+    subprocess.run([sys.executable,"-m","experiments.flexible_execution.continuing_jobs","--config",
+                   str(path.resolve()),"--run","--block",args.block],cwd=worker_dir,env=worker_env,check=True)
 
 
 if __name__=="__main__":

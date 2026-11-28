@@ -1,26 +1,20 @@
 """Offline assay. Predict from actual RGB; only the separate scoring stage opens the world."""
-import csv
 from collections import Counter, defaultdict
 from functools import lru_cache
 from hashlib import sha256
-from io import BytesIO, StringIO
 import json
-import os
 from pathlib import Path
-import re
-import subprocess
 import time
 from xml.etree import ElementTree
 
 import numpy as np
-from PIL import Image, ImageOps
+from PIL import Image
+
+from research.flexible_scheduling.literal_ocr import INSTALL, decode_rgb
 
 from experiments.flexible_execution.revision_audit import BASE, OUT as PRIOR, digest, read, save, write_table
 
 OUT = Path("outputs/continuing/ocr")
-INSTALL = Path("outputs/continuing/research-tools/ocr/root").resolve()
-TEXT = re.compile(r"(?<![A-Z0-9])([A-Z]{1,6}-[0-9]{2,6})(?![A-Z0-9])")
-SOURCE = re.compile(r"\bASSET\s*ID\s*[:#]?\s*([A-Z]{1,6}-[0-9]{2,6})\b")
 
 
 def inputs():
@@ -68,43 +62,7 @@ def inputs():
 
 @lru_cache(maxsize=256)
 def decode(jpeg, bbox, single_line_plaque=False):
-    binary=INSTALL/"usr/bin/tesseract"
-    image=Image.open(jpeg).convert("L")
-    w,h=image.size
-    left,top,right,bottom=bbox or (0.,0.,1.,1.)
-    box=(max(0,int(left*w)),max(0,int(top*h)),min(w,int(np.ceil(right*w))),min(h,int(np.ceil(bottom*h))))
-    if box[2]<=box[0] or box[3]<=box[1]:
-        return []
-    region=image.crop(box)
-    scale=4 if bbox else 2
-    region=ImageOps.expand(ImageOps.autocontrast(region.resize((region.width*scale,region.height*scale),
-                                                              Image.Resampling.LANCZOS if hasattr(Image,"Resampling") else Image.LANCZOS)),8,fill=255)
-    stream=BytesIO()
-    region.save(stream,format="PNG")
-    cmd=[str(binary),"stdin","stdout","--tessdata-dir",str(INSTALL/"usr/share/tesseract-ocr/4.00/tessdata"),
-         "-l","eng","--psm","7" if bbox or single_line_plaque else "11","-c","tessedit_create_tsv=1"]
-    p=subprocess.run(cmd,input=stream.getvalue(),stdout=subprocess.PIPE,stderr=subprocess.PIPE,
-                     env={**os.environ,"OMP_THREAD_LIMIT":"1"},timeout=15,check=True)
-    lines=defaultdict(list)
-    reader=csv.DictReader(StringIO(p.stdout.decode("utf8")),delimiter="\t")
-    if not {"level","text","conf","line_num"} <= set(reader.fieldnames or ()):
-        raise ValueError("OCR did not emit word-level TSV")
-    for r in reader:
-        if r.get("level")=="5" and (r.get("text") or "").strip():
-            lines[(r["block_num"],r["par_num"],r["line_num"])].append(r)
-    detections=[]
-    for words in lines.values():
-        line=" ".join(r["text"] for r in words).upper()
-        pattern=TEXT if bbox else SOURCE
-        for m in pattern.finditer(line):
-            conf=min(float(r["conf"]) for r in words)
-            if conf<75:
-                continue
-            x0=min(int(r["left"]) for r in words); x1=max(int(r["left"])+int(r["width"]) for r in words)
-            y0=min(int(r["top"]) for r in words); y1=max(int(r["top"])+int(r["height"]) for r in words)
-            detections.append(dict(value=m[1],confidence=conf,
-                center=[(box[0]+((x0+x1)/2-8)/scale)/w,(box[1]+((y0+y1)/2-8)/scale)/h]))
-    return detections
+    return decode_rgb(Path(jpeg).read_bytes(), bbox, single_line_plaque)
 
 
 def predict():

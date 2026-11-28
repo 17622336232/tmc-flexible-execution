@@ -64,6 +64,19 @@ def receipt_path(root,case,arm):
     return root/case["id"]/(arm+".receipt.json")
 
 
+def unresolved_service_limits(parent):
+    limits=[]
+    for p in parent.glob("*/*/*.receipt.json"):
+        d=read(p)
+        if not d.get("endpoint_block"):
+            continue
+        key=digest(p)
+        markers=(p.parents[1]/"recovery").glob("restoration-*.json")
+        if not any(key in read(m).get("interrupted_receipt_sha256",[]) for m in markers):
+            limits.append((str(p),d["endpoint_block"]))
+    return limits
+
+
 def snapshot(root,config):
     rows=[]
     for group in ("primary","comparators"):
@@ -102,6 +115,9 @@ def run(config_path,block,limit=None):
     guard=root.parent/"online.lock"
     with guard.open("a+") as lock:
         fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        limits=unresolved_service_limits(root.parent)
+        if limits:
+            raise SystemExit("Existing plan limit; use the verified recovery entry after service restoration: "+str(limits))
         launched=0
         for case,arm in planned(config,block):
             ep=root/case["id"]/arm

@@ -22,6 +22,8 @@ from .viewpoints import _candidates, xyz
 
 MODES = ("native-off","native-async","native-prefetch","native-planner","native-deferred")
 EVIDENCE_MODES = ("evidence-off","evidence-async","evidence-prefetch","evidence-planner","evidence-deferred")
+COORDINATED_MODES = ("coordinated-off","coordinated-async","coordinated-prefetch","coordinated-planner",
+                     "coordinated-deferred","coordinated-observe-only","coordinated-no-ocr")
 INSTRUCTIONS = """
 The optional camera tool is a real view of a previously visible subject. If an extra view may be useful
 after the next normal decision, you may include at most two next_views in your existing answer:
@@ -81,6 +83,20 @@ class ViewScheduler:
     def camera_goals(self,obs,geometry,target,field):
         return _candidates(self.backend,obs,geometry,target,self.trace)
 
+    def remember_source(self,offer,obs,geometry,details):
+        pass
+
+    def remember_capture(self,offer,tag,geometry,digest):
+        pass
+
+    def accepted_uses(self,answer,offers,context):
+        if (answer.get("action") or {}).get("type") not in ("observe","record"):
+            return []
+        return self.requested_views(answer,offers)
+
+    def released_photo(self,photo,offer,answer,context,deadline):
+        return photo
+
     def nominate(self, decision, obs, geometry, image_id, step):
         plans=decision.get("next_views",[])
         if decision.get("action",{}).get("type")=="submit" or not isinstance(plans,list):
@@ -115,6 +131,7 @@ class ViewScheduler:
                 if any(close_pose(o.goal,goal) and o.field==field and o.bbox==tuple(box) for o in result):
                     break
                 offer=Offer(tag,field,row["subject"],tuple(box),image_id,sha256(obs["data"]).hexdigest(),goal,independent,gate.source)
+                self.remember_source(offer,obs,geometry,details)
                 self.trace.event("native_offer",step,**offer.visible(),independent=independent,
                                  permission=gate.source,reference_sha256=offer.reference_hash,view_geometry=details)
                 result.append(offer)
@@ -168,7 +185,7 @@ class ViewScheduler:
                 departed=True
                 self.backend.move(offer.goal)
             with self.trace.measure("observation",f"{step}-side",candidate=offer.id):
-                frame,_=self.backend.observe()
+                frame,geometry=self.backend.observe()
             actual={**frame["position"],"yaw":frame["yaw"]}
             if not close_pose(actual,offer.goal) or monotonic()>=deadline:
                 return None
@@ -178,6 +195,7 @@ class ViewScheduler:
                         intended_subject=offer.subject,candidate=offer.id,field=offer.field)
             (self.root/(tag+".jpg")).write_bytes(frame["data"])
             write_json(self.root/(tag+".json"),meta)
+            self.remember_capture(offer,tag,geometry,h)
             observed=dict(image_id=tag,position=frame["position"],yaw=frame["yaw"],data=frame["data"],
                           capture_ros=frame["ros_stamp"],source_reference=offer.reference_image,
                           intended_subject=offer.subject,requested_field=offer.field)
@@ -239,7 +257,7 @@ class ViewScheduler:
         self.intervals.append(duration)
         if self.unrestored or monotonic()>=deadline or not isinstance(answer,dict):
             return answer
-        uses=self.requested_views(answer,offers) if (answer.get("action") or {}).get("type") in ("observe","record") else []
+        uses=self.accepted_uses(answer,offers,context)
         for use in uses:
             if self.unrestored or monotonic()>=deadline:
                 break
@@ -247,7 +265,7 @@ class ViewScheduler:
             if photo is None and not close_pose(anchor,use.goal):
                 photo=self.excursion(use,anchor,step,False,deadline)
             if photo and not self.unrestored:
-                self.ready.append(photo)
+                self.ready.append(self.released_photo(photo,use,answer,context,deadline))
         if self.unrestored:
             self.ready=[]
         self.trace.event("native_material_release",step,selected=choices[0].id if choices else None,
@@ -263,5 +281,8 @@ def run(backend,task,directory,event,timeout,*,model,trace,method,costs):
     if method in EVIDENCE_MODES:
         from research.flexible_scheduling.native_controller import EvidenceScheduler
         cls=EvidenceScheduler
+    elif method in COORDINATED_MODES:
+        from research.flexible_scheduling.coordinated_controller import CoordinatedScheduler
+        cls=CoordinatedScheduler
     scheduler=cls(backend,task,directory,trace,method,costs)
     return run_agent(backend,task,directory,event,timeout,model=model,trace=trace,view_scheduler=scheduler)

@@ -1,0 +1,71 @@
+{
+  "id": "coordinated-handoff-dev03",
+  "role": "registered prospective development; unsent; do not pool with earlier versions",
+  "model": "gpt-6.1-terra",
+  "effort": "max",
+  "admission": "coordinated-motion-material",
+  "runtime_sha256": "1125c65f49cb33a7821f2da906cb1deaa05ff0eece879ec39048c391fe95ee9b",
+  "backend": "cpu",
+  "max_requests_per_episode": 24,
+  "episode_s": 360,
+  "cost_config": "outputs/protocol-v2-optimization/custom-final/calibrated_costs.json",
+  "runtime_files": [
+    "research/flexible_scheduling/native_controller.py",
+    "research/flexible_scheduling/workflow.py",
+    "research/flexible_scheduling/front_facing.py",
+    "research/flexible_scheduling/label_geometry.py",
+    "research/flexible_scheduling/literal_ocr.py",
+    "research/flexible_scheduling/material_binding.py",
+    "research/flexible_scheduling/coordinated_controller.py"
+  ],
+  "cases": [
+    {
+      "id": "equipment-inspection-03",
+      "family": "cracks",
+      "seed": 884231,
+      "layout_seed": 584231,
+      "source_profile": "independent",
+      "count": 3,
+      "early_fields": "identity",
+      "primary": [
+        "coordinated-observe-only",
+        "coordinated-deferred",
+        "original-gpt"
+      ],
+      "comparators": [
+        "coordinated-prefetch",
+        "coordinated-off",
+        "coordinated-async",
+        "coordinated-planner"
+      ]
+    },
+    {
+      "id": "campus-access-03",
+      "family": "blocked_exit",
+      "seed": 884237,
+      "layout_seed": 584237,
+      "source_profile": "independent",
+      "count": 3,
+      "early_fields": "identity",
+      "primary": [
+        "original-gpt",
+        "coordinated-deferred",
+        "coordinated-observe-only"
+      ],
+      "comparators": [
+        "coordinated-planner",
+        "coordinated-async",
+        "coordinated-off",
+        "coordinated-prefetch"
+      ]
+    }
+  ],
+  "design": [
+    "The observed previous protocol required observe/record: nine actual use-selected replies all chose observe and eight next ordinary replies chose move. Test an interface in which scoped material retrieval and an independently useful, authorized normal move may be requested together. Do not claim a turn can be removed unless the complete online task and number of serial calls support it.",
+    "Cohort 02 resumes before this distinct development test; record external interruption and never replay the consumed original slot. The same subscription must be confirmed available. No holdout access. One new equipment and one new campus layout, preselected before rendering. Keep physical platform in CPU simulation with real max-model sends. No unsupervised flight.",
+    "All augmented methods receive identical raw image tools, predicate records, post-activation local OCR, calibrated source binding, archive and independent whole-task coverage. The observe-only ablation uses the same checks and estimator but cannot combine a material release with motion. The local OCR ablation has independent recorded-RGB comparisons. Main scientific comparison uses the unmodified original GPT and shared enhanced baselines.",
+    "A motion and photograph release must both be present in the exact reply with the motion_independent_of_view flag. The immutable reference and source region must support the positive typed mission condition. An early raw photograph by itself never authorizes interpretation. No accelerated completion certificate on these open-row tasks.",
+    "Admit additional comparator block only when a real conditional early photo is requested with an achieved move, restored and supplied to the next normal GPT decision, and a genuine later claim from this photo supports the nominated object's positive field. After prediction only, require a unique original plate center in the source box with >=36 pixels, >=0.90 alignment (per-channel error <=18) on both renders, and >=144 pixels each for the captured body ID and relevant door surface or actual access obstruction. Retain uncertain and unproven cases. Otherwise analyze the protocol design without repeating the same exposures.",
+    "Report success and deadline-restricted whole time, actual request and motion clocks, number of material-only turns, bound reading and subsequent photo-source use. An incomplete result and a service interruption are retained. Two development layouts do not establish a population speedup."
+  ]
+}

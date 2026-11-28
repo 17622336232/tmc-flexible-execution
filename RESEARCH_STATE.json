@@ -3,10 +3,11 @@
   "stage": "original-loop paired development, independent image-chain audit and remaining-task planning",
   "resumed_remote": "94bd1e78953164dce48ec38c8cc15dbd010f2e56",
   "resumed_local": "90f390c8ee332c866f4204dee628d447f8ddab2c",
-  "as_of_utc": "2026-11-28T12:55:54+00:00",
+  "as_of_utc": "2026-11-28T13:30:04+00:00",
   "method_version": {
     "native-views-dev01": "2e8e26cb8f0099bb68d02e5aa1c1e9569423706ec413227f9d9aa7714ffcef2b",
-    "native-evidence-dev02": "6c5dab53a9faf9d2de88df4c2d988619c066176423a1223341f30e75b84c2577"
+    "native-evidence-dev02": "6c5dab53a9faf9d2de88df4c2d988619c066176423a1223341f30e75b84c2577",
+    "coordinated-handoff-dev03": "1125c65f49cb33a7821f2da906cb1deaa05ff0eece879ec39048c391fe95ee9b"
   },
   "prior_formal": {
     "episodes": 456,
@@ -31,6 +32,10 @@
       "native-evidence-dev02": {
         "primary": 4,
         "comparators": 0
+      },
+      "coordinated-handoff-dev03": {
+        "primary": 0,
+        "comparators": 0
       }
     },
     "early_source_verified_handoffs": 3,
@@ -50,8 +55,8 @@
   "rejected": [
     "fixed conservative OCR has zero detections on 64 sampled historical image/ROI questions; 31 had independently assigned target identity"
   ],
-  "next": "Verify source-bound coverage and the usefulness of measured camera poses on the second development cohort. Retain the paired-RGB timeouts and continue the independent single-decision route.",
-  "phase": "paired native development and joint acquisition/perception research",
+  "next": "Complete source-bound offline diagnostics. On confirmed service restoration use the launch-matched frozen tree for cohort 02's single unsent primary slot; then assess its registered comparator gate. The separate coordinated-handoff-03 development registration has six primary and eight conditional comparator slots.",
+  "phase": "coordinating actual material handoff, ordinary movement and source-bound completion",
   "paired_rgb_assay": {
     "sends": 18,
     "results": {
@@ -146,5 +151,74 @@
     },
     "perception_only": true,
     "new_model_requests": 0
+  },
+  "scoped_evidence_replay": {
+    "role": "cross-reset evidence sufficiency only",
+    "layouts": 4,
+    "new_model_requests": 0,
+    "previous_literal_match_summary": "35604db4007633faaf0b332b4e83653d645f03fc864446441e1a4fe9f572ae47",
+    "question_rule": "Same affirmative front-crack predicate, optional image reference and determiner variation. No new source or model result.",
+    "estimated_online_time": null,
+    "roles": {
+      "radial_same_distance": {
+        "cases": 4,
+        "terminal": 0,
+        "strictly_supported": 0
+      },
+      "frontal_same_distance": {
+        "cases": 4,
+        "terminal": 2,
+        "strictly_supported": 2
+      },
+      "without-local-reading": {
+        "cases": 4,
+        "terminal": 0,
+        "strictly_supported": 0
+      }
+    }
+  },
+  "scoped_wait_censoring": {
+    "total": 621,
+    "replies": 209,
+    "right_censored": 412,
+    "outcome_counts": {
+      "negative": 120,
+      "positive": 87,
+      "uncertain": 2
+    },
+    "previously_successful_only_median_s": 6.186267242010217,
+    "measured_timeout_median_s": 8.850784772002953,
+    "measured_timeout_wall_median_s": 8.859912391970283,
+    "effective_deadline_min_s": 2.6319163130247034,
+    "effective_deadline_max_s": 8.86030168196885,
+    "effective_deadline_median_s": 8.859613901993725,
+    "underlying_median_lower_s": 8.85016591695603,
+    "underlying_median_upper_s": null,
+    "mean_observed_service_s": 7.884274257958121
+  },
+  "actual_offered_action_slots": {
+    "turns_with_offer": 19,
+    "turns_with_selected_offer": 9,
+    "actions_when_selected": {
+      "observe": 9
+    },
+    "following_ordinary_actions": {
+      "move": 8,
+      "submit": 1
+    }
+  },
+  "registered_slots": {
+    "native-views-dev01": {
+      "primary": 6,
+      "comparators": 6
+    },
+    "native-evidence-dev02": {
+      "primary": 6,
+      "comparators": 6
+    },
+    "coordinated-handoff-dev03": {
+      "primary": 6,
+      "comparators": 8
+    }
   }
 }

@@ -79,6 +79,9 @@ def predict(config,root,reg):
                 if receipt.get("external_block"):
                     raise SystemExit("Endpoint block in preserved receipt: "+slot)
                 continue
+            from experiments.flexible_execution.continuing_jobs import unresolved_service_limits
+            if unresolved_service_limits(root.parent):
+                raise SystemExit("A recorded limit on the authorized model plan is still pending.")
             ep.mkdir()
             payload,images,expected_hashes = [],[],[]
             for f in flags:

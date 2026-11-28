@@ -218,17 +218,6 @@
         {
           "cohort": "native-views-dev01",
           "case": "cracked-row",
-          "baseline": "Original GPT",
-          "proposed_pass": true,
-          "baseline_pass": true,
-          "delta_restricted_s": 28.071952532045543,
-          "delta_restricted_pct": 19.903061069800422,
-          "delta_transport_s": 21.778099546034355,
-          "delta_requests": 2
-        },
-        {
-          "cohort": "native-views-dev01",
-          "case": "cracked-row",
           "baseline": "Enhanced serial",
           "proposed_pass": true,
           "baseline_pass": true,
@@ -240,13 +229,24 @@
         {
           "cohort": "native-views-dev01",
           "case": "cracked-row",
-          "baseline": "Ordinary async",
+          "baseline": "Original GPT",
           "proposed_pass": true,
           "baseline_pass": true,
-          "delta_restricted_s": -118.9150950369658,
-          "delta_restricted_pct": -41.285599894814084,
-          "delta_transport_s": -100.37571788503556,
-          "delta_requests": -1
+          "delta_restricted_s": 28.071952532045543,
+          "delta_restricted_pct": 19.903061069800422,
+          "delta_transport_s": 21.778099546034355,
+          "delta_requests": 2
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "cracked-row",
+          "baseline": "Generic planner",
+          "proposed_pass": true,
+          "baseline_pass": true,
+          "delta_restricted_s": 66.78527565998957,
+          "delta_restricted_pct": 65.26456603581772,
+          "delta_transport_s": 60.19994937599404,
+          "delta_requests": 3
         },
         {
           "cohort": "native-views-dev01",
@@ -262,13 +262,13 @@
         {
           "cohort": "native-views-dev01",
           "case": "cracked-row",
-          "baseline": "Generic planner",
+          "baseline": "Ordinary async",
           "proposed_pass": true,
           "baseline_pass": true,
-          "delta_restricted_s": 66.78527565998957,
-          "delta_restricted_pct": 65.26456603581772,
-          "delta_transport_s": 60.19994937599404,
-          "delta_requests": 3
+          "delta_restricted_s": -118.9150950369658,
+          "delta_restricted_pct": -41.285599894814084,
+          "delta_transport_s": -100.37571788503556,
+          "delta_requests": -1
         },
         {
           "cohort": "native-views-dev01",
@@ -446,6 +446,16 @@
           "delta_requests": 0
         }
       ]
+    },
+    "coordinated-handoff-dev03": {
+      "scored": 0,
+      "strict": 0,
+      "sends": 0,
+      "started": 0,
+      "all_started_sends": 0,
+      "service_interrupted": [],
+      "episodes": [],
+      "paired": []
     }
   },
   "perception": {
@@ -641,5 +651,305 @@
     "structural_timing_rows": 30,
     "stress_scope": "Solver CPU only; no claim about VLM service for many simultaneous predicates.",
     "limitations": "Static return-to-anchor section; fixed observation coverage and factor distributions. Real perception accuracy is a separate paired assay."
+  },
+  "closed_roster_evidence_composition": {
+    "role": "cross-reset evidence sufficiency only",
+    "layouts": 4,
+    "new_model_requests": 0,
+    "previous_literal_match_summary": "35604db4007633faaf0b332b4e83653d645f03fc864446441e1a4fe9f572ae47",
+    "question_rule": "Same affirmative front-crack predicate, optional image reference and determiner variation. No new source or model result.",
+    "estimated_online_time": null,
+    "roles": {
+      "radial_same_distance": {
+        "cases": 4,
+        "terminal": 0,
+        "strictly_supported": 0
+      },
+      "frontal_same_distance": {
+        "cases": 4,
+        "terminal": 2,
+        "strictly_supported": 2
+      },
+      "without-local-reading": {
+        "cases": 4,
+        "terminal": 0,
+        "strictly_supported": 0
+      }
+    }
+  },
+  "observed_query_concurrency": {
+    "by_domain": {
+      "historical-custom": {
+        "attempts_with_log": 361,
+        "sends": 3530,
+        "timed_sends": 3530,
+        "attempts_with_simultaneous_transports": 0,
+        "peak_real_transports": 1,
+        "multi_region_frame_question_groups": 160,
+        "all_regions_answered": 31,
+        "grouped_region_questions": 496,
+        "definite_region_answers": 144,
+        "uncertain_only": 0,
+        "no_valid_reply": 352,
+        "explicit_multi_object_claim_replies": 120
+      },
+      "historical-houses": {
+        "attempts_with_log": 96,
+        "sends": 312,
+        "timed_sends": 312,
+        "attempts_with_simultaneous_transports": 0,
+        "peak_real_transports": 1,
+        "multi_region_frame_question_groups": 0,
+        "all_regions_answered": 0,
+        "grouped_region_questions": 0,
+        "definite_region_answers": 0,
+        "uncertain_only": 0,
+        "no_valid_reply": 0,
+        "explicit_multi_object_claim_replies": 0
+      },
+      "native-evidence-dev02": {
+        "attempts_with_log": 5,
+        "sends": 21,
+        "timed_sends": 21,
+        "attempts_with_simultaneous_transports": 0,
+        "peak_real_transports": 1,
+        "multi_region_frame_question_groups": 0,
+        "all_regions_answered": 0,
+        "grouped_region_questions": 0,
+        "definite_region_answers": 0,
+        "uncertain_only": 0,
+        "no_valid_reply": 0,
+        "explicit_multi_object_claim_replies": 2
+      },
+      "native-views-dev01": {
+        "attempts_with_log": 12,
+        "sends": 67,
+        "timed_sends": 67,
+        "attempts_with_simultaneous_transports": 0,
+        "peak_real_transports": 1,
+        "multi_region_frame_question_groups": 0,
+        "all_regions_answered": 0,
+        "grouped_region_questions": 0,
+        "definite_region_answers": 0,
+        "uncertain_only": 0,
+        "no_valid_reply": 0,
+        "explicit_multi_object_claim_replies": 1
+      }
+    },
+    "legacy_code_task_options": [
+      "cracks",
+      "temperature",
+      "locate",
+      "inventory",
+      "color_search",
+      "order_check",
+      "parking",
+      "blocked_exit",
+      "fire_safety",
+      "crack_and_heat",
+      "thermal_minimum",
+      "safe_equipment",
+      "shortage",
+      "overstock",
+      "large_inventory",
+      "vehicle_search",
+      "clear_exit",
+      "fire_and_access",
+      "equipment_labels",
+      "warehouse_labels",
+      "campus_labels",
+      "locate_crack",
+      "locate_condition",
+      "locate_boxes",
+      "locate_order",
+      "locate_extinguisher",
+      "locate_access"
+    ],
+    "clean_pilot_registered_families": [
+      "blocked_exit",
+      "clear_exit",
+      "color_search",
+      "crack_and_heat",
+      "cracks",
+      "fire_and_access",
+      "fire_safety",
+      "inventory",
+      "large_inventory",
+      "locate",
+      "locate_access",
+      "locate_boxes",
+      "locate_condition",
+      "locate_crack",
+      "locate_extinguisher",
+      "locate_order",
+      "order_check",
+      "overstock",
+      "parking",
+      "safe_equipment",
+      "shortage",
+      "temperature",
+      "thermal_minimum",
+      "vehicle_search"
+    ],
+    "clean_pilot_family_count": 24,
+    "note": "A group shares the image and question but has separate measured object regions. Multiple condition questions do not prove simultaneous remote transports or equal accuracy after batching. Raw attempts, not logical episode count."
+  },
+  "censored_specialized_service": {
+    "service": {
+      "total": 621,
+      "replies": 209,
+      "right_censored": 412,
+      "outcome_counts": {
+        "negative": 120,
+        "positive": 87,
+        "uncertain": 2
+      },
+      "previously_successful_only_median_s": 6.186267242010217,
+      "measured_timeout_median_s": 8.850784772002953,
+      "measured_timeout_wall_median_s": 8.859912391970283,
+      "effective_deadline_min_s": 2.6319163130247034,
+      "effective_deadline_max_s": 8.86030168196885,
+      "effective_deadline_median_s": 8.859613901993725,
+      "underlying_median_lower_s": 8.85016591695603,
+      "underlying_median_upper_s": null,
+      "mean_observed_service_s": 7.884274257958121
+    },
+    "explicit_box_service": {
+      "total": 587,
+      "replies": 204,
+      "right_censored": 383,
+      "outcome_counts": {
+        "negative": 119,
+        "positive": 85
+      },
+      "previously_successful_only_median_s": 6.17415347500355,
+      "measured_timeout_median_s": 8.850776209961623,
+      "measured_timeout_wall_median_s": 8.859888432984008,
+      "effective_deadline_min_s": 2.6319163130247034,
+      "effective_deadline_max_s": 8.86030168196885,
+      "effective_deadline_median_s": 8.859601300995564,
+      "underlying_median_lower_s": 8.850092003005557,
+      "underlying_median_upper_s": null,
+      "mean_observed_service_s": 7.841184022899454
+    },
+    "full_frame_service": {
+      "total": 34,
+      "replies": 5,
+      "right_censored": 29,
+      "outcome_counts": {
+        "negative": 1,
+        "positive": 2,
+        "uncertain": 2
+      },
+      "previously_successful_only_median_s": 7.527898131986149,
+      "measured_timeout_median_s": 8.850993996020406,
+      "measured_timeout_wall_median_s": 8.860093106050044,
+      "effective_deadline_min_s": 8.855719733983278,
+      "effective_deadline_max_s": 8.860125439998228,
+      "effective_deadline_median_s": 8.859773460499127,
+      "underlying_median_lower_s": 8.850819589017192,
+      "underlying_median_upper_s": null,
+      "mean_observed_service_s": 8.628214492647471
+    },
+    "actual_offered_slots": {
+      "turns_with_offer": 19,
+      "turns_with_selected_offer": 9,
+      "actions_when_selected": {
+        "observe": 9
+      },
+      "following_ordinary_actions": {
+        "move": 8,
+        "submit": 1
+      }
+    },
+    "physical_durations": [
+      {
+        "case": "custom-execution-condition-112",
+        "arm": "frontal_same_distance",
+        "navigation_sha256": "7e23b93759fd5b56ef1f518344cd6eaa72b45868620dd59f566849f9071ea01f",
+        "trip_motion_s": 14.335579575039446,
+        "mean_unhidden_motion_lower_s": 2.7682185439971625,
+        "mean_unhidden_motion_upper_s": 6.451305317081325,
+        "mean_overlap_lower_s": 7.884274257958121,
+        "mean_overlap_upper_s": 11.567361031042283,
+        "demand_probability_break_even_lower": 0.1931012645499926,
+        "demand_probability_break_even_upper": 0.4500205438721213
+      },
+      {
+        "case": "custom-execution-condition-112",
+        "arm": "radial_same_distance",
+        "navigation_sha256": "d58cebef8a5c7e05baa29cff97d597bd11fd2edc77631ce7e678c8c22afa09ab",
+        "trip_motion_s": 13.632011725043412,
+        "mean_unhidden_motion_lower_s": 2.5314300083302204,
+        "mean_unhidden_motion_upper_s": 5.747737467085291,
+        "mean_overlap_lower_s": 7.884274257958121,
+        "mean_overlap_upper_s": 11.100581716713192,
+        "demand_probability_break_even_lower": 0.18569746412994365,
+        "demand_probability_break_even_upper": 0.42163530834749097
+      },
+      {
+        "case": "custom-execution-condition-172",
+        "arm": "frontal_same_distance",
+        "navigation_sha256": "fcd599e451fe527c093b4ac388c39452be426b942e11c378ff1ae36b9e944526",
+        "trip_motion_s": 14.435323155019432,
+        "mean_unhidden_motion_lower_s": 2.801787639352746,
+        "mean_unhidden_motion_upper_s": 6.551048897061311,
+        "mean_overlap_lower_s": 7.884274257958121,
+        "mean_overlap_upper_s": 11.633535515666686,
+        "demand_probability_break_even_lower": 0.1940924778243369,
+        "demand_probability_break_even_upper": 0.45382073035084003
+      },
+      {
+        "case": "custom-execution-condition-172",
+        "arm": "radial_same_distance",
+        "navigation_sha256": "eddd9c1a403479ddf2c9c000c960d7dac00a956a70fbf229872a2a297974bbd0",
+        "trip_motion_s": 13.43368689995259,
+        "mean_unhidden_motion_lower_s": 2.464683006004968,
+        "mean_unhidden_motion_upper_s": 5.549412641994469,
+        "mean_overlap_lower_s": 7.884274257958121,
+        "mean_overlap_upper_s": 10.969003893947622,
+        "demand_probability_break_even_lower": 0.1834703327806208,
+        "demand_probability_break_even_upper": 0.4130967680967802
+      },
+      {
+        "case": "custom-scene-052",
+        "arm": "frontal_same_distance",
+        "navigation_sha256": "07ae14d594e0e5859d7998e78f54ec5529b5d3f1ac997e3c7b69ed454dba37d7",
+        "trip_motion_s": 12.834932820987888,
+        "mean_unhidden_motion_lower_s": 2.263169958495108,
+        "mean_unhidden_motion_upper_s": 4.950658563029767,
+        "mean_overlap_lower_s": 7.884274257958121,
+        "mean_overlap_upper_s": 10.571762862492779,
+        "demand_probability_break_even_lower": 0.17632892902986888,
+        "demand_probability_break_even_upper": 0.3857175282549489
+      },
+      {
+        "case": "custom-scene-052",
+        "arm": "radial_same_distance",
+        "navigation_sha256": "d516b1b2c2e601b24b8cdceec502a58c11b93792fb3ea83b2f931d2d7a2e11db",
+        "trip_motion_s": 12.031017214991152,
+        "mean_unhidden_motion_lower_s": 1.992608989649186,
+        "mean_unhidden_motion_upper_s": 4.146742957033031,
+        "mean_overlap_lower_s": 7.884274257958121,
+        "mean_overlap_upper_s": 10.038408225341966,
+        "demand_probability_break_even_lower": 0.16562265301776077,
+        "demand_probability_break_even_upper": 0.34467101849592696
+      },
+      {
+        "case": "custom-scene-162",
+        "arm": "radial_same_distance",
+        "navigation_sha256": "dfdeab64a7b20b27006d38960e56e51c86c34c00ead8bfa9a3fd65c5ef0fc6f7",
+        "trip_motion_s": 15.441049083019607,
+        "mean_unhidden_motion_lower_s": 3.140268668261017,
+        "mean_unhidden_motion_upper_s": 7.556774825061486,
+        "mean_overlap_lower_s": 7.884274257958121,
+        "mean_overlap_upper_s": 12.30078041475859,
+        "demand_probability_break_even_lower": 0.2033714582070945,
+        "demand_probability_break_even_upper": 0.48939516897019697
+      }
+    ],
+    "definition": "Each actually completed route provides a fixed motion duration evaluated against the archival query clocks. No simultaneous paired camera/service measurement is inferred. A cutoff supplies only a lower bound on time to a hypothetical valid reply, which can be infinite. No missing judgment is imputed.",
+    "break_even": "Illustrative risk-neutral one-trip model: if a later on-demand trip costs the same duration d, and a useful early capture eliminates that trip, expected time advantage equals p*d minus mean uncovered motion. The probability interval is the range of thresholds allowed by censoring, not a measured activation rate. Excludes recognition, route changes and task success.",
+    "new_model_requests": 0
   }
 }

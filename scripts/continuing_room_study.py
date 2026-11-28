@@ -71,6 +71,10 @@ def main():
     guard_file=(root/"smoke.lock") if smoke else (root.parent/"online.lock")
     with guard_file.open("a+") as guard:
         fcntl.flock(guard,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        if not smoke:
+            from experiments.flexible_execution.continuing_jobs import unresolved_service_limits
+            if unresolved_service_limits(root.parent):
+                raise SystemExit("A recorded limit on the authorized model plan is still pending.")
         for m in methods:
             ep=paths(root,case,m,smoke)
             receipt=ep.with_name(ep.name+".receipt.json")

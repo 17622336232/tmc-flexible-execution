@@ -76,10 +76,13 @@ class EvidenceScheduler(ViewScheduler):
         factors=tuple(((1<<i,1.),) if o.independent else ((0,.5),(1<<i,.5)) for i,o in enumerate(allowed))
         views=tuple(View(o.id,1<<i,costs[i],True,False) for i,o in enumerate(allowed))
         task=Workflow(factors,views,0,(window,),(0.,0.),0.,max_early_motion=max(0.,remaining-window))
-        result=DecisionProblem(task).solve(_METHODS[self.method])
+        result=DecisionProblem(task).solve(self.solver_method())
         self.trace.event("native_policy_checked",step,policy=self.method,request_window_s=window,
              options=[dict(id=o.id,roundtrip_s=c,independent=o.independent) for o,c in zip(allowed,costs)],
              selected=[allowed[i].id for i in result["overlap"]],expected_section_s=result["expected_seconds"],
              candidate_plans=result["evaluated"],planning_seconds=perf_counter()-begin,
              cost_scope="remaining camera work plus current ordinary request, identical later semantic service")
         return [allowed[i] for i in sorted(result["overlap"],key=lambda j:(not allowed[j].independent,costs[j],allowed[j].id))]
+
+    def solver_method(self):
+        return _METHODS[self.method]

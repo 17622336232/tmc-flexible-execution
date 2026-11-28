@@ -16,9 +16,9 @@ from scripts.continuing_recovery import interruptions
 
 
 OUT=Path("outputs/continuing/results")
-COHORTS=("native-views-dev01","native-evidence-dev02")
+COHORTS=("native-views-dev01","native-evidence-dev02","coordinated-handoff-dev03")
 NAMES={"original-gpt":"Original GPT","off":"Enhanced serial","async":"Ordinary async","prefetch":"Strong prefetch",
-       "planner":"Generic planner","deferred":"Proposed"}
+       "planner":"Generic planner","deferred":"Proposed","observe-only":"Observe-only ablation","no-ocr":"No local reading"}
 ORDER=["Original GPT","Enhanced serial","Ordinary async","Strong prefetch","Generic planner","Proposed"]
 
 
@@ -86,7 +86,7 @@ def collect():
             g={r["method"]:r for r in episodes if r["cohort"]==cohort and r["case"]==case}
             if "Proposed" not in g:continue
             a=g["Proposed"]
-            for m in ORDER[:-1]:
+            for m in (key for key in g if key!="Proposed"):
                 if m in g:
                     b=g[m]
                     paired.append(dict(cohort=cohort,case=case,baseline=m,proposed_pass=a["passed"],baseline_pass=b["passed"],
@@ -101,7 +101,8 @@ def figure(episodes):
     fig,axes=plt.subplots(len(cases),1,figsize=(8.3,max(2.8,2.65*len(cases))),squeeze=False)
     for ax,(group,case) in zip(axes[:,0],cases):
         g={r["method"]:r for r in episodes if r["cohort"]==group and r["case"]==case}
-        for i,m in enumerate(ORDER):
+        order=ORDER+[m for m in g if m not in ORDER]
+        for i,m in enumerate(order):
             if m not in g:continue
             r=g[m]
             ax.barh(i,r["whole_s"],height=.59,color="#367b74" if r["passed"] else "#b36d40")
@@ -109,7 +110,7 @@ def figure(episodes):
                 ax.barh(i,r["restricted_s"]-min(r["whole_s"],r["restricted_s"]),left=min(r["whole_s"],r["restricted_s"]),
                         height=.59,facecolor="none",edgecolor="#b36d40",hatch="///",lw=.7)
             ax.text(r["whole_s"]+3,i,f"{r['whole_s']:.0f} s",va="center",fontsize=8)
-        ax.set_yticks(range(len(ORDER)),ORDER)
+        ax.set_yticks(range(len(order)),order)
         ax.invert_yaxis();ax.set_xlim(0,390)
         ax.set_title(case+"  |  "+group,loc="left",fontsize=10)
         ax.spines[["top","right"]].set_visible(False)
@@ -136,7 +137,8 @@ def main():
                             "Motion overlap is an interval observation, not causal credit"])
     for g in COHORTS:
         batch=[r for r in episodes if r["cohort"]==g]
-        name={"native-views-dev01":"native_views_dev01","native-evidence-dev02":"native_evidence_dev02"}[g]
+        name={"native-views-dev01":"native_views_dev01","native-evidence-dev02":"native_evidence_dev02",
+              "coordinated-handoff-dev03":"coordinated_handoff_dev03"}[g]
         config=read(Path("config")/(name+".json"))
         stopped=interruptions(OUT.parent/g,config)
         brief["cohorts"][g]=dict(scored=len(batch),strict=sum(r["passed"] for r in batch),sends=sum(r["requests"] for r in batch),
@@ -150,6 +152,9 @@ def main():
         "static_binding":OUT.parent/"local-material-binding01/static-summary.json",
         "real_simulator_camera_binding":OUT.parent/"local-material-binding01/navigation-summary.json",
         "finite_workflow":OUT.parent/"workflow/balanced_summary.json",
+        "closed_roster_evidence_composition":OUT.parent/"scope-closure-dev01-parserfix/summary.json",
+        "observed_query_concurrency":OUT.parent/"observed-queries/summary.json",
+        "censored_specialized_service":OUT.parent/"observed-queries/wait_bounds.json",
     }.items():
         if file.is_file():
             brief[name]=read(file)

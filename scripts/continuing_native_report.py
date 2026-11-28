@@ -2,6 +2,7 @@
 import argparse
 from hashlib import sha256
 import json
+from math import isfinite
 from pathlib import Path
 from statistics import median
 from urllib.parse import unquote
@@ -31,6 +32,57 @@ def merged(intervals):
 
 def length(intervals):
     return sum(b-a for a,b in merged(intervals))
+
+
+def audited_activation(offer,decision,current):
+    from scripts.continuing_prefix import public_filter
+    from experiments.flexible_execution.text_requirements import compile_text
+    mission=current["input"]["authorized_task"]
+    rule=public_filter(mission)
+    if rule is None:
+        parsed=compile_text(mission)
+        if not parsed:
+            return False
+        gate=parsed[0].filter
+        if gate=={"op":"keep"}:
+            return bool(offer["independent"])
+        key=gate.get("field")
+        expected=(gate.get("right") or {}).get("literal")
+        if gate.get("op")=="eq":
+            typed=lambda v:type(v) is type(expected) and v is not None
+            active=lambda v:v==expected
+        elif gate.get("op")=="gt" and type(expected) in (float,int) and isfinite(expected):
+            typed=lambda v:type(v) in (float,int) and isfinite(v)
+            active=lambda v:v>expected
+        else:
+            return False
+    else:
+        key,typed,active=rule
+    judgments=decision.get("view_judgments")
+    if not isinstance(judgments,list):
+        return False
+    rows=[j for j in judgments if isinstance(j,dict) and j.get("id")==offer["id"]]
+    return (len(rows)==1 and rows[0].get("source")==offer["source"] and rows[0].get("field")==key
+            and typed(rows[0].get("value")) and active(rows[0]["value"]))
+
+
+def audit_hint(robot,image,offer,prior,delivered):
+    from research.flexible_scheduling.front_facing import sign_goals
+    from research.flexible_scheduling.literal_ocr import decode_rgb
+    from research.flexible_scheduling.material_binding import bind_identity
+    hint=delivered["local_measurement"]
+    original=robot/(offer["source"]+".jpg")
+    capture=robot/(image+".jpg")
+    source_geometry=prior["input"]["geometry"]
+    actual=read(robot/(image+"_geometry.json"))
+    if (digest(original)!=hint.get("reference_sha256") or hint.get("reference_image")!=offer["source"]
+            or hint.get("reference_bbox")!=offer["source_bbox"] or
+            actual["image_sha256"]!=digest(capture) or hint.get("raw_image_sha256")!=actual["image_sha256"]):
+        return False
+    options=sign_goals(original.read_bytes(),source_geometry,offer["source_bbox"])
+    match=bind_identity(source_geometry["camera"],actual["camera"],options[0] if options else None,
+                        offer["source_bbox"],decode_rgb(capture.read_bytes()))
+    return bool(match and match["value"]==hint.get("value") and match["center"]==hint.get("center"))
 
 
 def chain_checks(ep, calls, events, allowed, coverage):
@@ -82,15 +134,35 @@ def chain_checks(ep, calls, events, allowed, coverage):
         next_bound = bool(following and any(n == image and h == raw_hash for n,h in zip(image_names,following["image_sha256"])))
         decision = call.get("output") or {}
         listed=decision.get("use_views")
-        if ep.name.startswith("evidence-") and isinstance(listed,list):
-            chosen_by_gpt=len(listed)<=2 and all(isinstance(v,str) for v in listed) and cid in listed
+        coordinated=ep.name.startswith("coordinated-")
+        if ep.name.startswith(("evidence-","coordinated-")) and listed is not None:
+            chosen_by_gpt=isinstance(listed,list) and len(listed)<=2 and all(isinstance(v,str) for v in listed) and cid in listed
         else:
             chosen_by_gpt=decision.get("use_view")==cid
-        requested = chosen_by_gpt and (decision.get("action") or {}).get("type") in ("observe","record")
+        action=(decision.get("action") or {}).get("type")
+        co_moving=bool(coordinated and ep.name!="coordinated-observe-only" and action in ("move","approach")
+                       and decision.get("motion_independent_of_view") is True)
+        moved=event("action_finished",step,action=action,ok=True) if co_moving else {}
+        carried_during_move=bool(moved and following and end<=moved["monotonic_seconds"]<=following["dispatched_monotonic_seconds"])
+        activated=audited_activation(offer,decision,call) if coordinated else None
+        requested = chosen_by_gpt and (action in ("observe","record") or co_moving) and (not coordinated or activated)
         release = event("native_material_release",step)
+        hint_valid=None
+        if coordinated and image in release.get("released",[]):
+            admission=event("coordinated_delivery",image,candidate=cid)
+            if not requested or admission.get("monotonic_seconds",-1)<end:
+                refusals.append(dict(step=step,id=cid,reason="unsupported or premature semantic release"))
+            delivered=next((v for v in (following or {}).get("input",{}).get("recent_images",[]) if v["image_id"]==image),{})
+            if "local_measurement" in delivered:
+                hint_valid=audit_hint(robot,image,offer,prior,delivered)
+                if not hint_valid:
+                    refusals.append(dict(step=step,id=cid,reason="local measurement lacks reproducible source"))
         reference_bound = (offer["reference_sha256"] == digest(robot/(offer["source"]+".jpg")) ==
                            prior["image_sha256"][-1] == shot["reference_sha256"] and
                            meta["source_reference"] == offer["source"])
+        if coordinated:
+            supplied_names=[v["image_id"] for v in call["input"]["recent_images"]]+[call["input"]["current_image_id"]]
+            reference_bound &= (offer["source"],offer["reference_sha256"]) in zip(supplied_names,call["image_sha256"])
         offered = any(o.get("id") == cid and o.get("source_bbox") == offer["source_bbox"]
                       and o.get("source") == offer["source"] for o in call["input"].get("offered_views",[]))
         scope_ok = offer["field"] in allowed
@@ -101,10 +173,14 @@ def chain_checks(ep, calls, events, allowed, coverage):
         proves = all((early, concurrent, scope_ok, nominated, offered, reference_bound, pose_ok, raw_bound,
                       requested, image in release.get("released",[]), next_bound, restored.get("restored")))
         proofs.append(dict(case=ep.parent.name,method=ep.name,image=image,sha256=raw_hash,
+            reference_image=offer["source"],reference_bbox=offer["source_bbox"],
             candidate=cid,early=early,field=offer["field"],field_authorized=scope_ok,nomination_matches=nominated,
             offered_in_frozen_request=offered,reference_bound=reference_bound,actual_goal_reached=pose_ok,
             raw_bound=raw_bound,within_transport=concurrent,returned_to_anchor=restored.get("restored"),
             actual_gpt_requested=requested,next_input_contains_exact_rgb=next_bound,
+            jointly_requested_with_move=co_moving and requested,ordinary_motion_completed=carried_during_move,
+            conditional_semantic_activation=activated,
+            local_measurement_reproduced=hint_valid,
             final_report_cites=image in claim_frames,independent_field_support=image in supported,
             proven_early_handoff=proves))
     return proofs, refusals
@@ -122,6 +198,9 @@ def audit(ep, receipt, case):
     if ep.name.startswith("evidence-"):
         from research.flexible_scheduling.native_controller import EVIDENCE_INSTRUCTIONS
         suffix+=EVIDENCE_INSTRUCTIONS
+    elif ep.name.startswith("coordinated-"):
+        from research.flexible_scheduling.coordinated_controller import INSTRUCTIONS as coordinated_prompt
+        suffix=coordinated_prompt
     nominal = sha256((upstream().SYSTEM + suffix).encode()).hexdigest()
     for ix, (call, entry) in enumerate(zip(calls,ledger),1):
         assert call["instructions_sha256"] == nominal and call["model"] == entry["model"] == "gpt-6.1-terra"
@@ -154,7 +233,7 @@ def audit(ep, receipt, case):
         if str(a["step"]).endswith("-return"):
             returns.append((a["start"],a["finish"]))
     intersect = [(max(a,c),min(b,d)) for a,b in transport for c,d in merged(motion) if max(a,c)<min(b,d)]
-    successes = receipt["strict"] is True and cov.get("complete") is True and result["score"].get("correct") is True
+    successes = receipt["strict"] is True and cov.get("complete") is True and result["score"].get("correct") is True and not violations
     times = sorted(c["return_monotonic_seconds"]-c["dispatched_monotonic_seconds"] for c in calls)
     world = unquote((ep/"inspection.world").read_text()).replace(str(ep.resolve()),"{episode}")
     textures = [(f.name,digest(f)) for f in sorted((ep/"assets/materials/textures").glob("*.png"))]
@@ -174,6 +253,14 @@ def audit(ep, receipt, case):
         field_grant_violation_count=len(violations),receipt_sha256=receipt["result_sha256"],
         world_sha256=sha256(world.encode()).hexdigest(),texture_sha256=sha256(json.dumps(textures).encode()).hexdigest(),
         task_sha256=sha256(task.encode()).hexdigest(),source_sha256=receipt["source_sha256"]), proofs
+
+
+def comparator_witnesses(config,proofs):
+    if config.get("admission")=="coordinated-motion-material":
+        return [p for p in proofs if p["method"]=="coordinated-deferred" and p.get("proven_early_handoff")
+                and p.get("conditional_semantic_activation") and p.get("jointly_requested_with_move")
+                and p.get("ordinary_motion_completed") and p.get("independent_field_support")]
+    return [p for p in proofs if p.get("proven_early_handoff") and p["method"] in ("native-deferred","evidence-deferred")]
 
 
 def main():
@@ -214,7 +301,17 @@ def main():
         if external and not acknowledged(root,external):
             raise ValueError("The endpoint limit has no confirmed restoration")
         unavailable={(f["case"],f["method"]) for f in external}
-        admissible=[p for p in proofs if p.get("proven_early_handoff") and p["method"] in ("native-deferred","evidence-deferred")]
+        admissible=comparator_witnesses(config,proofs)
+        spatial=[]
+        if config.get("admission")=="coordinated-motion-material":
+            from scripts.continuing_sensor_visibility import nominated_positive_visible
+            verified=[]
+            for p in admissible:
+                witness=nominated_positive_visible(root/p["case"]/p["method"],p)
+                if witness:
+                    verified.append(p)
+                    spatial.append(witness)
+            admissible=verified
         if not primary<=completed|unavailable or not admissible or any(r["field_grant_violation_count"] for r in runs):
             raise ValueError("Primary comparisons or independent mechanism evidence missing")
         gate=dict(admit=True,config_sha256=digest(args.config),
@@ -225,6 +322,9 @@ def main():
         if external:
             gate["reason"]="Primary slots are terminal; retain the externally interrupted no-delivery outcome. The registered controller demonstrated early acquisition, later consumption, and correct grounded fields."
             gate["externally_interrupted_receipts"]=[f["receipt_sha256"] for f in external]
+        if config.get("admission")=="coordinated-motion-material":
+            gate["reason"]="Terminal primary slots. A source-bound pre-acquired image was jointly requested with a completed authorized movement, supplied to the next ordinary GPT request, and supported an independently verified field."
+            gate["post_task_surface_witnesses"]=spatial
         if frozen.exists() and read(frozen)!=gate:
             raise ValueError("Comparator admission evidence changed")
         save(frozen,gate)

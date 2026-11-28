@@ -45,6 +45,54 @@ def camera(renderer,meta):
     return np.asarray(observed[2],dtype=np.uint8).reshape(h,w,4)[:,:,:3],np.array(observed[4]).reshape(h,w)
 
 
+def nominated_positive_visible(ep,proof):
+    """Post-seal witness for a cited positive on the body nominated in the reference RGB."""
+    from scripts.continuing_crossworld_views import copied_renderer
+    robot=ep/"private/robot"
+    checked=audit_run(ep,recheck_legacy_fragments=True)["supported_by_frame"]
+    devices=read(ep/"private/truth.json")["devices"]
+    family=read(ep/"manifest.json")["family"]
+    field={"cracks":"cracked","blocked_exit":"blocked"}.get(family)
+    if field is None:
+        return None
+    stem="equipment" if family=="cracks" else "campus"
+    def observed(renderer,frame):
+        path=robot/(frame+".jpg")
+        meta=read(path.with_suffix(".json"))
+        if meta["sha256"]!=digest(path):
+            raise ValueError("Claim frame bytes differ from receipt")
+        generated,mask=camera(renderer,meta)
+        with Image.open(path) as img:
+            error=np.abs(np.asarray(img.convert("RGB"),dtype=float)-generated)
+        return mask,float((error.max(axis=2)<=18).mean())
+    with copied_renderer(ep) as (scene,renderer):
+        names=bodies(scene,renderer)
+        ref,a=observed(renderer,proof["reference_image"])
+        captured,b=observed(renderer,proof["image"])
+        box=proof["reference_bbox"]
+        candidates=[]
+        for i,dev in enumerate(devices,1):
+            station=stem+"_station_%02d"%i
+            panel=names.get((station,"reference_identity"))
+            if panel is None:
+                continue
+            yy,xx=np.where(ref==panel)
+            if len(xx)>=36 and box[0]<=np.mean(xx)/ref.shape[1]<=box[2] and box[1]<=np.mean(yy)/ref.shape[0]<=box[3]:
+                candidates.append((station,dev,panel))
+        if len(candidates)!=1 or min(a,b)<.90:
+            return None
+        station,dev,panel=candidates[0]
+        if dev[field] is not True or proof["image"] not in checked.get(dev["identity"],{}).get(field,[]):
+            return None
+        relevant=["door_surface"] if field=="cracked" else dev["approach_obstructions"]
+        surface=max((int((captured==names[(station,v)]).sum()) for v in relevant),default=0)
+        identity=int((captured==panel).sum())
+        if min(surface,identity)<144:
+            return None
+        return dict(object_id=dev["identity"],field=field,identity_pixels=identity,field_surface_pixels=surface,
+                    reference_alignment=a,capture_alignment=b,image_sha256=proof["sha256"])
+
+
 def grade_episode(ep,renderer,names,case):
     robot=ep/"private/robot"
     result=read(ep/"result.json")
