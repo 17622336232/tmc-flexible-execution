@@ -227,6 +227,11 @@ def main():
         "same_frame_region_requests":OUT.parent/"same-frame-region-assay01/summary.json",
         "measured_condition_range":OUT.parent/"condition-range-dev01/summary.json",
         "scoped_live_evidence":OUT.parent/"scoped-mission-dev01/mechanism_results.json",
+        "direct_inspection_travel_calibration":OUT.parent/"inspection-travel-dev01/calibration/summary.json",
+        "measured_return_travel_calibration":OUT.parent/"observed-return-dev02/calibration/summary.json",
+        "measured_return_travel_live":OUT.parent/"observed-return-dev02/live/summary.json",
+        "reference_schedule_on_real_travel":OUT.parent/"observed-return-dev02/schedule_reference.json",
+        "conditional_first_decision_milestones":OUT.parent/"first-view-contingency-dev01/replay_summary.json",
         "fixed_transport_critical_path":OUT/"critical_path.json",
         "same_photo_claim_comparison":OUT.parent/"same-image-claims/summary.json",
         "observed_camera_interface":OUT/"actual_camera_interface.json",
@@ -234,6 +239,10 @@ def main():
     }.items():
         if file.is_file():
             brief[name]=read(file)
+    optics=OUT.parent/"observed-return-dev02/optics.json"
+    if optics.is_file():
+        d=read(optics)
+        brief["optical_registration_controls"]={k:d[k] for k in ("groups","allow_rotated","source_registration_sha256","grader_sha256")}
     save(OUT/"development_summary.json",brief)
     save(Path("docs/continuing_development_results.json"),brief)
     print("scored",len(episodes),"paired differences",len(paired),"simulator process resource windows",sum(r["resource_samples"]>0 for r in measures))

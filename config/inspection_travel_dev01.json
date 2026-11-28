@@ -1,0 +1,40 @@
+{
+  "id": "inspection-travel-dev01",
+  "role": "Authored two-checkpoint mobile inspection mechanism on previously exposed simulator layouts, separate from free-form native tasks and the closed region and handoff blocks.",
+  "selection": "For each named archived cohort and layout, use ordinary executed model replies that cited a numbered object and included the same observed camera frame. Retain only two different target IDs on distinct ordinary camera frames in one episode, in chronological order with at least 1 m of measured translation between the stops. Rank all eligible pairs by SHA256(salt,case,relative episode,frame ids and object ids). Never select by field value, grader, prior success or speed. Use only the first pair. No replacements.",
+  "salt": "station-itinerary-native-01",
+  "model": "gpt-6.1-terra",
+  "effort": "max",
+  "mission": "Both exact public inspection waypoints and the original departure pose must be reached. At stop A read the specified device's condition from a fresh onboard photo. Stop B has a separate target. Its semantic inspection is required only after an actual positive at A. Both locations are independently mandatory for the published site round. The B capture grant differs by mission. End at the original departure pose. Uncertain does not activate reading, and is scored as unresolved. Only two single-image calls possible, one at a time; no post hoc interpretation request or simulated latency.",
+  "cases": [
+    {
+      "id": "equipment",
+      "cohort": "coordinated-handoff-dev03",
+      "case": "equipment-inspection-03",
+      "field": "cracked",
+      "positive_if": "true",
+      "b_capture": "mandatory-archive",
+      "order": [
+        "serial",
+        "dependency-schedule",
+        "strong-prefetch"
+      ]
+    },
+    {
+      "id": "warehouse",
+      "cohort": "native-evidence-dev02",
+      "case": "warehouse-filter-02",
+      "field": "box_count",
+      "positive_if": "greater-than-two",
+      "b_capture": "after-positive-only",
+      "order": [
+        "strong-prefetch",
+        "dependency-schedule",
+        "serial"
+      ]
+    }
+  ],
+  "calibration": "One new clean simulator reset per case, under an explicitly separate two-camera calibration grant. Use the two registered public poses and require world equivalence, native map admission, arrival at both poses, return, matched reference images (global grayscale NCC >=0.85 within 16 px translation), source RGB renderer agreement >=0.90 within channel error 18, and source visibility at both poses. Equipment needs 144 pixels each of the named body's identity plate and front. Warehouse needs 144 identity panel pixels, both uprights, three shelf levels and every actual carton at >=36 pixels each. Seal both captures/routes before independently opening scoring geometry. An unqualified pairing remains closed and is never replaced. These local runs do not imply semantic correctness or online task time.",
+  "online": "For every qualified case use the registered three methods, fixed order, max 2 real sends per arm, no retries, 120 s per model request and 240 s whole-task deadline after take-off at the start, including all three travel legs. Normal navigation and original map checks. The immediate lawful-work strong baseline and exact event-dependency scheduler have the same primitives; compare their schedules explicitly. Also verify generic planning on enumerated legal action orders offline. Do not spend on a method certified to generate identical robot/model actions solely to obtain a different stochastic GPT outcome: execute its first registered representative and mark equivalent aliases without a score. Independently grade actual acquired frames, branch permission, full report fields and poses. Never infer mission time from photo calibration or counterfactual clock.",
+  "grading": "Require a matching numeric/boolean field, an actual cited source hash and an independently verified model-indicated body ID plate region, whose center contains the official label center, covers at least 0.5 of its visible pixels, and occupies <=0.20 of the image. Full-frame grader must additionally confirm relevant physical parts are visible as specified. Cases with missing or uncertain findings, an unverified source, wrong branch, forbidden acquisition/interpretation or failed return are incomplete; retain them. The post-execution grading uses static geometry, never supplied to the policy. Independent blind testing stays sealed."
+}

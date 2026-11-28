@@ -2411,6 +2411,385 @@
     "real_vehicle_motion": 0,
     "interpretation": "A scoped numerical range packet can show actual physical surfaces. Correct branch inference is untested, an absent hit does not establish a clear portal, and these fresh resets do not supply the old run's missing range scan."
   },
+  "direct_inspection_travel_calibration": {
+    "role": "calibration",
+    "registrations": "527109b2661a58d2adcc6cd01fe6ad8df969b9b3b984d0c98bfc71f92d0b276f",
+    "cases": [
+      {
+        "case": "equipment",
+        "method": "calibration",
+        "elapsed_s": 9.93332544300938,
+        "sends": 0,
+        "route_ok": false,
+        "frames": {
+          "a": {
+            "verified": true,
+            "label_pixels": 2290,
+            "part_pixels": {
+              "door_surface": 17299
+            },
+            "label_box_verified": false,
+            "reference_ncc": 0.9041450619697571,
+            "delta_px": [
+              0,
+              -13
+            ],
+            "rgb_agreement": 0.9283854166666666,
+            "actual": false,
+            "correct": false,
+            "source_sha256": "f6b35201bf835d85fefca4b2a2e885a91cb8b8de10fa9cfd1f42d6c0811b3417"
+          },
+          "b": {
+            "verified": true,
+            "label_pixels": 4732,
+            "part_pixels": {
+              "door_surface": 36135
+            },
+            "label_box_verified": false,
+            "reference_ncc": 0.9274529218673706,
+            "delta_px": [
+              2,
+              0
+            ],
+            "rgb_agreement": 0.9603125,
+            "actual": true,
+            "correct": false,
+            "source_sha256": "0e1b215acf35dfeb51928d2a38e93f355dc5b2c2d96ac58391e25cb92cf332dc"
+          }
+        },
+        "motion_s": [
+          4.8109273060108535,
+          5.113053319975734
+        ],
+        "endpoint_block": null,
+        "failure": {
+          "code": "goal_unobserved",
+          "message": "接近点的机体空间尚未充分观测或地图不可用，请重新观察"
+        },
+        "attempt_sha256": "7c4e4b228f8d67ab88c706243caec352be99221d8e236f2cbb5318bb017e2171",
+        "admitted": false
+      },
+      {
+        "case": "warehouse",
+        "method": "calibration",
+        "elapsed_s": 10.351330741017591,
+        "sends": 0,
+        "route_ok": false,
+        "frames": {
+          "a": {
+            "verified": true,
+            "label_pixels": 11680,
+            "part_pixels": {
+              "rack_post_-0.67": 2165,
+              "rack_post_0.67": 9026,
+              "rack_shelf_0.23": 605,
+              "rack_shelf_0.82": 4724,
+              "rack_shelf_1.42": 2971,
+              "cargo_0": 5392,
+              "cargo_1": 6266,
+              "cargo_2": 5033
+            },
+            "label_box_verified": false,
+            "reference_ncc": 0.9171448349952698,
+            "delta_px": [
+              1,
+              -3
+            ],
+            "rgb_agreement": 0.951015625,
+            "actual": 3,
+            "correct": false,
+            "source_sha256": "3cd9ae4c1e4f14dc24a65fc3ab42691f0c46ba0745dd982ab4f38b6878c91172"
+          },
+          "b": {
+            "verified": false,
+            "label_pixels": 4997,
+            "part_pixels": {
+              "rack_post_-0.67": 2123,
+              "rack_post_0.67": 2897,
+              "rack_shelf_0.23": 1556,
+              "rack_shelf_0.82": 1727,
+              "rack_shelf_1.42": 1233,
+              "cargo_0": 2422,
+              "cargo_1": 2581,
+              "cargo_2": 2033
+            },
+            "label_box_verified": false,
+            "reference_ncc": 0.678817629814148,
+            "delta_px": [
+              1,
+              5
+            ],
+            "rgb_agreement": 0.9398914930555555,
+            "actual": 3,
+            "correct": false,
+            "source_sha256": "287520fa1a32e8276291a1e78ec50c42c8a4a71aced1aed59388ee84ed300b46"
+          }
+        },
+        "motion_s": [
+          6.017838803003542,
+          4.312958392954897
+        ],
+        "endpoint_block": null,
+        "failure": {
+          "code": "goal_unobserved",
+          "message": "接近点的机体空间尚未充分观测或地图不可用，请重新观察"
+        },
+        "attempt_sha256": "b8ce26898b1249830e0eecd0c69dedc3257db88bbf188ab851a0b2c3ee24d627",
+        "admitted": false
+      }
+    ]
+  },
+  "measured_return_travel_calibration": {
+    "role": "calibration",
+    "registered": {
+      "equipment": [
+        "calibration"
+      ],
+      "warehouse": [
+        "calibration"
+      ]
+    },
+    "equivalent_policies_without_independent_runs": {},
+    "actual_sends": 0,
+    "cases": [
+      {
+        "case": "equipment",
+        "method": "calibration",
+        "route_ok": false,
+        "elapsed_s": 9.829703919007443,
+        "sends": 0,
+        "frames": {
+          "a": {
+            "verified": true,
+            "label_pixels": 2302,
+            "part_pixels": {
+              "door_surface": 17305
+            },
+            "label_box_verified": false,
+            "reference_ncc": 0.9099793434143066,
+            "delta_px": [
+              0,
+              -12
+            ],
+            "rgb_agreement": 0.9822352430555555,
+            "actual": false,
+            "correct": false,
+            "source_sha256": "4292c8c07569b7ca6188edbe00f870c0f0e13772566df5706b618488ebf35008",
+            "optics": {
+              "registered": true,
+              "translation_m": 0.006397394555399371,
+              "rotation_deg": 1.8475559012559999,
+              "coverage": 0.9606336805555555,
+              "measured_correlation": 0.9651161497233279,
+              "raw_ncc": 0.9099793434143066,
+              "reference_sha256": "b79ad133242ddc9830ff55d0469713c2c45413601bb73e4d8559dc1beb9ea57b",
+              "capture_sha256": "4292c8c07569b7ca6188edbe00f870c0f0e13772566df5706b618488ebf35008"
+            },
+            "raw_verified": true
+          }
+        },
+        "physical_segment_s": [
+          4.810549651971087
+        ],
+        "return_segments": 0,
+        "refusal_reasons": [],
+        "failure": {
+          "code": "NativeNavigationError",
+          "message": "Original planner stopped this request: replan fail too much. Emergency stop."
+        },
+        "endpoint_block": null,
+        "attempt_sha256": "960b1b0522fe00cd964e675444bee9d26fc98a0a14761e70d00117a21b878fbf",
+        "admitted": false
+      },
+      {
+        "case": "warehouse",
+        "method": "calibration",
+        "route_ok": true,
+        "elapsed_s": 19.782745435019024,
+        "sends": 0,
+        "frames": {
+          "a": {
+            "verified": false,
+            "label_pixels": 11898,
+            "part_pixels": {
+              "rack_post_-0.67": 2248,
+              "rack_post_0.67": 9280,
+              "rack_shelf_0.23": 903,
+              "rack_shelf_0.82": 4683,
+              "rack_shelf_1.42": 3004,
+              "cargo_0": 5912,
+              "cargo_1": 7008,
+              "cargo_2": 4992
+            },
+            "label_box_verified": false,
+            "reference_ncc": 0.6873555183410645,
+            "delta_px": [
+              0,
+              -12
+            ],
+            "rgb_agreement": 0.9722743055555556,
+            "actual": 3,
+            "correct": false,
+            "source_sha256": "55c492d2ba1e77cf985ea1716211683f968079fcbcaa92d319092b8504f54c59",
+            "optics": {
+              "registered": true,
+              "translation_m": 0.005077765035391419,
+              "rotation_deg": 2.256322545583142,
+              "coverage": 0.9657335069444445,
+              "measured_correlation": 0.9730556583084672,
+              "raw_ncc": 0.6873555183410645,
+              "reference_sha256": "98eba8036f278adc42da6291ad86f6026bdc1182905efcc9bc47528c41ef0233",
+              "capture_sha256": "55c492d2ba1e77cf985ea1716211683f968079fcbcaa92d319092b8504f54c59"
+            },
+            "raw_verified": false
+          },
+          "b": {
+            "verified": false,
+            "label_pixels": 4937,
+            "part_pixels": {
+              "rack_post_-0.67": 2134,
+              "rack_post_0.67": 2890,
+              "rack_shelf_0.23": 1600,
+              "rack_shelf_0.82": 1744,
+              "rack_shelf_1.42": 1238,
+              "cargo_0": 2417,
+              "cargo_1": 2625,
+              "cargo_2": 2086
+            },
+            "label_box_verified": false,
+            "reference_ncc": 0.5984121561050415,
+            "delta_px": [
+              2,
+              1
+            ],
+            "rgb_agreement": 0.9132725694444445,
+            "actual": 3,
+            "correct": false,
+            "source_sha256": "f40ae33441e6c5d380e332b650742a1ef35bd0c9070e56b1e5fdccf6fdfb1410",
+            "optics": {
+              "registered": true,
+              "translation_m": 0.004911479378994391,
+              "rotation_deg": 3.8999788642542312,
+              "coverage": 0.951875,
+              "measured_correlation": 0.9570622219050795,
+              "raw_ncc": 0.5984121561050415,
+              "reference_sha256": "596edbd6105afb6238ba497bc544a06a5b61729b811e9480d465dc2fe4f67b22",
+              "capture_sha256": "f40ae33441e6c5d380e332b650742a1ef35bd0c9070e56b1e5fdccf6fdfb1410"
+            },
+            "raw_verified": false
+          }
+        },
+        "physical_segment_s": [
+          5.91551935201278,
+          4.312224377004895,
+          6.115147756005172,
+          3.408642289985437
+        ],
+        "return_segments": 2,
+        "refusal_reasons": [
+          "not_known_free",
+          "not_known_free"
+        ],
+        "failure": null,
+        "endpoint_block": null,
+        "attempt_sha256": "df749dbe9050ab1e40e0ce5a20b101e85380f036c2fb107c9f1f1c4ccb62991c",
+        "admitted": false
+      }
+    ],
+    "worker_sha256": "476d2b4343c6a1dd047c5b093f734d05e11aee60848e29f6e8f338df5bf3fe87",
+    "optics_grader_sha256": "c2c04d29dc980af437c8cc385964611fa2c5326c8d685834439b2682fb9e5d1c"
+  },
+  "measured_return_travel_live": {
+    "role": "live",
+    "registered": {},
+    "equivalent_policies_without_independent_runs": {},
+    "actual_sends": 0,
+    "cases": [],
+    "worker_sha256": "476d2b4343c6a1dd047c5b093f734d05e11aee60848e29f6e8f338df5bf3fe87",
+    "optics_grader_sha256": "c2c04d29dc980af437c8cc385964611fa2c5326c8d685834439b2682fb9e5d1c"
+  },
+  "reference_schedule_on_real_travel": {
+    "rows": [
+      {
+        "case": "warehouse",
+        "grant": "mandatory-archive",
+        "demand": false,
+        "exact_s": 32.79604530101642,
+        "compiled_s": 32.79604530101642,
+        "eager_s": 32.79604530101642,
+        "serial_s": 46.64435727702221,
+        "legal_schedules": 10,
+        "component_times": {
+          "to-a": 5.91551935201278,
+          "to-b": 4.312224377004895,
+          "photo-a": 0.011901204998139292,
+          "photo-b": 0.007367952028289437,
+          "home": 9.528719646972604,
+          "read-a": 26.8686247440055,
+          "read-b": 26.8686247440055
+        }
+      },
+      {
+        "case": "warehouse",
+        "grant": "mandatory-archive",
+        "demand": true,
+        "exact_s": 59.66467004502192,
+        "compiled_s": 59.66467004502192,
+        "eager_s": 59.66467004502192,
+        "serial_s": 73.51298202102771,
+        "legal_schedules": 22,
+        "component_times": {
+          "to-a": 5.91551935201278,
+          "to-b": 4.312224377004895,
+          "photo-a": 0.011901204998139292,
+          "photo-b": 0.007367952028289437,
+          "home": 9.528719646972604,
+          "read-a": 26.8686247440055,
+          "read-b": 26.8686247440055
+        }
+      },
+      {
+        "case": "warehouse",
+        "grant": "after-positive-only",
+        "demand": false,
+        "exact_s": 42.324764947989024,
+        "compiled_s": 42.324764947989024,
+        "eager_s": 42.324764947989024,
+        "serial_s": 46.63698932499392,
+        "legal_schedules": 3,
+        "component_times": {
+          "to-a": 5.91551935201278,
+          "to-b": 4.312224377004895,
+          "photo-a": 0.011901204998139292,
+          "photo-b": 0.007367952028289437,
+          "home": 9.528719646972604,
+          "read-a": 26.8686247440055,
+          "read-b": 26.8686247440055
+        }
+      },
+      {
+        "case": "warehouse",
+        "grant": "after-positive-only",
+        "demand": true,
+        "exact_s": 59.67203799705021,
+        "compiled_s": 59.67203799705021,
+        "eager_s": 59.67203799705021,
+        "serial_s": 73.51298202102771,
+        "legal_schedules": 9,
+        "component_times": {
+          "to-a": 5.91551935201278,
+          "to-b": 4.312224377004895,
+          "photo-a": 0.011901204998139292,
+          "photo-b": 0.007367952028289437,
+          "home": 9.528719646972604,
+          "read-a": 26.8686247440055,
+          "read-b": 26.8686247440055
+        }
+      }
+    ],
+    "model_requests": 0,
+    "note": "Descriptive resource schedule under anchored time assumptions. All three physical legs were actually measured. Both predicate outcomes are enumerated; historical normal-request service is only a proxy. These are not measured model-driven mission times."
+  },
   "fixed_transport_critical_path": {
     "scored": 16,
     "paired_strict_device_tasks": [
@@ -2761,5 +3140,32 @@
     "regions_with_measured_view": 5,
     "new_model_requests": 0,
     "note": "Initial onboard RGBs stored during the eight completed navigation resets. Candidate geometry requires a later live map check. No semantic answers, model-latency observations or full task success are claimed."
+  },
+  "optical_registration_controls": {
+    "groups": {
+      "same-layout-start": {
+        "total": 27,
+        "raw_pass": 27,
+        "corrected_pass": 27
+      },
+      "same-stop": {
+        "total": 4,
+        "raw_pass": 3,
+        "corrected_pass": 3
+      },
+      "wrong-layout-start": {
+        "total": 27,
+        "raw_pass": 27,
+        "corrected_pass": 27
+      },
+      "wrong-stop": {
+        "total": 4,
+        "raw_pass": 0,
+        "corrected_pass": 0
+      }
+    },
+    "allow_rotated": false,
+    "source_registration_sha256": "85caba3f2380e9d489f5ca18896e2ac5878688464f39c1394a2f4b2becb9b84a",
+    "grader_sha256": "c2c04d29dc980af437c8cc385964611fa2c5326c8d685834439b2682fb9e5d1c"
   }
 }

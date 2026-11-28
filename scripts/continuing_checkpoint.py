@@ -1,10 +1,11 @@
 """Persist counts from receipts, provenance checks, and the live controller heartbeat."""
+import argparse
 import csv
 from datetime import datetime, timezone
 from pathlib import Path
 
 from experiments.flexible_execution.continuing_jobs import snapshot
-from experiments.flexible_execution.revision_audit import read,save
+from experiments.flexible_execution.revision_audit import digest,read,save
 from scripts.continuing_recovery import interruptions,acknowledged
 
 
@@ -24,6 +25,9 @@ def upsert(path,title,section):
 
 
 def main():
+    parser=argparse.ArgumentParser()
+    parser.add_argument("--execution-state",choices=("paused","active"),help="Record the user's execution decision")
+    requested_state=parser.parse_args().execution_state
     data,checked,workers,cohorts=[],[],[],{}
     terminal_external=[]
     other_undelivered=[]
@@ -108,6 +112,35 @@ def main():
     regional=optional("same-frame-region-assay01/summary.json")
     decision=optional("registered-blocks.json")
     measured=optional("condition-range-dev01/summary.json")
+    direct_travel=optional("inspection-travel-dev01/calibration/summary.json")
+    routed_travel=optional("observed-return-dev02/calibration/summary.json")
+    first_view=local/"first-view-contingency-dev01"
+    fv_reg=optional("first-view-contingency-dev01/registration.json")
+    fv_slots=sum(len(c["methods"]) for c in fv_reg.get("cases",[]))
+    fv_ledger=first_view/"sends.jsonl"
+    fv_sends=len(fv_ledger.read_bytes().splitlines()) if fv_ledger.exists() else 0
+    fv_sealed=(first_view/"sealed_replies.json").is_file()
+    fv_replay=optional("first-view-contingency-dev01/replay_summary.json")
+    fv_rows=[]
+    if fv_sealed:
+        sealed=read(first_view/"sealed_replies.json")
+        for c in fv_reg["cases"]:
+            for m in c["methods"]:
+                rc=first_view/c["id"]/(m+".receipt.json")
+                log=first_view/c["id"]/m/"model_calls.jsonl"
+                if sealed[c["id"]+"/"+m]!={"receipt":digest(rc),"model_log":digest(log)}:
+                    raise ValueError("Sealed first decision does not match its original response")
+                row=read(rc)
+                fv_rows.append({k:row[k] for k in ("case","method","actual_reply","requested_action","supplied_option","service_s","log_sha256","error")})
+    fv_pids=[]
+    if fv_reg:
+        for p in Path("/proc").glob("[0-9]*/cmdline"):
+            try:
+                args=p.read_bytes().split(b"\0")
+                if any(x.endswith((b"/continuing_first_views.py",b"/continuing_first_view_replay.py")) for x in args) and any(a in args for a in (b"predict",b"run",b"worker")):
+                    fv_pids.append(int(p.parent.name))
+            except (FileNotFoundError,ProcessLookupError,PermissionError):
+                pass
     if terminal_external and not unavailable:
         status+="原套餐中断保留，后续未发送位置已使用恢复后的同一服务。"
     if decision.get("stage")=="registered-decision-point":
@@ -119,18 +152,45 @@ def main():
         status+=(f"两条本机测距路线均回位。满足门框和障碍物同时可核实要求的原位扫描 "
                  f"{sum(r['positive_geometry_support'] for r in scored_ranges if r['view']=='anchor')}/2，近处扫描 "
                  f"{sum(r['positive_geometry_support'] for r in scored_ranges if r['view']=='close')}/2。")
+    if routed_travel:
+        status+="首次两条双站巡检路线均到达第二站，直返均被原地图拒绝。改用实测经过点回程后，货位回到起点，设备在去第二站时由原导航停止。两版各有两条校准路线，零模型请求。"
+    if fv_reg:
+        status+=f"独立的首次决策试验实发 {fv_sends}/{fv_slots} 次。"
+        if fv_sealed:
+            count=sum(r["supplied_option"] for r in fv_rows if r["method"]=="contingent")
+            arms=sum(r["method"]=="contingent" for r in fv_rows)
+            status+=f"{sum(r['actual_reply'] for r in fv_rows)} 份真实答复已封存，允许给备选动作的 {arms} 份中有 {count} 份给出备选。"
+        if not fv_replay:
+            status+="首次决策的仿真动作尚未取得评分。"
+        if fv_pids:
+            status+="当前独立试验进程 "+", ".join(map(str,fv_pids))+"。"
     if planned_assay:
         status+=f"另行登记的单图多区域感知比较实发 {regional_sends}/{planned_assay} 次。"
     if unavailable:
         next_step="等待现有 Diff-VLA 套餐显示可用，再从未发送且已登记的位置恢复。"
     elif workers:
         next_step="跟踪正在进行的 "+workers[0]["cohort"]+" 批次，逐一保留原始收据并复核完整评分。"
+    elif fv_reg:
+        if fv_replay:
+            next_step="按独立的首次决策及位姿来源评分决定是否把备用动作接入完整开发任务；保留未能触发的方案。"
+        elif fv_sealed:
+            next_step="恢复研发后，先补齐从封存回复驱动仿真的运行入口，再逐份检验动作、拒绝原因和现场照片。已消耗的八次模型请求无需重发。"
+        else:
+            next_step="完成同一首帧上原版与附带可选备用动作的正常决策，封存全部回复后才做独立仿真重放。"
     elif measured:
         next_step="已关闭的相机补图批次保留原判。接下来检查能否在判读现场照片期间执行任务本来就要求的下一段行程，先核验场景、照片归属及路线，再决定是否使用真实模型。"
     else:
         next_step="从各批次收据与原有门槛检查下一项尚未发送的作业，继续当前版本的开发分析。"
     stage="paired native development and measured serial inference dependencies" if not measured else "source-bound evidence and mandatory inspection travel"
+    if fv_reg:
+        stage="frozen first-decision replies and pending simulator verification"
+    execution_state=requested_state or doc.get("execution_state","active")
+    if execution_state=="paused":
+        if workers or fv_pids:
+            raise ValueError("A study worker is still active at the requested pause")
+        status="执行已按用户要求暂停，当前研究任务进程为 0。"+status
     doc.update(as_of_utc=timestamp,method_version=versions,
+        execution_state=execution_state,
         new_dev=dict(scored_episodes=len(scored),strict_successes=sum(r["strict"] for r in scored),
         scored_sends=closed,in_flight_sends_at_snapshot=live_sends,closed_unscored_sends=stopped,
         started_episodes=sum(bool(r["sends"]) for r in data),blocks_completed=cohorts,
@@ -143,6 +203,10 @@ def main():
         critical_path=optional("results/critical_path.json"),matched_sparse_and_generic=optional("results/actual_offer_planners.json"),
         task_roster_on_fresh_camera=optional("scoped-mission-dev01/preflight.json"),
         region_assay_result=regional,measured_range_result=measured,
+        mandatory_itinerary_direct=direct_travel,mandatory_itinerary_measured_return=routed_travel,
+        first_decision_study=dict(registered=fv_slots,sends=fv_sends,sealed=fv_sealed,pids=fv_pids,
+          sealed_file_sha256=digest(first_view/"sealed_replies.json") if fv_sealed else None,receipts=fv_rows,
+          replay_entry_present=Path("scripts/continuing_first_view_replay.py").is_file(),replay=fv_replay),
         registered_block_decision=decision if decision.get("stage")=="registered-decision-point" else {},
         optional_development=dict(region_assay_registered_sends=planned_assay,region_assay_actual_sends=regional_sends,
             closed_mechanism_registered_arms=mechanism.get("bounded_online_order",[]),closed_mechanism_actual_sends=scoped_sends),
@@ -151,7 +215,7 @@ def main():
         pending_workers=workers,paired_rgb_assay=dict(sends=assay_sends,results=assay_results),
         accounted_sends=dict(historical_formal=3842,historical_revision_development=93,
           continued_native_development=totals,archived_rgb_assay=assay_sends,one_image_regions=regional_sends,
-          explicit_roster_mechanism=scoped_sends),
+          explicit_roster_mechanism=scoped_sends,standalone_first_decisions=fv_sends),
         next=next_step)
     save(Path("RESEARCH_STATE.json"),doc)
     tally="；".join(f"{k} 主对照 {v['primary']}/{planned_counts[k]['primary']}、强对照 {v['comparators']}/{planned_counts[k]['comparators']}" for k,v in cohorts.items())
@@ -174,6 +238,8 @@ def main():
             labels.get(f["method"],f["method"]),f["code"],f["task_seconds"],f["restricted_if_counted_s"],f["actual_sends"]))
     upsert(Path("PROGRESS.md"),"## 持续研发最新实测",stat+"\n\n"+"\n".join(table))
     recovery="在仓库项目环境中运行 `scripts/continuing_registered_blocks.py` 可核对全部已登记批次与额度状态。运行 `scripts/continuing_region_assay.py grade` 和 `scripts/continuing_condition_range.py grade` 可用已有原始数据独立复核两项诊断。"
+    if fv_reg:
+        recovery+="用 `scripts/continuing_first_views.py status` 核对首次决策位置，用 `scripts/continuing_first_views.py seal` 核对封存回复，两条命令均为零新增模型请求。"
     upsert(Path("NEXT_ACTION.md"),"## 最近一次恢复位置",stat+"\n\n"+next_step+"\n\n"+recovery)
     manuscript=Path("docs/DEVELOPMENT_EVIDENCE_CN.md")
     if manuscript.exists():
