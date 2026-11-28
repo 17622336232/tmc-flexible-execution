@@ -21,6 +21,7 @@ from .viewpoints import _candidates, xyz
 
 
 MODES = ("native-off","native-async","native-prefetch","native-planner","native-deferred")
+EVIDENCE_MODES = ("evidence-off","evidence-async","evidence-prefetch","evidence-planner","evidence-deferred")
 INSTRUCTIONS = """
 The optional camera tool is a real view of a previously visible subject. If an extra view may be useful
 after the next normal decision, you may include at most two next_views in your existing answer:
@@ -77,6 +78,9 @@ class ViewScheduler:
         pending,self.ready=self.ready,[]
         return pending
 
+    def camera_goals(self,obs,geometry,target,field):
+        return _candidates(self.backend,obs,geometry,target,self.trace)
+
     def nominate(self, decision, obs, geometry, image_id, step):
         plans=decision.get("next_views",[])
         if decision.get("action",{}).get("type")=="submit" or not isinstance(plans,list):
@@ -103,7 +107,7 @@ class ViewScheduler:
             except (ValueError,TypeError):
                 continue
             tag=f"v{step}-{i+1}"
-            for goal,_ in islice(_candidates(self.backend,obs,geometry,SimpleNamespace(id=tag,bbox=box),self.trace),8):
+            for goal,details in islice(self.camera_goals(obs,geometry,SimpleNamespace(id=tag,bbox=box),field),8):
                 try:
                     self.backend.check_goal(goal)
                 except (ValueError,RuntimeError):
@@ -112,7 +116,7 @@ class ViewScheduler:
                     break
                 offer=Offer(tag,field,row["subject"],tuple(box),image_id,sha256(obs["data"]).hexdigest(),goal,independent,gate.source)
                 self.trace.event("native_offer",step,**offer.visible(),independent=independent,
-                                 permission=gate.source,reference_sha256=offer.reference_hash)
+                                 permission=gate.source,reference_sha256=offer.reference_hash,view_geometry=details)
                 result.append(offer)
                 break
         return result
@@ -145,6 +149,13 @@ class ViewScheduler:
         else:
             options.sort(key=lambda a:(-a[0],a[2],a[1].id))
         return next((o for g,o,_,_ in options if g>0),None)
+
+    def select_many(self,offers,anchor,window,remaining,step):
+        choice=self.select(offers,anchor,window,remaining,step)
+        return [choice] if choice else []
+
+    def requested_views(self,answer,offers):
+        return [o for o in offers if o.id==answer.get("use_view")]
 
     def excursion(self, offer, anchor, step, early, deadline):
         tag="onboard_side_%04d_%s_%s"%(step,offer.id,"early" if early else "required")
@@ -201,44 +212,56 @@ class ViewScheduler:
         anchor={**obs["position"],"yaw":obs["yaw"]}
         deadline=model.deadline_monotonic
         window=median(self.intervals[-5:]) if self.intervals else self.costs.frozen_query_seconds
-        choice=self.select(offers,anchor,window,deadline-monotonic(),step) if offers else None
+        choices=self.select_many(offers,anchor,window,deadline-monotonic(),step) if offers else []
         def infer():
             t=monotonic()
             with self.trace.measure("model_request",step,image_id=context["current_image_id"],purpose="native_control"):
                 answer=model.request(self.instructions,context,images)
             return answer,monotonic()-t
-        photo=None
-        if choice:
+        photos={}
+        if choices:
             before=model.calls
             with ThreadPoolExecutor(max_workers=1) as executor:
                 request=executor.submit(infer)
                 while not request.done() and before==model.calls and monotonic()<deadline:
                     sleep(.01)
-                if not request.done() and model.calls>before and monotonic()<deadline:
+                for choice in choices:
+                    if request.done() or model.calls<=before or monotonic()>=deadline or self.unrestored:
+                        break
                     self.trace.event("native_early_start",step,candidate=choice.id,field=choice.field,
                                      grant=choice.grant,reference_sha256=choice.reference_hash)
                     photo=self.excursion(choice,anchor,step,True,deadline)
+                    if photo:
+                        photos[choice.id]=photo
                 answer,duration=request.result()
         else:
             answer,duration=infer()
         self.intervals.append(duration)
         if self.unrestored or monotonic()>=deadline or not isinstance(answer,dict):
             return answer
-        use=next((o for o in offers if o.id==answer.get("use_view")),None)
-        if (answer.get("action") or {}).get("type") not in ("observe","record"):
-            use=None
-        if use is not None:
-            if choice!=use or photo is None:
-                photo=self.excursion(use,anchor,step,False,deadline) if not close_pose(anchor,use.goal) else None
+        uses=self.requested_views(answer,offers) if (answer.get("action") or {}).get("type") in ("observe","record") else []
+        for use in uses:
+            if self.unrestored or monotonic()>=deadline:
+                break
+            photo=photos.get(use.id)
+            if photo is None and not close_pose(anchor,use.goal):
+                photo=self.excursion(use,anchor,step,False,deadline)
             if photo and not self.unrestored:
                 self.ready.append(photo)
-        self.trace.event("native_material_release",step,selected=choice.id if choice else None,
-                         requested=use.id if use else None,released=[f["image_id"] for f in self.ready])
+        if self.unrestored:
+            self.ready=[]
+        self.trace.event("native_material_release",step,selected=choices[0].id if choices else None,
+                         requested=uses[0].id if uses else None,selected_ids=[o.id for o in choices],
+                         requested_ids=[o.id for o in uses],released=[f["image_id"] for f in self.ready])
         if not self.unrestored and monotonic()<deadline:
             self.offers=self.nominate(answer,obs,geometry,context["current_image_id"],step)
         return answer
 
 
 def run(backend,task,directory,event,timeout,*,model,trace,method,costs):
-    scheduler=ViewScheduler(backend,task,directory,trace,method,costs)
+    cls=ViewScheduler
+    if method in EVIDENCE_MODES:
+        from research.flexible_scheduling.native_controller import EvidenceScheduler
+        cls=EvidenceScheduler
+    scheduler=cls(backend,task,directory,trace,method,costs)
     return run_agent(backend,task,directory,event,timeout,model=model,trace=trace,view_scheduler=scheduler)

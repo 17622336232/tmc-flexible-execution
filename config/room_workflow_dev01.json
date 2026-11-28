@@ -1,0 +1,63 @@
+{
+  "id": "room-workflow-dev01",
+  "role": "new authored mechanism missions in previously exposed ProcTHOR validation houses; separate from the native aircraft and archived RGB assay",
+  "runtime_catalog": "outputs/public-visual/validation-pilot-v1/pilot_manifest.json",
+  "cases": [
+    {
+      "id": "conditional-room",
+      "house": 82,
+      "direction": "right",
+      "front": [
+        "Chair"
+      ],
+      "side": [
+        "Bed"
+      ],
+      "mandatory_initial_side_archive": false,
+      "early_capture": true,
+      "early_semantic": true,
+      "order": [
+        "factored",
+        "serial",
+        "strong-prefetch",
+        "async",
+        "generic",
+        "physical-prefetch"
+      ]
+    },
+    {
+      "id": "archive-and-screen",
+      "house": 76,
+      "direction": "left",
+      "front": [
+        "Sofa",
+        "Window"
+      ],
+      "side": [
+        "CoffeeTable",
+        "HousePlant"
+      ],
+      "mandatory_initial_side_archive": true,
+      "early_capture": true,
+      "early_semantic": true,
+      "order": [
+        "generic",
+        "async",
+        "physical-prefetch",
+        "strong-prefetch",
+        "serial",
+        "factored"
+      ]
+    }
+  ],
+  "study_design": "One six-arm block per distinct mission. All arms have the same real camera, terminology, joint reading and same cost model. The two exact algorithms may select the same plan. The neutral physical-only policy is an ablation. Preserve the pinned original GPT comparison on the aircraft; these cross-platform roles use the disclosed room observation protocol, not an unchanged original aircraft agent.",
+  "per_field_prior": 0.5,
+  "deadline_s": 240,
+  "request_limit": 4,
+  "model": "gpt-6.1-terra",
+  "effort": "max",
+  "recognition_gate": "All six two-image diagnostic pairs complete, positive median service saving and at most one additional joint both-frame failure versus separate across six pairs. Development admission only.",
+  "costs": "Use prospective paired RGB medians for primary, secondary, and joint service, previously frozen validation turn/photograph estimates, same independent .5 priors. Actual mission time includes startup, all rotations and any mandatory initial archive. Final report uses a fixed lossless template and actual source hashes for every arm. No external final verifier. Regrade independent saved instance masks.",
+  "smoke": "Instrumentation only, no model. A separate output namespace captures-and-restores, inspects source hashes and validates mask regrade plumbing. Exclude from all performance results.",
+  "decision": "Execute live development only if the published calibration gate admits joint reading, simulation smoke is sound and at least one registered task distinguishes admissible schedules. Never replace a failed slot."
+}

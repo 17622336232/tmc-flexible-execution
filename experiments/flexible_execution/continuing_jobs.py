@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import time
 from datetime import datetime, timezone
+from hashlib import sha256
 
 from experiments.task_attack.model import EXTERNAL_RESPONSE_CODES
 from .revision_audit import digest, read, save
@@ -16,6 +17,18 @@ from .timeline import read_trace_rows
 
 def now():
     return datetime.now(timezone.utc).isoformat()
+
+
+def runtime_fingerprint(config):
+    base=source_id()
+    extra=config.get("runtime_files",[])
+    if not extra:
+        return base
+    h=sha256(bytes.fromhex(base))
+    for name in sorted(extra):
+        path=Path(name)
+        h.update(name.encode()+b"\0"+path.read_bytes())
+    return h.hexdigest()
 
 
 def planned(config, block):
@@ -115,10 +128,13 @@ def run(config_path,block,limit=None):
                 if not gate.exists() or read(gate).get("admit") is not True:
                     raise SystemExit("Comparator gate has not been established from observed material use")
             receipt.parent.mkdir(parents=True,exist_ok=True)
+            fingerprint=runtime_fingerprint(config)
+            if config.get("runtime_sha256",fingerprint)!=fingerprint:
+                raise SystemExit("Registered runtime differs from the files on disk; no new request made.")
             argv=command(config,case,arm,ep)
             meta=dict(case=case["id"],method=arm,block=block,config_sha256=digest(config_path),
                       git=subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip(),
-                      source_sha256=source_id(),controller_pid=os.getpid(),start_utc=now(),command=argv)
+                      source_sha256=fingerprint,controller_pid=os.getpid(),start_utc=now(),command=argv)
             save(receipt,{**meta,"state":"starting"})
             with receipt.with_name(arm+".console.log").open("a") as log:
                 proc=subprocess.Popen(argv,stdout=log,stderr=subprocess.STDOUT)

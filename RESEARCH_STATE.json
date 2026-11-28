@@ -3,7 +3,7 @@
   "stage": "original-loop paired development, independent image-chain audit and remaining-task planning",
   "resumed_remote": "94bd1e78953164dce48ec38c8cc15dbd010f2e56",
   "resumed_local": "90f390c8ee332c866f4204dee628d447f8ddab2c",
-  "as_of_utc": "2026-11-28T10:44:52+00:00",
+  "as_of_utc": "2026-11-28T11:01:13+00:00",
   "method_version": "native-views-dev01 / runtime source 2e8e26cb8f0099bb68d02e5aa1c1e9569423706ec413227f9d9aa7714ffcef2b",
   "prior_formal": {
     "episodes": 456,
@@ -14,29 +14,19 @@
     "sends": 93
   },
   "new_dev": {
-    "scored_episodes": 8,
-    "strict_successes": 5,
-    "scored_sends": 45,
-    "in_flight_sends_at_snapshot": 9,
+    "scored_episodes": 12,
+    "strict_successes": 6,
+    "scored_sends": 67,
+    "in_flight_sends_at_snapshot": 0,
     "blocks_completed": {
       "primary": 6,
-      "comparators": 2
+      "comparators": 6
     },
     "early_source_verified_handoffs": 2,
     "early_photos_cited_in_final": 0,
     "early_field_violations": 0
   },
-  "pending_workers": [
-    {
-      "utc": "2026-11-28T10:44:49.417961+00:00",
-      "state": "running",
-      "controller_pid": 3661181,
-      "worker_pid": 3664201,
-      "case": "cracked-row",
-      "method": "native-async",
-      "sends": 8
-    }
-  ],
+  "pending_workers": [],
   "account_remaining_requests": null,
   "hardware_motion_authorized": false,
   "current_hypothesis": "Use the original decision loop. Acquire admissible secondary photos during an already outstanding request; interpret them in a subsequent ordinary decision only when useful.",
@@ -51,13 +41,21 @@
   "next": "Finish independent image-chain checks and strong controls, calibrate joint semantic requests on real archived images, check the full-task evidence scheduler against a generic exact planner.",
   "phase": "paired native development and joint acquisition/perception research",
   "paired_rgb_assay": {
-    "sends": 0,
-    "results": null
+    "sends": 18,
+    "results": {
+      "cases": 6,
+      "sends": 18,
+      "joint_both_correct": 4,
+      "separate_both_correct": 4,
+      "timed_valid_pairs": 5,
+      "median_separate_minus_joint_service_s": 7.702752171084285,
+      "tokens_recorded": null
+    }
   },
   "accounted_sends": {
     "historical_formal": 3842,
     "historical_revision_development": 93,
-    "continued_native_development": 54,
-    "archived_rgb_assay": 0
+    "continued_native_development": 67,
+    "archived_rgb_assay": 18
   }
 }

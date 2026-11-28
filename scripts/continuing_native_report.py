@@ -81,7 +81,12 @@ def chain_checks(ep, calls, events, allowed, coverage):
         image_names = [i["image_id"] for i in (following or {}).get("input",{}).get("recent_images",[])]
         next_bound = bool(following and any(n == image and h == raw_hash for n,h in zip(image_names,following["image_sha256"])))
         decision = call.get("output") or {}
-        requested = decision.get("use_view") == cid and (decision.get("action") or {}).get("type") in ("observe","record")
+        listed=decision.get("use_views")
+        if ep.name.startswith("evidence-") and isinstance(listed,list):
+            chosen_by_gpt=len(listed)<=2 and all(isinstance(v,str) for v in listed) and cid in listed
+        else:
+            chosen_by_gpt=decision.get("use_view")==cid
+        requested = chosen_by_gpt and (decision.get("action") or {}).get("type") in ("observe","record")
         release = event("native_material_release",step)
         reference_bound = (offer["reference_sha256"] == digest(robot/(offer["source"]+".jpg")) ==
                            prior["image_sha256"][-1] == shot["reference_sha256"] and
@@ -113,7 +118,11 @@ def audit(ep, receipt, case):
     calls = rows(robot/"model_calls.jsonl")
     ledger = rows(ep/"request_attempts.jsonl")
     assert len(calls) == len(ledger) == receipt["sends"]
-    nominal = sha256((upstream().SYSTEM + ("" if ep.name=="original-gpt" else INSTRUCTIONS)).encode()).hexdigest()
+    suffix="" if ep.name=="original-gpt" else INSTRUCTIONS
+    if ep.name.startswith("evidence-"):
+        from research.flexible_scheduling.native_controller import EVIDENCE_INSTRUCTIONS
+        suffix+=EVIDENCE_INSTRUCTIONS
+    nominal = sha256((upstream().SYSTEM + suffix).encode()).hexdigest()
     for ix, (call, entry) in enumerate(zip(calls,ledger),1):
         assert call["instructions_sha256"] == nominal and call["model"] == entry["model"] == "gpt-6.1-terra"
         assert call["reasoning_effort"] == entry["reasoning_effort"] == "max"
@@ -200,7 +209,7 @@ def main():
     if args.admit_comparators:
         primary={(c["id"],m) for c in config["cases"] for m in c["primary"]}
         completed={(r["case"],r["method"]) for r in runs}
-        admissible=[p for p in proofs if p.get("proven_early_handoff") and p["method"]=="native-deferred"]
+        admissible=[p for p in proofs if p.get("proven_early_handoff") and p["method"] in ("native-deferred","evidence-deferred")]
         if not primary<=completed or not admissible or any(r["field_grant_violation_count"] for r in runs):
             raise ValueError("Primary comparisons or independent mechanism evidence missing")
         endpoint_errors=[read(root/c/(m+".receipt.json")).get("endpoint_block") for c,m in primary]

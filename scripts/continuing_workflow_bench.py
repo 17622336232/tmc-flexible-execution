@@ -11,7 +11,7 @@ from research.flexible_scheduling.workflow import Workflow,View,DecisionProblem,
 
 
 OUT=Path("outputs/continuing/workflow")
-METHODS=("serial","async","prefetch","fixed-joint","generic","factored")
+METHODS=("serial","async","prefetch","strong-prefetch","fixed-joint","generic","factored")
 
 
 def balanced():

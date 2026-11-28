@@ -1,0 +1,63 @@
+{
+  "id": "native-evidence-dev02",
+  "role": "prospective-development-only",
+  "model": "gpt-6.1-terra",
+  "effort": "max",
+  "backend": "cpu",
+  "max_requests_per_episode": 24,
+  "episode_s": 360,
+  "cost_config": "outputs/protocol-v2-optimization/custom-final/calibrated_costs.json",
+  "runtime_files": [
+    "research/flexible_scheduling/native_controller.py",
+    "research/flexible_scheduling/workflow.py",
+    "research/flexible_scheduling/front_facing.py",
+    "research/flexible_scheduling/label_geometry.py"
+  ],
+  "cases": [
+    {
+      "id": "cracked-row-02",
+      "family": "cracks",
+      "seed": 883211,
+      "layout_seed": 583211,
+      "source_profile": "independent",
+      "count": 2,
+      "early_fields": "identity",
+      "primary": [
+        "evidence-deferred",
+        "original-gpt",
+        "evidence-off"
+      ],
+      "comparators": [
+        "evidence-prefetch",
+        "evidence-planner",
+        "evidence-async"
+      ]
+    },
+    {
+      "id": "warehouse-filter-02",
+      "family": "large_inventory",
+      "seed": 883213,
+      "layout_seed": 583213,
+      "source_profile": "single",
+      "count": 3,
+      "early_fields": "identity",
+      "primary": [
+        "evidence-off",
+        "original-gpt",
+        "evidence-deferred"
+      ],
+      "comparators": [
+        "evidence-async",
+        "evidence-planner",
+        "evidence-prefetch"
+      ]
+    }
+  ],
+  "design": [
+    "Two newly generated development worlds chosen before any rendering or grade; use all labels generated. The two new questions revisit actual defects seen on different exposures: legibility under oblique sign views and records of nonqualifying inventory items. Do not pool groups across revisions.",
+    "Same real upstream GPT baseline. Every enhanced arm shares a field/source recording prompt, a front-facing viewpoint constructed only from a rectangular surface in actual RGB plus measured LiDAR, two-image handoff and the same model, permissions, skills, time and request budgets. No OCR predictions fed to GPT. The remaining ordinary decisions handle all semantics.",
+    "At every pending turn consider all admitted camera round trips up to two, reuse only actual images and release only those requested by GPT. The generic planner and the strong joint-capable prefetch have the same full actions and costs. For this live adapter remaining semantic service is a common normal decision; predicted section time is not a measured whole-task score.",
+    "Record source checks, multi-photo returns, prior RGB/box, source-surface vs fallback, actual accepted coverage of all in-scope objects, real calls and full deadline-restricted duration. Underfilled opportunities and early failures retained. Strong comparator block requires a verified actual early handoff on this revision and comparison can distinguish the hypotheses. No test-set access, no physical deployment."
+  ],
+  "runtime_sha256": "6c5dab53a9faf9d2de88df4c2d988619c066176423a1223341f30e75b84c2577"
+}

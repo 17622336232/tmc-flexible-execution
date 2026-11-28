@@ -31,6 +31,7 @@ class Workflow:
     primary_seconds: tuple   # indexed by extra images interpreted in this request
     followup_seconds: tuple  # indexed by images; zero requires no request
     report_seconds: float
+    max_early_motion: float = float("inf")
 
     def __post_init__(self):
         if len({v.name for v in self.views}) != len(self.views):
@@ -41,6 +42,8 @@ class Workflow:
             raise ValueError("Invalid evidence or service table")
         if any(not isfinite(v) or v<0 for v in (*self.primary_seconds,*self.followup_seconds,self.report_seconds)):
             raise ValueError("Service estimates must be finite and nonnegative")
+        if self.max_early_motion<0 or self.max_early_motion!=self.max_early_motion:
+            raise ValueError("Invalid physical preparation budget")
         cover=self.verified
         for view in self.views:
             cover |= view.fields
@@ -109,7 +112,9 @@ class DecisionProblem:
         joint=[i for i in self.sources if self.task.views[i].read_early and (i in early or i in self.raw)]
         for batch in subsets(joint,len(self.task.primary_seconds)-1):
             for overlap in subsets(i for i in early if i not in batch):
-                yield batch,overlap
+                travel=sum(self.task.views[i].trip for i in (*batch,*overlap) if i not in self.raw)
+                if travel<=self.task.max_early_motion:
+                    yield batch,overlap
 
     def prefix(self,batch,overlap):
         v=self.task.views
@@ -125,7 +130,7 @@ class DecisionProblem:
         # The generic comparator is a memoized exact backward induction over observed demand.
         # It has the same terminal optimization, dominance from already-covered requirements,
         # and complete choice of physical and semantic actions as the sparse forward calculation.
-        if method not in ("generic","factored","serial","async","prefetch","fixed-joint"):
+        if method not in ("generic","factored","serial","async","prefetch","strong-prefetch","fixed-joint"):
             raise ValueError(method)
         if method=="generic":
             @lru_cache(None)
@@ -160,18 +165,41 @@ class DecisionProblem:
             # Largest authorized batch; ties use the exact expected task cost.
             largest=max(len(b) for b,_ in fullset)
             fullset=tuple((b,o) for b,o in fullset if len(b)==largest)
-        candidates=[]
-        for batch,overlap in fullset:
+        @lru_cache(None)
+        def evaluate(batch,overlap):
             prefix,raw,done=self.prefix(batch,overlap)
             if method=="generic":
                 future=distribution(0,0,raw,done)
             else:
                 future=sum(p*self.finish(mask & ~done,raw) for mask,p in marginal.items())
             pre_travel=sum(self.task.views[i].trip for i in (*batch,*overlap) if i not in self.raw)
-            candidates.append((prefix+future,pre_travel,batch,overlap))
-        value=min(c[0] for c in candidates)
+            return prefix+future,pre_travel,batch,overlap
+
+        def choose(scored):
+            value=min(c[0] for c in scored)
+            return min((c for c in scored if c[0]<=value+1e-8),key=lambda c:c[1:])
+
+        if method=="strong-prefetch":
+            # Strong full-tool heuristic. Start at wait and at the best physical prefetch;
+            # exchanges may promote a raw acquisition into a joint read or postpone it.
+            signatures={a:tuple(2 if i in a[0] else 1 if i in a[1] else 0 for i in self.sources) for a in fullset}
+            pure=choose([evaluate(*a) for a in fullset if not a[0]])
+            heads=[((),()),pure[2:]]
+            local=[]
+            for head in heads:
+                while True:
+                    now=signatures[head]
+                    neighbors=[a for a,sign in signatures.items() if sum(x!=y for x,y in zip(now,sign))<=1]
+                    best=choose([evaluate(*a) for a in neighbors])
+                    if best[2:]==head:
+                        break
+                    head=best[2:]
+                local.append(best)
+            candidates=local
+        else:
+            candidates=[evaluate(*a) for a in fullset]
         # A deterministic common tie break removes floating addition order from the chosen action.
-        best=min((c for c in candidates if c[0]<=value+1e-8),key=lambda c:c[1:])
+        best=choose(candidates)
         return dict(expected_seconds=best[0],joint=best[2],overlap=best[3],early_motion_s=best[1],
-                    evaluated=len(candidates),solve_seconds=perf_counter()-start,
+                    evaluated=evaluate.cache_info().currsize,solve_seconds=perf_counter()-start,
                     terminal_states=self.finish.cache_info().currsize)

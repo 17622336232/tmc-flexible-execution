@@ -26,7 +26,8 @@ from ..request_budget import RequestBudget
 from ..runner import _hash
 from ..timeline import Timeline, summarize
 from .gpt_probe import run_paired, run_probe
-from .native_views import MODES as NATIVE_VIEW_MODES
+from .native_views import MODES, EVIDENCE_MODES
+NATIVE_VIEW_MODES = MODES + EVIDENCE_MODES
 
 
 METHOD_MODES = {"original-gpt": "UPSTREAM_GPT_HASH_PINNED", "serial": "ACTUAL_GPT_CLEAN_SERIAL", "async-probe": "ACTUAL_GPT_FROZEN_QUERY_INTEGRATION_PROBE",
