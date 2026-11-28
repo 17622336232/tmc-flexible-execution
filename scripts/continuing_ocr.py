@@ -67,7 +67,7 @@ def inputs():
 
 
 @lru_cache(maxsize=256)
-def decode(jpeg, bbox):
+def decode(jpeg, bbox, single_line_plaque=False):
     binary=INSTALL/"usr/bin/tesseract"
     image=Image.open(jpeg).convert("L")
     w,h=image.size
@@ -82,7 +82,7 @@ def decode(jpeg, bbox):
     stream=BytesIO()
     region.save(stream,format="PNG")
     cmd=[str(binary),"stdin","stdout","--tessdata-dir",str(INSTALL/"usr/share/tesseract-ocr/4.00/tessdata"),
-         "-l","eng","--psm","7" if bbox else "11","-c","tessedit_create_tsv=1"]
+         "-l","eng","--psm","7" if bbox or single_line_plaque else "11","-c","tessedit_create_tsv=1"]
     p=subprocess.run(cmd,input=stream.getvalue(),stdout=subprocess.PIPE,stderr=subprocess.PIPE,
                      env={**os.environ,"OMP_THREAD_LIMIT":"1"},timeout=15,check=True)
     lines=defaultdict(list)
@@ -142,6 +142,10 @@ def controls():
 def positions(ep, name):
     # These inputs exist only in this offline referee; no OCR call receives them.
     g=read(ep/"private/robot"/(name+"_geometry.json"))["camera"]
+    return projected_label_boxes(ep,g)
+
+
+def projected_label_boxes(ep,g):
     tf=np.linalg.inv(np.asarray(g["world_T_camera"]))
     intr=g["intrinsics"]
     truth=read(ep/"private/truth.json")

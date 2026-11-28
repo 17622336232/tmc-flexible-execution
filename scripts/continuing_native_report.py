@@ -1,6 +1,5 @@
 """Independently link actual dispatches, scoped nominations, motion, RGB and report citations."""
 import argparse
-from collections import defaultdict
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -171,6 +170,7 @@ def audit(ep, receipt, case):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config",type=Path,default=Path("config/native_views_dev01.json"))
+    parser.add_argument("--admit-comparators",action="store_true")
     args = parser.parse_args()
     config = read(args.config)
     root = Path("outputs/continuing")/config["id"]
@@ -197,6 +197,23 @@ def main():
         final_early_citations=sum(r["early_final_citations"] for r in runs),
         verified_model_and_photos=True, token_counts=None,energy_joules=None,
         note="Transport without logged motion is a descriptive blocking proxy. Handoff alone does not imply a benefit or a verified final fact."))
+    if args.admit_comparators:
+        primary={(c["id"],m) for c in config["cases"] for m in c["primary"]}
+        completed={(r["case"],r["method"]) for r in runs}
+        admissible=[p for p in proofs if p.get("proven_early_handoff") and p["method"]=="native-deferred"]
+        if not primary<=completed or not admissible or any(r["field_grant_violation_count"] for r in runs):
+            raise ValueError("Primary comparisons or independent mechanism evidence missing")
+        endpoint_errors=[read(root/c/(m+".receipt.json")).get("endpoint_block") for c,m in primary]
+        if any(endpoint_errors):
+            raise ValueError("Primary block has an endpoint error")
+        gate=dict(admit=True,config_sha256=digest(args.config),
+                  reason="Complete primary block with actual nomination, permitted motion, source-bound RGB and subsequent ordinary request. The house-independent inventory task with zero nominations remains as the negative opportunity control.",
+                  proven_photos=[p["sha256"] for p in admissible],
+                  primary_result_sha256=sorted(r["receipt_sha256"] for r in runs if (r["case"],r["method"]) in primary))
+        frozen=root/"comparator_gate.json"
+        if frozen.exists() and read(frozen)!=gate:
+            raise ValueError("Comparator admission evidence changed")
+        save(frozen,gate)
     for r in runs:
         print(r["case"],r["method"],r["strict"],round(r["whole_s"],2),r["requests"],r["early_handoffs"],r["early_final_citations"])
 

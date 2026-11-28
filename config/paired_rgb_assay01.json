@@ -1,0 +1,52 @@
+{
+  "id": "paired-rgb-assay01",
+  "role": "perception-only-exposed-development",
+  "input_pool": "outputs/protocol-v2-optimization/public-final",
+  "selection": "One previously obtained front+side RGB pair per exposed house. Sort house id by SHA256 of salt + id, take six; within a house select existing acquisition by lexicographic relative path without looking up outcomes. No new houses or held-out test access.",
+  "salt": "joint-rgb-comparison-origin-v1/",
+  "houses": 6,
+  "model": "gpt-6.1-terra",
+  "reasoning_effort": "max",
+  "per_call_cap": 1,
+  "max_total_sends": 18,
+  "per_call_seconds": 120,
+  "order": [
+    [
+      "joint",
+      "front",
+      "side"
+    ],
+    [
+      "front",
+      "side",
+      "joint"
+    ],
+    [
+      "side",
+      "joint",
+      "front"
+    ],
+    [
+      "joint",
+      "side",
+      "front"
+    ],
+    [
+      "front",
+      "joint",
+      "side"
+    ],
+    [
+      "side",
+      "front",
+      "joint"
+    ]
+  ],
+  "goal": "Measure total real service time for a two-image context against two separate sends of exactly the same pixels and questions. Actual use in a live mission requires separate scope for capture and semantic processing. This diagnostic explicitly asks to read both archived photos.",
+  "primary": [
+    "paired service time, sum of single requests minus joint",
+    "fixed semantic outcome for each labelled image vs independent saved segmentation; uncertain counts as incorrect",
+    "both frames correct per house, outcomes and all transport failures preserved"
+  ],
+  "admission": "Lock predictions and hashes for all attempted slots before opening segmentation for scoring. Strong planner and research policy receive identical measured marginal costs and legal joint-read operation. No claim about complete task duration or natural distribution."
+}
