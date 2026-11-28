@@ -29,6 +29,10 @@ _REPORT_ONLY = re.compile(r"(?:只|仅)(?:需)?报告(?:异常|阳性|有裂纹)
 _POSITIVE_ONLY_PHOTO = re.compile(
     r"(?:只有|仅在)?(?:确认|判定)(?:设备|对象)?(?:为)?(?:异常|阳性|有裂纹)(?:之)?后"
     r"(?:才(?:能|可|允许)|方可)?(?:拍摄|拍照|采集)(?:设备|对象)?(?:的)?(?:编号|本体编号)")
+_NOT_BEFORE_POSITIVE = re.compile(
+    r"(?:不得|不能|不允许)在(?:确认|判定)(?:设备|对象)?(?:为)?(?:异常|阳性|有裂纹)(?:之)?前"
+    r"(?:拍摄|采集)(?:设备|对象)?(?:的)?(?:编号|本体编号)")
+_SCOPE_QUALIFIER = re.compile(r"只在|仅对|只对|除.+外|需.+(?:同意|批准|许可)|等待.+批准|待.+同意|以.+为准")
 BODY_IDENTITY = re.compile(
     r"(?:编号|身份)[^。；\n]{0,24}(?:本体|本身)|(?:本体|本身)[^。；\n]{0,12}(?:编号|身份)|(?:body|asset) identity",
     re.I)
@@ -60,17 +64,19 @@ def permission_for(instruction, material):
     late = [(line, LATE_GRANT.fullmatch(line)) for line in lines if LATE_GRANT.fullmatch(line)]
     explicit_late = [(line, match[1]) for line, match in late if material.field in match[2].split("、")]
     clauses = [s.strip() for s in re.split(r"[。；;，,\n]+", instruction) if s.strip()]
-    denials = [s for s in clauses if re.search(r"禁止|不得|不许|不可|不允许|不要|do not|must not", s, re.I)]
+    natural_late = [s for s in clauses if material.field == "identity" and
+                    (_POSITIVE_ONLY_PHOTO.fullmatch(s) or _NOT_BEFORE_POSITIVE.fullmatch(s))]
+    denials = [s for s in clauses if s not in natural_late and
+               (re.search(r"禁止|不得|不许|不可|不允许|不要|do not|must not", s, re.I) or _SCOPE_QUALIFIER.search(s))]
     if denials:
         return Permission(False, (), denials[0])
     if explicit_late:
         outcomes = tuple(outcome for outcome in material.needed_when
-                         if all(outcome == permitted for _, permitted in explicit_late))
+                         if all(outcome == permitted for _, permitted in explicit_late)
+                         and (not natural_late or outcome == "positive"))
         return Permission(False, outcomes, " ".join(line for line, _ in explicit_late))
-    if material.field == "identity":
-        late_photo = next((s for s in clauses if _POSITIVE_ONLY_PHOTO.fullmatch(s)), None)
-        if late_photo:
-            return Permission(False, tuple(o for o in material.needed_when if o == "positive"), late_photo)
+    if natural_late:
+        return Permission(False, tuple(o for o in material.needed_when if o == "positive"), " ".join(natural_late))
     other = [s for s in clauses if not _REPORT_ONLY.fullmatch(s) and not EARLY_GRANT.fullmatch(s + "。")]
     restrictions = [s for s in other if _DENIAL.search(s) or RESTRICTION.search(s)]
     if restrictions:
@@ -78,7 +84,10 @@ def permission_for(instruction, material):
     if len(early) == 1:
         return Permission(True, tuple(OUTCOMES), early[0])
     scoped = next((s for s in clauses if _SCOPE_PHOTO.fullmatch(s)), None)
-    if scoped and material.field == "identity" and any(_REPORT_ONLY.fullmatch(s) for s in clauses):
+    plain_task = re.compile(r"(?:请)?检查(?:这一排|指定|本次任务范围内的)(?:设备|对象)(?:的正面外壳)?"
+                            r"|(?:请|并)?保留图像证据|编号指设备本体身份")
+    scoped_context = all(s == scoped or _REPORT_ONLY.fullmatch(s) or plain_task.fullmatch(s) for s in clauses)
+    if scoped and scoped_context and material.field == "identity" and any(_REPORT_ONLY.fullmatch(s) for s in clauses):
         return Permission(True, tuple(OUTCOMES), scoped)
     return Permission(False, material.needed_when, "No unambiguous early acquisition grant")
 

@@ -72,6 +72,7 @@ def main(argv=None):
     parser.add_argument("--ranker-config", type=Path, help="Frozen candidate scoring and check budget")
     parser.add_argument("--compile-task-program", action="store_true", help="Check a typed task program at submission")
     parser.add_argument("--protocol-v2", action="store_true", help="Use the common v2 inspection loop")
+    parser.add_argument("--bounded-text-compiler", action="store_true", help="Compile exactly recognized task text locally")
     parser.add_argument("--execution-revision", help="Registered execution implementation")
     parser.add_argument("--study-task", type=Path, help="Registered custom task with a private scoring contract")
     parser.add_argument("--frontend-reference", type=Path, help="Shared front-end reference for this registered case")
@@ -83,6 +84,8 @@ def main(argv=None):
     parser.add_argument("--handoff-at-observation", action="store_true",
                         help="Allow a shared handoff at the acquired view with time reserved to revisit")
     args = parser.parse_args(argv)
+    if args.bounded_text_compiler and (not args.protocol_v2 or args.frontend_reference):
+        parser.error("The bounded compiler uses a fresh, uncached v2 front end")
     if not isfinite(args.episode_timeout) or args.episode_timeout <= 0:
         parser.error("Choose a positive finite episode timeout")
     if args.max_request_attempts < 1:
@@ -174,6 +177,7 @@ def main(argv=None):
     if args.protocol_v2:
         preflight.update(protocol_version="protocol-v2", evidence_level=(
             "TRACE_SUPPORTED" if args.frontend_reference else "NATURAL_ONLINE"))
+        preflight["bounded_text_compiler"] = args.bounded_text_compiler
     if args.execution_revision:
         preflight["execution_revision"] = args.execution_revision
     if ranking:
@@ -208,7 +212,7 @@ def main(argv=None):
             execution = partial(run_live, method=args.method, costs=costs, hold_at_view=args.handoff_at_observation,
                                 ranked_policy=profile, use_program=args.compile_task_program,
                                 frontend_reference=args.frontend_reference, scene_sha=args.scene_fingerprint,
-                                protocol_v2=args.protocol_v2)
+                                protocol_v2=args.protocol_v2, bounded_text=args.bounded_text_compiler)
         elif execution is None:
             execution = partial(run_paired, during_pending=args.method == "paired-async")
         if clause:

@@ -4,6 +4,7 @@ import fcntl
 import json
 import os
 import subprocess
+import time
 from hashlib import sha256
 from pathlib import Path
 
@@ -17,10 +18,10 @@ def source_id():
     return sha256(b"".join(str(p).encode() + b"\0" + p.read_bytes() for p in files)).hexdigest()
 
 
-def jobs(config):
+def jobs(config, out=OUT):
     for c in config["cases"]:
         for arm in c["order"]:
-            directory = OUT / c["id"] / arm
+            directory = out / c["id"] / arm
             args = ["bash", "scripts/run_flexible_clean.sh", "--method", arm, "--backend", config["backend"],
                     "--family", c["family"], "--seed", str(c["seed"]), "--layout-seed", str(c["layout_seed"]),
                     "--source-profile", c["source_profile"], "--equipment-count", str(config["equipment_count"]),
@@ -31,7 +32,9 @@ def jobs(config):
                 args += ["--early-fields", c["early_fields"]]
             if arm != "original-gpt":
                 args += ["--cost-config", config["calibration"], "--protocol-v2", "--compile-task-program",
-                         "--handoff-at-observation", "--execution-revision", "revision-development-1"]
+                         "--handoff-at-observation", "--execution-revision", config.get("revision", "revision-development-1")]
+                if config.get("bounded_text"):
+                    args.append("--bounded-text-compiler")
             yield c, arm, directory, args
 
 
@@ -49,15 +52,44 @@ def observed(directory):
     return dict(state="unfinished", seconds=elapsed, sends=sent)
 
 
+def worker_active(directory):
+    """The scheduler lock can outlive neither a crash nor an orphaned worker."""
+    for entry in Path("/proc").glob("[0-9]*/cmdline"):
+        try:
+            argv = entry.read_bytes().decode("utf8", errors="replace").split("\0")
+            if "--output" not in argv or not any("flexible_execution.adapters.clean_run" in arg for arg in argv):
+                continue
+            target = Path(argv[argv.index("--output") + 1])
+            if ((entry.parent / "cwd").resolve() / target).resolve() == directory.resolve():
+                return True
+        except (OSError, IndexError):
+            continue
+    return False
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run", action="store_true")
+    parser.add_argument("--round3", action="store_true")
     args = parser.parse_args()
-    config = read(Path("config/revision_development.json"))
+    config_path = Path("config/revision_development.json")
+    config = read(config_path)
+    out = OUT
+    if args.round3:
+        config_path = Path("config/revision_round3.json")
+        study = read(config_path)
+        case = next(c for c in config["cases"] if c["id"] == study["case"])
+        assert all(case[k] == study[k] for k in ("seed", "layout_seed", "source_profile", "early_fields"))
+        assert config["timeout_s"] == study["timeout_s"] and config["request_limit"] == study["request_limit"]
+        config = dict(config, cases=[dict(case, order=study["online_order"])], bounded_text=True,
+                      revision="revision-development-3")
+        out = OUT / "round3"
+        if args.run and not (out / "text_validation.json").is_file():
+            raise SystemExit("Run the registered text validation before dispatch")
     OUT.mkdir(parents=True, exist_ok=True)
     with (OUT / "development.lock").open("a+") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        for case, arm, directory, command in jobs(config):
+        for case, arm, directory, command in jobs(config, out):
             receipt = directory.parent / (arm + ".receipt.json")
             row = observed(directory)
             print(case["id"], arm, row, flush=True)
@@ -67,16 +99,34 @@ def main():
                 recorded = read(receipt)
                 if recorded["state"] == "endpoint-blocked":
                     raise SystemExit("Endpoint failure recorded; diagnose before dispatch")
-                if recorded["state"] in ("scored", "closed-failure"):
+                if recorded["state"] in ("scored", "closed-failure", "interrupted-after-dispatch"):
                     continue
             if row["state"] == "scored":
                 save(receipt, dict(**row, registered_case=case["id"], method=arm, provenance="existing completed arm"))
                 continue
             if directory.exists():
-                raise SystemExit("Unclosed existing arm. Inspect its worker and raw logs before recovery: " + str(directory))
+                while worker_active(directory):
+                    time.sleep(3)
+                row = observed(directory)
+                if row["state"] == "scored":
+                    prior = read(receipt) if receipt.exists() else {}
+                    save(receipt, {**prior, **row, "case":case["id"], "method":arm})
+                    continue
+                if row["sends"]:
+                    prior = read(receipt) if receipt.exists() else {}
+                    save(receipt, {**prior, **row, "state":"interrupted-after-dispatch",
+                                   "case":case["id"], "method":arm})
+                    continue
+                archive = directory.with_name(directory.name + ".before-first-send")
+                if archive.exists():
+                    raise SystemExit("Repeated preflight interruption; preserved both raw directories")
+                directory.rename(archive)
+                console = directory.parent / (arm + ".console.log")
+                if console.exists():
+                    console.rename(archive / "console.log")
             directory.parent.mkdir(parents=True, exist_ok=True)
             metadata = dict(case=case["id"], method=arm, controller_pid=os.getpid(), source_sha256=source_id(),
-                            config_sha256=sha256(Path("config/revision_development.json").read_bytes()).hexdigest(),
+                            config_sha256=sha256(config_path.read_bytes()).hexdigest(),
                             command=command)
             save(receipt, dict(**metadata, state="starting"))
             with (directory.parent / (arm + ".console.log")).open("x") as log:

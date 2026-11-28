@@ -55,7 +55,7 @@ def compile_requirements(model, instruction):
     return program, parse_intent(conditional, instruction) if conditional is not None else None
 
 
-def _front_end(backend, directory, trace, model, started, instruction, reference, scene):
+def _front_end(backend, directory, trace, model, started, instruction, reference, scene, bounded_text=False):
     source, observation, geometry = _take_photo(backend, directory, trace, started, 1, "scene")
     status, shared, reference_sha = "disabled", None, None
     if reference:
@@ -66,8 +66,18 @@ def _front_end(backend, directory, trace, model, started, instruction, reference
     if shared:
         program, intent, targets, reference_sha = shared
     else:
-        with trace.measure("model_request", 0, purpose="compile_joint_task"):
-            program, intent = compile_requirements(model, instruction)
+        prepared = None
+        if bounded_text:
+            from ..text_requirements import compile_text
+            with trace.measure("local_compile", 0, purpose="bounded_text_grammar"):
+                prepared = compile_text(instruction)
+            trace.event("bounded_text_compilation", 0, recognized=prepared is not None,
+                        task_sha256=sha256(instruction.encode("utf8")).hexdigest())
+        if prepared is None:
+            with trace.measure("model_request", 0, purpose="compile_joint_task"):
+                program, intent = compile_requirements(model, instruction)
+        else:
+            program, intent = prepared
         targets = ()
         if intent:
             with trace.measure("model_request", 2, purpose="locate_visible_targets", image_sha256=source.digest):
@@ -97,11 +107,11 @@ def _goals(backend, observation, geometry, target, current, trace):
 
 
 def run(backend, instruction, directory, event, timeout, *, model, trace, method, costs, hold_at_view,
-        ranked_policy, frontend_reference, scene_sha):
+        ranked_policy, frontend_reference, scene_sha, bounded_text=False):
     started = monotonic()
     model.deadline_monotonic = backend.execution_deadline_monotonic = started + timeout
     program, intent, targets, source, overview, geometry = _front_end(
-        backend, directory, trace, model, started, instruction, frontend_reference, scene_sha)
+        backend, directory, trace, model, started, instruction, frontend_reference, scene_sha, bounded_text)
     step = 2
     summary = {"initial_scene_image": "probe_0001", "visible_targets": [asdict(t) for t in targets],
                "accepted_materials": {}}

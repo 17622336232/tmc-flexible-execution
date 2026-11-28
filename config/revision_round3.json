@@ -1,0 +1,23 @@
+{
+  "round": 3,
+  "base": "b8423b3",
+  "trigger": "Same exposed cracks scene. Joint text compilation took 117.5 s off and 46.9 s A; original completed in 231.13 s.",
+  "change": "Shared bounded text grammar for an explicitly declared schema and fully recognized instruction; other inputs use full GPT compilation. No outcomes, old replies, task IDs, or source assets available to this compiler.",
+  "acceptance": "All accepted archived task texts agree with public requirement semantics under all finite truth assignments of the validation grid. Explicit unknown/changed text falls back. Preserve original coverage checks. Three more arms on the same exposed diagnostic case only if validation passes; no fresh formal test.",
+  "online_order": [
+    "conditional-planner",
+    "conditional-async",
+    "conditional-a"
+  ],
+  "case": "dev-cracks-prim",
+  "seed": 881201,
+  "layout_seed": 581201,
+  "source_profile": "independent",
+  "early_fields": "identity",
+  "equipment_count": 2,
+  "timeout_s": 360,
+  "request_limit": 24,
+  "model": "gpt-6.1-terra",
+  "effort": "max",
+  "interpretation": "One whole matched block for this shared change. Existing original reference is noncontemporaneous. Do not pool versions or estimate a population effect. If limited opportunity/cost and strong baselines remain, stop this route after round 3."
+}

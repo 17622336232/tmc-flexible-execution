@@ -45,6 +45,8 @@ class ResearchRevisionTest(unittest.TestCase):
             self.assertTrue(permission_for(grant + report, m).early)
             self.assertFalse(permission_for(grant + report + "只有确认异常之后才允许拍摄编号。", m).early)
             self.assertEqual(permission_for(grant + report + "禁止拍摄编号。", m).after, ())
+            self.assertEqual(permission_for(grant + report + "不得在确认异常前拍摄编号。", m).after, ("positive",))
+            self.assertFalse(permission_for(grant + report + "只在A区拍摄。", m).early)
             self.assertFalse(permission_for(grant + report, SimpleNamespace(field="temperature", needed_when=("positive",))).early)
         for s in (report, "仅允许对A区指定设备进行非接触式巡检和拍摄。" + report,
                   "如果管理员同意，方可拍摄编号。" + report):

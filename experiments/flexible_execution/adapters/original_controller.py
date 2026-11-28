@@ -1,5 +1,6 @@
 """Run the hash-pinned upstream controller with the shared metered transport."""
 import subprocess
+import os
 from contextlib import ExitStack
 from hashlib import sha256
 from pathlib import Path
@@ -11,8 +12,14 @@ AGENT_SHA256 = "6fb095847e927b712f9a8e5bdb1a25ee7119f2cc7d49e72a5aba042a6d781066
 
 
 def run(backend, task, directory, event, timeout, *, model, trace):
-    source = subprocess.check_output(["git", "cat-file", "blob", AGENT_BLOB],
-                                     cwd=Path(__file__).resolve().parents[3])
+    root = Path(__file__).resolve().parents[3]
+    stored = subprocess.run(["git", "cat-file", "blob", AGENT_BLOB], cwd=root,
+                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    if stored.returncode == 0:
+        source = stored.stdout
+    else:
+        upstream = Path(os.environ.get("VLA_LEGACY_ROOT", Path.home() / "uav/Embodied-intelligent-behavior"))
+        source = (upstream / "experiments/task_attack/agent.py").read_bytes()
     if sha256(source).hexdigest() != AGENT_SHA256:
         raise ValueError("Original controller source fingerprint differs")
     module = ModuleType("experiments.task_attack.upstream_agent")

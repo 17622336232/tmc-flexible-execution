@@ -7,6 +7,7 @@ import json
 from collections import Counter
 from hashlib import sha256
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 from .clean_coverage import audit_run
 from .timeline import read_trace_rows
@@ -32,7 +33,10 @@ def write_table(path, rows):
 
 
 def save(path, obj):
-    path.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf8")
+    with NamedTemporaryFile("w", dir=path.parent, encoding="utf8", delete=False) as tmp:
+        json.dump(obj, tmp, ensure_ascii=False, indent=2)
+        tmp.write("\n")
+    Path(tmp.name).replace(path)
 
 
 def one_view_reference(contract, start):

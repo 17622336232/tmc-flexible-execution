@@ -516,13 +516,14 @@ def _screen_evidence_group(reply, photo_ids, claims):
 
 
 def run_live(backend, instruction, directory, event, timeout, *, model, trace, method, costs, hold_at_view=False,
-             ranked_policy=None, use_program=False, frontend_reference=None, scene_sha=None, protocol_v2=False):
+             ranked_policy=None, use_program=False, frontend_reference=None, scene_sha=None, protocol_v2=False,
+             bounded_text=False):
     if protocol_v2:
         from .v2_execution import run
 
         return run(backend, instruction, directory, event, timeout, model=model, trace=trace, method=method,
                    costs=costs, hold_at_view=hold_at_view, ranked_policy=ranked_policy,
-                   frontend_reference=frontend_reference, scene_sha=scene_sha)
+                   frontend_reference=frontend_reference, scene_sha=scene_sha, bounded_text=bounded_text)
     started = monotonic()
     model.deadline_monotonic = backend.execution_deadline_monotonic = started + timeout
     program = None
