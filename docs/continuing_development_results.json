@@ -1,0 +1,645 @@
+{
+  "role": "development-only",
+  "cohorts": {
+    "native-views-dev01": {
+      "scored": 12,
+      "strict": 6,
+      "sends": 67,
+      "started": 12,
+      "all_started_sends": 67,
+      "service_interrupted": [],
+      "episodes": [
+        {
+          "cohort": "native-views-dev01",
+          "case": "cracked-row",
+          "method": "Proposed",
+          "passed": true,
+          "whole_s": 169.11534497101093,
+          "restricted_s": 169.11534497101093,
+          "requests": 8,
+          "transport_s": 149.37821298703784,
+          "concurrent_motion_s": 13.032257282990031,
+          "idle_transport_s": 136.3459557040478,
+          "first_valid_move_start_s": 38.138030704983976,
+          "early_handoff": 2,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "cracked-row",
+          "method": "Enhanced serial",
+          "passed": true,
+          "whole_s": 259.0368760509882,
+          "restricted_s": 259.0368760509882,
+          "requests": 9,
+          "transport_s": 225.83569831895875,
+          "concurrent_motion_s": 0.0,
+          "idle_transport_s": 225.83569831895875,
+          "first_valid_move_start_s": 41.296222925011534,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "cracked-row",
+          "method": "Original GPT",
+          "passed": true,
+          "whole_s": 141.04339243896538,
+          "restricted_s": 141.04339243896538,
+          "requests": 6,
+          "transport_s": 127.60011344100349,
+          "concurrent_motion_s": 0.0,
+          "idle_transport_s": 127.60011344100349,
+          "first_valid_move_start_s": 33.86830506200204,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "cracked-row",
+          "method": "Generic planner",
+          "passed": true,
+          "whole_s": 102.33006931102136,
+          "restricted_s": 102.33006931102136,
+          "requests": 5,
+          "transport_s": 89.1782636110438,
+          "concurrent_motion_s": 0.0,
+          "idle_transport_s": 89.1782636110438,
+          "first_valid_move_start_s": 29.590156783990096,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "cracked-row",
+          "method": "Strong prefetch",
+          "passed": true,
+          "whole_s": 143.57036050298484,
+          "restricted_s": 143.57036050298484,
+          "requests": 5,
+          "transport_s": 119.4516050410457,
+          "concurrent_motion_s": 25.213476621895097,
+          "idle_transport_s": 94.2381284191506,
+          "first_valid_move_start_s": 21.153436917986255,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "cracked-row",
+          "method": "Ordinary async",
+          "passed": true,
+          "whole_s": 288.0304400079767,
+          "restricted_s": 288.0304400079767,
+          "requests": 9,
+          "transport_s": 249.7539308720734,
+          "concurrent_motion_s": 0.0,
+          "idle_transport_s": 249.7539308720734,
+          "first_valid_move_start_s": 43.09026744100265,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "warehouse-filter",
+          "method": "Original GPT",
+          "passed": false,
+          "whole_s": 105.27936117001809,
+          "restricted_s": 360.0,
+          "requests": 4,
+          "transport_s": 90.44767245399999,
+          "concurrent_motion_s": 0.0,
+          "idle_transport_s": 90.44767245399999,
+          "first_valid_move_start_s": 13.478066444047727,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "warehouse-filter",
+          "method": "Enhanced serial",
+          "passed": false,
+          "whole_s": 94.4126812160248,
+          "restricted_s": 360.0,
+          "requests": 4,
+          "transport_s": 79.28121240297332,
+          "concurrent_motion_s": 0.0,
+          "idle_transport_s": 79.28121240297332,
+          "first_valid_move_start_s": 19.80977430503117,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "warehouse-filter",
+          "method": "Proposed",
+          "passed": false,
+          "whole_s": 93.26289036602248,
+          "restricted_s": 360.0,
+          "requests": 4,
+          "transport_s": 78.42883727001026,
+          "concurrent_motion_s": 0.0,
+          "idle_transport_s": 78.42883727001026,
+          "first_valid_move_start_s": 15.186459477990866,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "warehouse-filter",
+          "method": "Ordinary async",
+          "passed": false,
+          "whole_s": 88.1916667529731,
+          "restricted_s": 360.0,
+          "requests": 4,
+          "transport_s": 73.94782361696707,
+          "concurrent_motion_s": 0.0,
+          "idle_transport_s": 73.94782361696707,
+          "first_valid_move_start_s": 21.387975977966562,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "warehouse-filter",
+          "method": "Strong prefetch",
+          "passed": false,
+          "whole_s": 101.98810804798268,
+          "restricted_s": 360.0,
+          "requests": 5,
+          "transport_s": 84.13279862800846,
+          "concurrent_motion_s": 5.813964536006097,
+          "idle_transport_s": 78.31883409200236,
+          "first_valid_move_start_s": 15.233683059050236,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "warehouse-filter",
+          "method": "Generic planner",
+          "passed": false,
+          "whole_s": 95.83934640901862,
+          "restricted_s": 360.0,
+          "requests": 4,
+          "transport_s": 80.99794254504377,
+          "concurrent_motion_s": 6.6148896050290205,
+          "idle_transport_s": 74.38305294001475,
+          "first_valid_move_start_s": 24.836663118039723,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        }
+      ],
+      "paired": [
+        {
+          "cohort": "native-views-dev01",
+          "case": "cracked-row",
+          "baseline": "Original GPT",
+          "proposed_pass": true,
+          "baseline_pass": true,
+          "delta_restricted_s": 28.071952532045543,
+          "delta_restricted_pct": 19.903061069800422,
+          "delta_transport_s": 21.778099546034355,
+          "delta_requests": 2
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "cracked-row",
+          "baseline": "Enhanced serial",
+          "proposed_pass": true,
+          "baseline_pass": true,
+          "delta_restricted_s": -89.92153107997729,
+          "delta_restricted_pct": -34.71379536799128,
+          "delta_transport_s": -76.4574853319209,
+          "delta_requests": -1
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "cracked-row",
+          "baseline": "Ordinary async",
+          "proposed_pass": true,
+          "baseline_pass": true,
+          "delta_restricted_s": -118.9150950369658,
+          "delta_restricted_pct": -41.285599894814084,
+          "delta_transport_s": -100.37571788503556,
+          "delta_requests": -1
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "cracked-row",
+          "baseline": "Strong prefetch",
+          "proposed_pass": true,
+          "baseline_pass": true,
+          "delta_restricted_s": 25.544984468026087,
+          "delta_restricted_pct": 17.792658859761666,
+          "delta_transport_s": 29.926607945992146,
+          "delta_requests": 3
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "cracked-row",
+          "baseline": "Generic planner",
+          "proposed_pass": true,
+          "baseline_pass": true,
+          "delta_restricted_s": 66.78527565998957,
+          "delta_restricted_pct": 65.26456603581772,
+          "delta_transport_s": 60.19994937599404,
+          "delta_requests": 3
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "warehouse-filter",
+          "baseline": "Original GPT",
+          "proposed_pass": false,
+          "baseline_pass": false,
+          "delta_restricted_s": 0.0,
+          "delta_restricted_pct": 0.0,
+          "delta_transport_s": -12.018835183989722,
+          "delta_requests": 0
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "warehouse-filter",
+          "baseline": "Enhanced serial",
+          "proposed_pass": false,
+          "baseline_pass": false,
+          "delta_restricted_s": 0.0,
+          "delta_restricted_pct": 0.0,
+          "delta_transport_s": -0.8523751329630613,
+          "delta_requests": 0
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "warehouse-filter",
+          "baseline": "Ordinary async",
+          "proposed_pass": false,
+          "baseline_pass": false,
+          "delta_restricted_s": 0.0,
+          "delta_restricted_pct": 0.0,
+          "delta_transport_s": 4.481013653043192,
+          "delta_requests": 0
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "warehouse-filter",
+          "baseline": "Strong prefetch",
+          "proposed_pass": false,
+          "baseline_pass": false,
+          "delta_restricted_s": 0.0,
+          "delta_restricted_pct": 0.0,
+          "delta_transport_s": -5.703961357998196,
+          "delta_requests": -1
+        },
+        {
+          "cohort": "native-views-dev01",
+          "case": "warehouse-filter",
+          "baseline": "Generic planner",
+          "proposed_pass": false,
+          "baseline_pass": false,
+          "delta_restricted_s": 0.0,
+          "delta_restricted_pct": 0.0,
+          "delta_transport_s": -2.5691052750335075,
+          "delta_requests": 0
+        }
+      ]
+    },
+    "native-evidence-dev02": {
+      "scored": 4,
+      "strict": 4,
+      "sends": 17,
+      "started": 5,
+      "all_started_sends": 21,
+      "service_interrupted": [
+        {
+          "cohort": "native-evidence-dev02",
+          "case": "warehouse-filter-02",
+          "method": "original-gpt",
+          "block": "primary",
+          "code": "subscription_sharing_usage_limit_exceeded",
+          "actual_sends": 4,
+          "valid_replies": 3,
+          "task_seconds": 84.87859040498734,
+          "restricted_if_counted_s": 360,
+          "report_submitted": false,
+          "retry_after": null,
+          "receipt_sha256": "0f71cc1c59cfc4024421f76d196fad46080b40afdb90760e2863b48455468d3e",
+          "model_log_sha256": "08305d2bce45db0edd4409385eedd16a01a62662429b8d612b280718a2bbf627",
+          "result_sha256": "53b5482604ff11ee3b63173e76b61b86d904784e0c4e46d4301b56b9bb4b2912",
+          "end_utc": "2026-11-28T11:10:57.187335+00:00"
+        }
+      ],
+      "episodes": [
+        {
+          "cohort": "native-evidence-dev02",
+          "case": "cracked-row-02",
+          "method": "Proposed",
+          "passed": true,
+          "whole_s": 141.20771186298225,
+          "restricted_s": 141.20771186298225,
+          "requests": 5,
+          "transport_s": 132.26502700697165,
+          "concurrent_motion_s": 17.64722893992439,
+          "idle_transport_s": 114.61779806704726,
+          "first_valid_move_start_s": 20.38850130402716,
+          "early_handoff": 1,
+          "early_field_support": 1,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "native-evidence-dev02",
+          "case": "cracked-row-02",
+          "method": "Original GPT",
+          "passed": true,
+          "whole_s": 109.91545665398007,
+          "restricted_s": 109.91545665398007,
+          "requests": 4,
+          "transport_s": 100.12730157002807,
+          "concurrent_motion_s": 0.0,
+          "idle_transport_s": 100.12730157002807,
+          "first_valid_move_start_s": 44.16902157198638,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "native-evidence-dev02",
+          "case": "cracked-row-02",
+          "method": "Enhanced serial",
+          "passed": true,
+          "whole_s": 116.75258987600682,
+          "restricted_s": 116.75258987600682,
+          "requests": 5,
+          "transport_s": 105.98956770898076,
+          "concurrent_motion_s": 0.0,
+          "idle_transport_s": 105.98956770898076,
+          "first_valid_move_start_s": 60.38002507499186,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "native-evidence-dev02",
+          "case": "warehouse-filter-02",
+          "method": "Enhanced serial",
+          "passed": true,
+          "whole_s": 79.98834318399895,
+          "restricted_s": 79.98834318399895,
+          "requests": 3,
+          "transport_s": 69.27598741895054,
+          "concurrent_motion_s": 0.0,
+          "idle_transport_s": 69.27598741895054,
+          "first_valid_move_start_s": 27.86891486099921,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        }
+      ],
+      "paired": [
+        {
+          "cohort": "native-evidence-dev02",
+          "case": "cracked-row-02",
+          "baseline": "Original GPT",
+          "proposed_pass": true,
+          "baseline_pass": true,
+          "delta_restricted_s": 31.292255209002178,
+          "delta_restricted_pct": 28.469385618359322,
+          "delta_transport_s": 32.13772543694358,
+          "delta_requests": 1
+        },
+        {
+          "cohort": "native-evidence-dev02",
+          "case": "cracked-row-02",
+          "baseline": "Enhanced serial",
+          "proposed_pass": true,
+          "baseline_pass": true,
+          "delta_restricted_s": 24.455121986975428,
+          "delta_restricted_pct": 20.946106645640295,
+          "delta_transport_s": 26.275459297990892,
+          "delta_requests": 0
+        }
+      ]
+    }
+  },
+  "perception": {
+    "cases": 6,
+    "sends": 18,
+    "joint_both_correct": 4,
+    "separate_both_correct": 4,
+    "timed_valid_pairs": 5,
+    "median_separate_minus_joint_service_s": 7.702752171084285,
+    "tokens_recorded": null
+  },
+  "measured_viewpoints": {
+    "nominations": 17,
+    "eligible_pairs": 3,
+    "scored_endpoints": 6,
+    "contact_endpoints": 0,
+    "literal_endpoint_reads": 3,
+    "unique_sources": 17,
+    "scope": "Static endpoint RGB in copied scene only. Projected area excludes frame clipping but does not account for occlusion. An actual navigation trajectory is required for online use."
+  },
+  "limitations": [
+    "No measured hardware motion or energy; simulator clock only",
+    "No usage-token telemetry from this transport",
+    "Repeated methods in one layout are paired, not independent houses",
+    "Partial process windows; summed RSS may double-count shared pages; alive CPU is a snapshot",
+    "Motion overlap is an interval observation, not causal credit"
+  ],
+  "prefix_audit": {
+    "exposed_episodes": 16,
+    "ever_sufficient": 10,
+    "sufficient_strictly_before_last": 2,
+    "zero_additional_requests": true,
+    "scope": "Fixed actual decision outputs. Retrospective full roster is evaluator-only. No deployable stopping certificate is inferred."
+  },
+  "static_crossworld_views": {
+    "new_model_requests": 0,
+    "config_sha256": "f4112cea359d6a5337eb64a55afe3247b0734fbfe4ab693363b054dce6e0da5a",
+    "proposals_sha256": "c3949bc8f96222dde119b3870c0445852b36bdb12bd69342cfefd5ce6f127248",
+    "predictions_sha256": "57f9b3d3bc294175164ed8723082c6bb27700b8a581f77d084cc788c99bceb92",
+    "strata": {
+      "all": {
+        "questions": 64,
+        "scenes": 25,
+        "unique_rgb_regions": 55,
+        "can_propose": 30,
+        "has_rect": 50,
+        "has_depth": 49,
+        "roles": {
+          "previous": {
+            "unassigned": 16,
+            "abstain": 14
+          },
+          "radial_same_distance": {
+            "unassigned": 16,
+            "abstain": 14
+          },
+          "frontal_same_distance": {
+            "unassigned": 16,
+            "abstain": 8,
+            "correct": 6
+          }
+        }
+      },
+      "outside_design_layout": {
+        "questions": 58,
+        "scenes": 24,
+        "unique_rgb_regions": 50,
+        "can_propose": 30,
+        "has_rect": 44,
+        "has_depth": 49,
+        "roles": {
+          "previous": {
+            "unassigned": 16,
+            "abstain": 14
+          },
+          "radial_same_distance": {
+            "unassigned": 16,
+            "abstain": 14
+          },
+          "frontal_same_distance": {
+            "unassigned": 16,
+            "abstain": 8,
+            "correct": 6
+          }
+        }
+      }
+    }
+  },
+  "closed_loop_local_navigation": {
+    "registered": 8,
+    "started": 8,
+    "model_requests": 0,
+    "real_vehicle_motion": 0,
+    "arms": {
+      "radial_same_distance": {
+        "trials": 4,
+        "arrived": 4,
+        "returned": 4,
+        "grounded_read_and_return": 0
+      },
+      "frontal_same_distance": {
+        "trials": 4,
+        "arrived": 3,
+        "returned": 3,
+        "grounded_read_and_return": 2
+      }
+    }
+  },
+  "static_binding": {
+    "mode": "static",
+    "config_sha256": "a9890ab22fef15538d0cdb154c95b9f5c2e2686de0f21b0661e4d077e994b2ba",
+    "images": 82,
+    "source_layouts": 11,
+    "outcomes": {
+      "all": {
+        "unique-literal": {
+          "no-unique-reference": 65,
+          "abstain": 63,
+          "wrong-source-or-value": 9,
+          "correct-source": 6,
+          "positive_without_unique_reference": 0
+        },
+        "source-cone": {
+          "no-unique-reference": 65,
+          "abstain": 72,
+          "correct-source": 6,
+          "positive_without_unique_reference": 0
+        }
+      },
+      "visible-literal": {
+        "unique-literal": {
+          "wrong-source-or-value": 9,
+          "correct-source": 6,
+          "positive_without_unique_reference": 0
+        },
+        "source-cone": {
+          "abstain": 9,
+          "correct-source": 6,
+          "positive_without_unique_reference": 0
+        }
+      }
+    },
+    "perception_only": true,
+    "new_model_requests": 0
+  },
+  "real_simulator_camera_binding": {
+    "mode": "navigation",
+    "config_sha256": "a9890ab22fef15538d0cdb154c95b9f5c2e2686de0f21b0661e4d077e994b2ba",
+    "images": 7,
+    "source_layouts": 4,
+    "outcomes": {
+      "all": {
+        "unique-literal": {
+          "abstain": 10,
+          "correct-source": 2,
+          "wrong-source-or-value": 2,
+          "positive_without_unique_reference": 0
+        },
+        "source-cone": {
+          "abstain": 12,
+          "correct-source": 2,
+          "positive_without_unique_reference": 0
+        }
+      },
+      "visible-literal": {
+        "unique-literal": {
+          "correct-source": 2,
+          "wrong-source-or-value": 2,
+          "positive_without_unique_reference": 0
+        },
+        "source-cone": {
+          "correct-source": 2,
+          "abstain": 2,
+          "positive_without_unique_reference": 0
+        }
+      }
+    },
+    "perception_only": true,
+    "new_model_requests": 0
+  },
+  "finite_workflow": {
+    "task_profiles": 24,
+    "method_runs": 168,
+    "optimal_cost_matches": {
+      "serial": 9,
+      "async": 11,
+      "prefetch": 23,
+      "strong-prefetch": 24,
+      "fixed-joint": 9,
+      "generic": 24,
+      "factored": 24
+    },
+    "structural_timing_rows": 30,
+    "stress_scope": "Solver CPU only; no claim about VLM service for many simultaneous predicates.",
+    "limitations": "Static return-to-anchor section; fixed observation coverage and factor distributions. Real perception accuracy is a separate paired assay."
+  }
+}

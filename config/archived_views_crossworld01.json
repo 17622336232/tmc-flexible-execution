@@ -1,0 +1,15 @@
+{
+  "id": "archived-views-crossworld01",
+  "role": "offline matched sensor and geometry development assay, zero model requests, no natural task score",
+  "inputs": "outputs/continuing/ocr/predictions.json",
+  "prespecified_inputs": 64,
+  "input_rule": "Keep all previously selected reference-image/region pairs from the 25 exposed scenes including proposals that abstain; identify dev-cracks-prim separately because its layout motivated the frontal method. No hidden labels for selecting observations, camera poses or predictions.",
+  "method": "Use unaltered source RGB, logged normalized box, intrinsics, pose and measured surface grid to generate frozen frontal candidates. Select the first supported standoff without consulting ground truth.",
+  "matched_views": [
+    "actual previously achieved pose, re-rendered level in the common camera model",
+    "new radial pose at the same distance and estimated surface point as the frontal pose, pointed along the original sight line",
+    "new near-normal pose at the same distance and estimated surface point"
+  ],
+  "evaluation": "For each publicly supportable proposal, render all three in a private copy of its own world. Run the same pre-existing image-only OCR including its ASSET ID prefix and confidence floor. Only after predictions are sealed may the referee match printed plaque polygons and textures to assignment. Reject collisions, ambiguous target, unsupported source, and incorrect readings; retain each denominator. Report known design layout separately. These are camera endpoints under an optimistic reachable-pose assumption until checked by live simulation.",
+  "route_validation": "A separate zero-model smoke may use a frozen list of public geometric goals on the simulated robot with normal map checks. The hidden mesh, segmentation and identities are scoring-only. No physical flight."
+}

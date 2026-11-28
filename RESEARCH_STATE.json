@@ -3,8 +3,11 @@
   "stage": "original-loop paired development, independent image-chain audit and remaining-task planning",
   "resumed_remote": "94bd1e78953164dce48ec38c8cc15dbd010f2e56",
   "resumed_local": "90f390c8ee332c866f4204dee628d447f8ddab2c",
-  "as_of_utc": "2026-11-28T11:01:13+00:00",
-  "method_version": "native-views-dev01 / runtime source 2e8e26cb8f0099bb68d02e5aa1c1e9569423706ec413227f9d9aa7714ffcef2b",
+  "as_of_utc": "2026-11-28T12:55:54+00:00",
+  "method_version": {
+    "native-views-dev01": "2e8e26cb8f0099bb68d02e5aa1c1e9569423706ec413227f9d9aa7714ffcef2b",
+    "native-evidence-dev02": "6c5dab53a9faf9d2de88df4c2d988619c066176423a1223341f30e75b84c2577"
+  },
   "prior_formal": {
     "episodes": 456,
     "sends": 3842
@@ -14,15 +17,24 @@
     "sends": 93
   },
   "new_dev": {
-    "scored_episodes": 12,
-    "strict_successes": 6,
-    "scored_sends": 67,
+    "scored_episodes": 16,
+    "strict_successes": 10,
+    "scored_sends": 84,
     "in_flight_sends_at_snapshot": 0,
+    "closed_unscored_sends": 4,
+    "started_episodes": 17,
     "blocks_completed": {
-      "primary": 6,
-      "comparators": 6
+      "native-views-dev01": {
+        "primary": 6,
+        "comparators": 6
+      },
+      "native-evidence-dev02": {
+        "primary": 4,
+        "comparators": 0
+      }
     },
-    "early_source_verified_handoffs": 2,
+    "early_source_verified_handoffs": 3,
+    "early_photos_supporting_correct_fields": 1,
     "early_photos_cited_in_final": 0,
     "early_field_violations": 0
   },
@@ -38,7 +50,7 @@
   "rejected": [
     "fixed conservative OCR has zero detections on 64 sampled historical image/ROI questions; 31 had independently assigned target identity"
   ],
-  "next": "Finish independent image-chain checks and strong controls, calibrate joint semantic requests on real archived images, check the full-task evidence scheduler against a generic exact planner.",
+  "next": "Verify source-bound coverage and the usefulness of measured camera poses on the second development cohort. Retain the paired-RGB timeouts and continue the independent single-decision route.",
   "phase": "paired native development and joint acquisition/perception research",
   "paired_rgb_assay": {
     "sends": 18,
@@ -55,7 +67,84 @@
   "accounted_sends": {
     "historical_formal": 3842,
     "historical_revision_development": 93,
-    "continued_native_development": 67,
+    "continued_native_development": 88,
     "archived_rgb_assay": 18
+  },
+  "closed_external_attempts": [
+    {
+      "cohort": "native-evidence-dev02",
+      "case": "warehouse-filter-02",
+      "method": "original-gpt",
+      "block": "primary",
+      "code": "subscription_sharing_usage_limit_exceeded",
+      "actual_sends": 4,
+      "valid_replies": 3,
+      "task_seconds": 84.87859040498734,
+      "restricted_if_counted_s": 360,
+      "report_submitted": false,
+      "retry_after": null,
+      "receipt_sha256": "0f71cc1c59cfc4024421f76d196fad46080b40afdb90760e2863b48455468d3e",
+      "model_log_sha256": "08305d2bce45db0edd4409385eedd16a01a62662429b8d612b280718a2bbf627",
+      "result_sha256": "53b5482604ff11ee3b63173e76b61b86d904784e0c4e46d4301b56b9bb4b2912",
+      "end_utc": "2026-11-28T11:10:57.187335+00:00"
+    }
+  ],
+  "unresolved_endpoint_limits": [
+    "subscription_sharing_usage_limit_exceeded"
+  ],
+  "zero_model_navigation": {
+    "registered": 8,
+    "started": 8,
+    "model_requests": 0,
+    "real_vehicle_motion": 0,
+    "arms": {
+      "radial_same_distance": {
+        "trials": 4,
+        "arrived": 4,
+        "returned": 4,
+        "grounded_read_and_return": 0
+      },
+      "frontal_same_distance": {
+        "trials": 4,
+        "arrived": 3,
+        "returned": 3,
+        "grounded_read_and_return": 2
+      }
+    }
+  },
+  "source_binding_assay": {
+    "mode": "navigation",
+    "config_sha256": "a9890ab22fef15538d0cdb154c95b9f5c2e2686de0f21b0661e4d077e994b2ba",
+    "images": 7,
+    "source_layouts": 4,
+    "outcomes": {
+      "all": {
+        "unique-literal": {
+          "abstain": 10,
+          "correct-source": 2,
+          "wrong-source-or-value": 2,
+          "positive_without_unique_reference": 0
+        },
+        "source-cone": {
+          "abstain": 12,
+          "correct-source": 2,
+          "positive_without_unique_reference": 0
+        }
+      },
+      "visible-literal": {
+        "unique-literal": {
+          "correct-source": 2,
+          "wrong-source-or-value": 2,
+          "positive_without_unique_reference": 0
+        },
+        "source-cone": {
+          "correct-source": 2,
+          "abstain": 2,
+          "positive_without_unique_reference": 0
+        }
+      }
+    },
+    "perception_only": true,
+    "new_model_requests": 0
   }
 }

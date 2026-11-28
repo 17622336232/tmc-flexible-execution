@@ -145,14 +145,14 @@ def positions(ep, name):
     return projected_label_boxes(ep,g)
 
 
-def projected_label_boxes(ep,g):
+def projected_label_boxes(ep,g,domain="equipment"):
     tf=np.linalg.inv(np.asarray(g["world_T_camera"]))
     intr=g["intrinsics"]
     truth=read(ep/"private/truth.json")
     scene=ElementTree.parse(ep/"inspection.world")
     result={}
     for i,d in enumerate(truth["devices"],1):
-        node=scene.find(".//model[@name='equipment_station_%02d']"%i)
+        node=scene.find(".//model[@name='%s_station_%02d']"%(domain,i))
         if node is None:
             continue
         plate=node.find("./link/visual[@name='reference_identity']")

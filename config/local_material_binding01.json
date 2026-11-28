@@ -1,0 +1,15 @@
+{
+  "id": "local-material-binding01",
+  "role": "source-only material association on exposed simulated sensor images, no online model",
+  "camera_controls": [
+    "use an OCR literal if exactly one distinct body identifier appears anywhere",
+    "require its centers, mapped through the observed rectangular plane, to stay inside the nominated source region throughout a fixed ±0.30 m plane-depth perturbation; abstain if more than one plausible literal"
+  ],
+  "scopes": [
+    "the archived model's chosen source region",
+    "all other disjoint object regions nominated in the same genuine historical localization reply, applied to the same captured RGB as alternative association questions"
+  ],
+  "evidence": "Use the measured surface plane for each reference region independently. Require matching time-stamped ROS camera metadata and source RGB, anchored image digests and the requested field identity; do not submit any new images. The independent physical plaque identity and rendered instance mask are opened only after every prediction is sealed.",
+  "denominators": "Report all nominated and neighbor questions, including those with no measurable plane or no visible literal, and report separately the subgroup with an actual OCR detection. Multiple questions on the same photo are correlated; list distinct source layouts. Check fresh camera observations from the navigation study separately.",
+  "use_in_controller": "A developmental material tool can emit an attributed measurement with source hashes only after an actual release, once the field is authorized and a valid measurement exists. Do not grant a new task score or assume generic high reliability from these development scenes."
+}

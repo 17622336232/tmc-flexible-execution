@@ -1,0 +1,16 @@
+{
+  "id": "local-view-navigation01",
+  "role": "sensor and normal simulated navigation only, zero model sends",
+  "input": "outputs/continuing/archived-views-crossworld01/proposals.json",
+  "selection": "Use all distinct previously exposed equipment crack layouts with independent body identity, a measured candidate at first observation and outside the layout used to design the method. One eligible RGB/box per layout by SHA256 of the fixed salt, case, image digest and normalized box; take at most four layouts by the hash of case. Selection reads no score or OCR output.",
+  "salt": "observed-equipment-route/v1/",
+  "layout_limit": 4,
+  "arms": [
+    "radial_same_distance",
+    "frontal_same_distance"
+  ],
+  "paired_order": "Alternate order by registered layout index, fresh simulation for each arm. Use the actual frozen measured pose of each arm; check fresh image alignment and map permission before moving.",
+  "alignment": "Same regenerated world and textures verified before motion. Initial position within 0.25 m, circular yaw difference at most 0.12 rad, source ROI at least 6 pixels on each axis with grayscale SD at least 4, bounded search of 16 pixels and normalized cross-correlation at least 0.75.",
+  "limits": "Local CPU renderer, original single-robot simulated controller only. Map checks, original motion arrival tolerance, 45 seconds outward and 45 seconds for return, each checked with measured pose. Count failures to align, insufficient authority, map denial, failed travel, and failed return. Supply no synthetic delay and no GPT decisions.",
+  "scoring": "Seal fresh image hashes and OCR outputs for every slot before consulting private sources. Check source-bound asset identity using instance mask of the actual captured pose and original reference ROI. Record route time, successful arrival and return, and reading at identical estimated standoff. This experiment does not supply an online task-success, inference-wait or energy result."
+}

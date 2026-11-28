@@ -207,19 +207,24 @@ def main():
         verified_model_and_photos=True, token_counts=None,energy_joules=None,
         note="Transport without logged motion is a descriptive blocking proxy. Handoff alone does not imply a benefit or a verified final fact."))
     if args.admit_comparators:
+        from scripts.continuing_recovery import interruptions,acknowledged
         primary={(c["id"],m) for c in config["cases"] for m in c["primary"]}
         completed={(r["case"],r["method"]) for r in runs}
+        external=interruptions(root,config)
+        if external and not acknowledged(root,external):
+            raise ValueError("The endpoint limit has no confirmed restoration")
+        unavailable={(f["case"],f["method"]) for f in external}
         admissible=[p for p in proofs if p.get("proven_early_handoff") and p["method"] in ("native-deferred","evidence-deferred")]
-        if not primary<=completed or not admissible or any(r["field_grant_violation_count"] for r in runs):
+        if not primary<=completed|unavailable or not admissible or any(r["field_grant_violation_count"] for r in runs):
             raise ValueError("Primary comparisons or independent mechanism evidence missing")
-        endpoint_errors=[read(root/c/(m+".receipt.json")).get("endpoint_block") for c,m in primary]
-        if any(endpoint_errors):
-            raise ValueError("Primary block has an endpoint error")
         gate=dict(admit=True,config_sha256=digest(args.config),
                   reason="Complete primary block with actual nomination, permitted motion, source-bound RGB and subsequent ordinary request. The house-independent inventory task with zero nominations remains as the negative opportunity control.",
                   proven_photos=[p["sha256"] for p in admissible],
                   primary_result_sha256=sorted(r["receipt_sha256"] for r in runs if (r["case"],r["method"]) in primary))
         frozen=root/"comparator_gate.json"
+        if external:
+            gate["reason"]="Primary slots are terminal; retain the externally interrupted no-delivery outcome. The registered controller demonstrated early acquisition, later consumption, and correct grounded fields."
+            gate["externally_interrupted_receipts"]=[f["receipt_sha256"] for f in external]
         if frozen.exists() and read(frozen)!=gate:
             raise ValueError("Comparator admission evidence changed")
         save(frozen,gate)

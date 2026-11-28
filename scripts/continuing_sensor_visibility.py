@@ -1,0 +1,137 @@
+"""Post-task referee for masks of the cited physical surfaces. Does not run in the robot process."""
+import argparse
+from collections import Counter,defaultdict
+import math
+from pathlib import Path
+import shutil
+from tempfile import TemporaryDirectory
+from xml.etree import ElementTree as ET
+
+import cv2
+import numpy as np
+from PIL import Image
+from experiments.task_attack.cpu_world import SceneRenderer
+from experiments.flexible_execution.revision_audit import read,save,write_table,digest
+from experiments.flexible_execution.clean_coverage import audit_run
+
+
+def bodies(scene,renderer):
+    names={}
+    for model in ET.parse(scene).findall("world/model"):
+        key=model.get("name")
+        parts=[item for link in model.findall("link") for item in [*link.findall("visual"),*link.findall("collision")]
+               if item.find("geometry") is not None]
+        built=renderer.groups[key]
+        if len(parts)!=len(built):
+            raise ValueError("Renderer part mapping differs: "+key)
+        for item,(body,_,_) in zip(parts,built):
+            if item.tag=="visual":
+                names[(key,item.get("name"))]=body
+    return names
+
+
+def camera(renderer,meta):
+    pos=np.array([meta["position"][k] for k in ("x","y","z")])
+    quat=[meta["orientation"][k] for k in ("x","y","z","w")]
+    renderer.set_pose("vla_uav",pos,quat)
+    r=np.array(renderer.p.getMatrixFromQuaternion(quat)).reshape((3,3))
+    origin=pos+r.dot([.17,0,.02])
+    view=renderer.p.computeViewMatrix(origin.tolist(),(origin+r[:,0]).tolist(),r[:,2].tolist())
+    w,h=meta["width"],meta["height"]
+    vfov=math.degrees(2*math.atan(math.tan(1.3962634016/2)*h/w))
+    proj=renderer.p.computeProjectionMatrixFOV(vfov,w/h,.05,30.)
+    observed=renderer.p.getCameraImage(w,h,view,proj,shadow=0,lightDirection=[-1,-2,4],lightAmbientCoeff=.7,
+                lightDiffuseCoeff=.3,renderer=renderer.p.ER_TINY_RENDERER,physicsClientId=renderer.client)
+    return np.asarray(observed[2],dtype=np.uint8).reshape(h,w,4)[:,:,:3],np.array(observed[4]).reshape(h,w)
+
+
+def grade_episode(ep,renderer,names,case):
+    robot=ep/"private/robot"
+    result=read(ep/"result.json")
+    if not isinstance(result.get("report"),dict):
+        return []
+    verified=audit_run(ep,recheck_legacy_fragments=True)
+    refs=verified["supported_by_frame"]
+    ids={r["identity"]:(idx,r) for idx,r in enumerate(read(ep/"private/truth.json")["devices"],1)}
+    photos={frame for fields in refs.values() for frames in fields.values() for frame in frames}
+    views={}
+    for frame in sorted(photos):
+        meta=read(robot/(frame+".json"))
+        raw=robot/(frame+".jpg")
+        if digest(raw)!=meta["sha256"]:
+            raise ValueError("Evidence image changed")
+        rgb,mask=camera(renderer,meta)
+        original=np.array(Image.open(raw).convert("RGB"))
+        # Record exact differences as JPEG compression, OS timing and odometry may matter.
+        difference=np.abs(original.astype(float)-rgb.astype(float))
+        views[frame]=(Counter(dict(zip(*np.unique(mask,return_counts=True)))),float(difference.mean()),
+                      float((difference.max(axis=2)<=18).mean()))
+    records=[]
+    for ident,fields in refs.items():
+        idx,dev=ids[ident]
+        for field,frames in fields.items():
+            for frame in frames:
+                count,mae,rate=views[frame]
+                station=("equipment_" if field=="cracked" else "warehouse_")+"station_%02d"%idx
+                if field=="cracked":
+                    parts=[("door",station,"door_surface"),("identity",station,"reference_identity")]
+                elif field=="box_count":
+                    parts=[("identity","panel_%02d"%idx,"front")]
+                    # If there are no boxes, visibility of the whole shelf cannot be certified by a count of zero.
+                    parts.extend(("box_%d"%i,station,"cargo_%d"%i) for i in range(dev["box_count"]))
+                else:
+                    continue
+                pixels={role:int(count[names[obj,part]]) for role,obj,part in parts}
+                records.append(dict(case=case,method=ep.name,object_id=ident,field=field,source=frame,
+                    mean_rgb_absolute_difference=mae,fraction_pixels_within_18=rate,
+                    source_pixels=pixels,minimum_source_pixels=min(pixels.values()),
+                    zero_item_requires_separate_coverage=field=="box_count" and dev["box_count"]==0))
+    return records
+
+
+def main():
+    parser=argparse.ArgumentParser()
+    parser.add_argument("--config",type=Path,default=Path("config/native_views_dev01.json"))
+    conf=read(parser.parse_args().config)
+    root=Path("outputs/continuing")/conf["id"]
+    dest=root/"audit"
+    dest.mkdir(parents=True,exist_ok=True)
+    allrows=[]
+    for case in conf["cases"]:
+        receipts=[r for r in sorted((root/case["id"]).glob("*.receipt.json")) if read(r).get("state")=="scored"]
+        if not receipts:
+            continue
+        base=receipts[0].with_name(read(receipts[0])["method"])
+        with TemporaryDirectory(dir=dest) as temp:
+            scene=Path(temp)/"inspection.world"
+            shutil.copy2(base/"inspection.world",scene)
+            shutil.copytree(base/"assets",Path(temp)/"assets")
+            renderer=SceneRenderer(scene,robot=True)
+            try:
+                names=bodies(scene,renderer)
+                for r in receipts:
+                    ep=r.with_name(read(r)["method"])
+                    allrows.extend(grade_episode(ep,renderer,names,case["id"]))
+            finally:
+                renderer.close()
+    save(dest/"cited_sensor_visibility.json",allrows)
+    summary=[]
+    for case in conf["cases"]:
+        for m in case["primary"]+case["comparators"]:
+            rr=[r for r in allrows if (r["case"],r["method"])==(case["id"],m)]
+            if not rr:
+                continue
+            # Thresholds are a displayed sensitivity diagnostic, not a replacement for the study grade.
+            summary.append(dict(case=case["id"],method=m,bound_claim_frames=len(rr),
+                 min_image_alignment_rate=min(r["fraction_pixels_within_18"] for r in rr),
+                 max_rgb_mae=max(r["mean_rgb_absolute_difference"] for r in rr),
+                 visible_at_1=sum(r["minimum_source_pixels"]>=1 for r in rr),
+                 visible_at_36=sum(r["minimum_source_pixels"]>=36 for r in rr),
+                 visible_at_144=sum(r["minimum_source_pixels"]>=144 for r in rr)))
+    if summary:
+        write_table(dest/"cited_sensor_visibility.csv",summary)
+    print("Actual bound claim-frame records",len(allrows),"arm summaries",len(summary))
+
+
+if __name__=="__main__":
+    main()
