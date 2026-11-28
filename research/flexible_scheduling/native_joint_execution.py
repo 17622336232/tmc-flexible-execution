@@ -10,8 +10,10 @@ from experiments.task_attack.agent import run_agent
 from experiments.task_attack.runtime import append_json
 from .cross_source_workflow import CrossSourceWorkflow
 from .event_workflow import ALWAYS, indices
+from .native_continuation import NATIVE_REPLY_CONTRACT, REPLY_EXTENSION, proposal_plan
 from .native_frontier_adapter import NativeFrontierObserver, scheduling_state
-from .natural_frontier import released, source_map
+from .native_service_estimate import RequestObservation, restricted_request_estimate
+from .natural_frontier import read_ordinary_records, released, source_map
 from .ordinary_frontier import camera_goals, pose_matches
 from .priced_cross_source import PricedCrossSourcePlanner
 
@@ -22,7 +24,8 @@ class NativePlanner(PricedCrossSourcePlanner):
         # The next native observation after moving to a new viewpoint takes a real photo.
         # The joint controller cannot advertise transit through an unlicensed camera waypoint.
         return tuple(a for a in candidates if not (a.motion and not a.motion[1]
-                     and not state.raw&(1<<a.motion[0])))
+                     and not state.raw&(1<<a.motion[0]))
+                     and not (a.motion and a.motion[0]==1 and a.reads and not self.m.early_capture[1]))
 
 
 class PendingCamera:
@@ -37,25 +40,31 @@ class PendingCamera:
         try:
             frame,geometry=self.backend.observe()
             pose={**geometry["position"],"yaw":geometry["yaw"]}
-            if not pose_matches(pose,goal,metres=.10,radians_tol=.10):
+            frame_pose={**frame["position"],"yaw":frame["yaw"]}
+            if not all(pose_matches(p,goal,metres=.10,radians_tol=.10) for p in (pose,frame_pose)):
                 raise ValueError("Captured viewpoint differs from the permitted destination")
-        except (RuntimeError, ValueError, TimeoutError) as error:
+        except (RuntimeError, ValueError, TimeoutError, KeyError, TypeError) as error:
             self.trace.event("joint_capture_unavailable",step,error=type(error).__name__)
             return
-        self.pending=(frame,geometry)
+        scene=self.backend.scene.get("catalog",{}).get("scene_conditions",{})
+        if scene.get("dynamic"):
+            return
+        self.pending=(frame,geometry,scene.get("state_version"))
         self.trace.event("joint_pending_capture",step,started_monotonic_seconds=started,
                          image_sha256=sha256(frame["data"]).hexdigest(),
                          observed_pose=pose,capture_ros=frame["ros_stamp"])
 
     def observe(self):
         pending,self.pending=self.pending,None
-        if pending is not None:
-            return pending
+        scene=self.backend.scene.get("catalog",{}).get("scene_conditions",{})
+        if pending is not None and not scene.get("dynamic") and scene.get("state_version")==pending[2]:
+            return pending[:2]
         return self.backend.observe()
 
 
 class NativeJointExecution:
-    def __init__(self, task, directory, trace, mode, prices, camera=None):
+    def __init__(self, task, directory, trace, mode, prices, camera=None, propose_work=False,
+                 native_reply_contract=False):
         self.task=task
         self.directory=directory
         self.trace=trace
@@ -72,6 +81,49 @@ class NativeJointExecution:
         self.service_times={}
         self.pending_motion=None
         self.camera=camera
+        self.propose_work=propose_work and not self.enabled
+        self.native_reply_contract=native_reply_contract
+        self.request_history={
+            shape:[(row["phase"],RequestObservation(0,row["seconds"],row["delivered"],row["correct"]))
+                   for row in rows] for shape,rows in prices.get("request_history",{}).items()
+        }
+
+    def bootstrap(self, model, context, images, step):
+        self.propose_work=False
+        packet={**context,"native_reply_extension":REPLY_EXTENSION}
+        prompt=self.prompt+NATIVE_REPLY_CONTRACT if self.native_reply_contract else self.prompt
+        reply=model.request(prompt,packet,images,attempt_limit=1)
+        current=context["current_image_id"]
+        initial_source={current:"front"} if len(images)==1 and not context["recent_images"] else {}
+        plan=proposal_plan(self.task,reply,initial_source)
+        native_action=(reply.get("action") or {}).get("type") if isinstance(reply,dict) else None
+        if plan is None or native_action not in ("move","approach","observe","record"):
+            self.note("joint_continuation_not_admitted",step)
+            return reply,None
+        self.observer.plan=plan
+        self.enabled=True
+        observed=self.observe(context,images)
+        if observed is None:
+            return reply,None
+        views,_,self.here=observed
+        verified=read_ordinary_records(plan,reply,{},initial_source)
+        scope={i:current for i in sorted(released(plan,self.observer.prior)) if plan.fields[i].view==views[current]}
+        append_json(self.directory/"joint_native_replies.jsonl",dict(step=step,reply=reply))
+        decision=self.bind(reply,scope,step)
+        if self.observer.prior!=verified:
+            self.enabled=False
+            self.note("joint_continuation_not_admitted",step,reason="source-proof-mismatch")
+            return reply,None
+        self.note("joint_continuation_admitted",step,remaining=[
+            dict(field=f.name,view=f.view,parents=f.any_of)
+            for i,f in enumerate(plan.fields) if i not in self.observer.prior],
+            adopted_facts=sorted(self.observer.prior),retained_native_action=native_action in ("record","observe"),
+            image_id=current,image_sha256=self.photos[current][1],scene_version=self.scene[0])
+        if native_action in ("move","approach"):
+            # Revalidate the native action against the discovered legal frontier on the next
+            # ordinary cycle, without another model call for the admitted physical move.
+            return {**decision,"action":dict(type="record")},None
+        return decision,None
 
     def note(self, kind, step, **event):
         self.trace.event(kind,step,**event)
@@ -120,6 +172,16 @@ class NativeJointExecution:
         # A few in-episode successful timings move the median only after a return.
         return median([default,default,*values[-4:]])
 
+    def service_profile(self, shape, cap, elapsed=0):
+        if not self.request_history or not 0<=elapsed<cap:
+            return None
+        rows=self.request_history.get(shape,())
+        phase="continuation" if self.observer.prior else "initial"
+        cohort=[sample for stage,sample in rows if stage==phase]
+        samples=cohort if len(cohort)>=2 else [sample for _,sample in rows]
+        return restricted_request_estimate(samples,now=monotonic(),elapsed_s=elapsed,limit_s=cap,
+                                           prior_s=self.price[shape+"_s"])
+
     def planned(self, views, here, remaining):
         travel=self.price["travel_s"]
         def ticks(seconds):
@@ -127,6 +189,9 @@ class NativeJointExecution:
         directed=tuple(tuple(0 if i==j else ticks(self.estimate(self.move_times,(i,j),travel[i][j]))
                              for j in range(2)) for i in range(2))
         costs={k:self.estimate(self.service_times,k,self.price[k+"_s"]) for k in ("single","same","cross")}
+        cap=min(remaining,self.price.get("per_send_s",remaining))
+        profiles={k:p for k in costs if (p:=self.service_profile(k,cap)) is not None}
+        costs.update({k:p["estimated_restricted_s"] for k,p in profiles.items()})
         m,state=scheduling_state(self.observer,set(views.values()),here,directed,
                 (ticks(self.price["photo_s"]),)*2,(0,ticks(costs["single"]),ticks(costs["same"])))
         allow_cross=costs["cross"]<remaining and self.price.get("cross_enabled",False)
@@ -140,7 +205,7 @@ class NativeJointExecution:
         else:
             result=p.solve(state,budget=256)
             cost,action=result["value_ticks"],result["action"]
-        return action,False,{**costs,"expected_remaining_s":cost/100}
+        return action,False,{**costs,"expected_remaining_s":cost/100,"service_profiles":profiles}
 
     def authorized_motion(self, action, view):
         if action is None or not action.motion:
@@ -239,6 +304,8 @@ class NativeJointExecution:
         return None
 
     def decide(self, model, context, images, *, execute, trace, step, image_sha256):
+        if self.propose_work:
+            return self.bootstrap(model,context,images,step)
         if not self.enabled:
             return model.request(self.prompt,context,images),None
         observed=self.observe(context,images)
@@ -273,6 +340,8 @@ class NativeJointExecution:
         scoped=[(name,meta,blob) for name,(meta,blob) in by_id.items() if name in with_scope]
         packet["recent_images"]=[meta for name,meta,_ in scoped if name!=current]
         attachments=[blob for _,_,blob in scoped]
+        captured=len(set(selected.values()))
+        shape="single" if len(selected)==1 else "same" if captured==1 else "cross"
         begin=monotonic()
         before=model.calls
         feedback=None
@@ -290,13 +359,18 @@ class NativeJointExecution:
                     if feedback.get("ok"):
                         self.move_times.setdefault((1-target,target),[]).append(took)
                         if self.camera is not None and not future.done():
-                            self.camera.capture(step,move["goal"])
+                            cap=min(remaining,self.price.get("per_send_s",remaining))
+                            profile=self.service_profile(shape,cap,monotonic()-started)
+                            predicted=profile["median_until_usable_s"] if profile else None
+                            if predicted is None or predicted>=self.price["photo_s"]:
+                                self.camera.capture(step,move["goal"])
+                            else:
+                                self.note("joint_capture_deferred_for_short_wait",step,predicted_s=predicted)
                 reply=future.result()
         else:
             reply=model.request(self.prompt,packet,attachments,attempt_limit=1)
         finished=monotonic()
-        captured=len(set(selected.values()))
-        shape="single" if len(selected)==1 else "same" if captured==1 else "cross"
+        elapsed=None
         if selected and isinstance(reply,dict):
             # Use the actual transport log clock when available, so concurrent movement
             # does not get folded into the inference cost.
@@ -310,6 +384,10 @@ class NativeJointExecution:
                 self.service_times.setdefault(shape,[]).append(elapsed)
         append_json(self.directory/"joint_native_replies.jsonl",dict(step=step,reply=reply))
         decision=self.bind(reply,selected,step)
+        if self.request_history and elapsed is not None and isfinite(elapsed) and elapsed>0:
+            phase="continuation" if packet["this_request_scope"]["observed_facts"] else "initial"
+            delivered=set(selected)<=self.observer.prior.keys()
+            self.request_history.setdefault(shape,[]).append((phase,RequestObservation(finished,elapsed,delivered)))
         if feedback is not None:
             # The reply was planned from the old pose. Preserve its source-bound evidence
             # and reconsider its next action from the freshly measured actual pose.
@@ -323,10 +401,12 @@ class NativeJointExecution:
         return decision,None
 
 
-def run_joint(backend,task,directory,event,timeout,*,model,trace,mode,prices,retain_pending_photo=False):
+def run_joint(backend,task,directory,event,timeout,*,model,trace,mode,prices,retain_pending_photo=False,
+              propose_work=False,native_reply_contract=False):
     camera=PendingCamera(backend,trace) if retain_pending_photo else None
-    controller=NativeJointExecution(task,directory,trace,mode,prices,camera=camera)
-    if not controller.enabled:
+    controller=NativeJointExecution(task,directory,trace,mode,prices,camera=camera,propose_work=propose_work,
+                                    native_reply_contract=native_reply_contract)
+    if not controller.enabled and not propose_work:
         from experiments.flexible_execution.adapters.original_controller import run
         return run(backend,task,directory,event,timeout,model=model,trace=trace)
     return run_agent(backend,task,directory,event,timeout,model=model,trace=trace,

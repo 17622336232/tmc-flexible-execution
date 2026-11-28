@@ -16,7 +16,7 @@ SUBJECT = re.compile(
     r"有没有|有无|(?:能)?(?:看见|看到)|有)(?P<name>[^，。,；、：？！?\s]{1,28})"
 )
 ASK = re.compile(r"^(?:请)?(?:也|再|分别)?(?:看看|检查|确认|判断|报告|核实)")
-EARLY = re.compile(r"(?:可以|允许|准许)(?:在等待结果时|在等待时|提前|先)(?:提前)?(?:采集|拍摄|保存)侧面(?:原图|照片)")
+EARLY = re.compile(r"(?P<denial>不)?(?:可以|允许|准许)(?:在等待结果时|在等待时|提前|先)(?:提前)?(?:采集|拍摄|保存)侧面(?:原图|照片)")
 REPORT = re.compile(r"(?:请)?(?:报告每项的实际照片来源|每项附实拍照片|看不清就说无法判定|分别报告各项结果|用物品名称作记录标识，布尔字段用 visible)")
 
 
@@ -63,8 +63,11 @@ def discover(instruction):
                 return None
             finish = "front" if "恢复" in c else "side"
             continue
-        if EARLY.fullmatch(c):
-            early = True
+        grant=EARLY.fullmatch(c)
+        if grant:
+            if early is not None:
+                return None
+            early = grant["denial"] is None
             continue
         if REPORT.fullmatch(c):
             continue

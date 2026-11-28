@@ -13415,6 +13415,678 @@
       }
     ]
   },
+  "native_reply_continuation": {
+    "rows": [
+      {
+        "case": "warehouse-crossed",
+        "method": "joint",
+        "sends": 2,
+        "whole_s": 49.18923610402271,
+        "strict": false,
+        "restricted_s": 240,
+        "error": null,
+        "actual_service_s": 48.05212150805164,
+        "service_with_action_overlap_s": 0,
+        "motion_while_pending": 0,
+        "permission_violations": [
+          {
+            "turn": 2,
+            "field": "白色货箱",
+            "photo": "onboard_0002",
+            "kind": "not-newly-authorized"
+          },
+          {
+            "turn": 2,
+            "field": "白色货箱",
+            "photo": "onboard_0002",
+            "kind": "not-newly-authorized"
+          }
+        ],
+        "requested_fields": [
+          null,
+          null
+        ],
+        "final_pose_ok": true,
+        "expected": [
+          {
+            "field": "红色货箱",
+            "view": "front",
+            "expected": true,
+            "bound_and_correct": true
+          },
+          {
+            "field": "蓝色货箱",
+            "view": "front",
+            "expected": true,
+            "bound_and_correct": true
+          },
+          {
+            "field": "绿色货箱",
+            "view": "side",
+            "expected": false,
+            "bound_and_correct": true
+          },
+          {
+            "field": "白色货箱",
+            "view": "side",
+            "expected": false,
+            "bound_and_correct": false
+          }
+        ],
+        "pending_captures": [],
+        "continuation_proposal_admitted": false,
+        "submission_sources": [
+          [
+            "红色货箱",
+            "onboard_0001",
+            true
+          ],
+          [
+            "蓝色货箱",
+            "onboard_0001",
+            true
+          ],
+          [
+            "绿色货箱",
+            "onboard_0002",
+            false
+          ],
+          [
+            "白色货箱",
+            "onboard_0002",
+            false
+          ]
+        ]
+      }
+    ],
+    "strict": 0,
+    "actual_sends": 2,
+    "registration_sha256": "7a4dd58591149d567ee23944500ee35c9ac126bdeb6ff6ae85693e7fae7f01d5",
+    "sealed_sha256": "27ff471f87414fb451f93d931dfac9a955a43e5d52b8d8a17bcae616016c5ab3"
+  },
+  "native_reply_permission": {
+    "rows": [
+      {
+        "case": "warehouse-prose-permitted",
+        "method": "joint",
+        "sends": 4,
+        "whole_s": 205.59394821198657,
+        "strict": false,
+        "restricted_s": 240,
+        "error": null,
+        "actual_service_s": 194.2018352849991,
+        "service_with_action_overlap_s": 0,
+        "motion_while_pending": 0,
+        "permission_violations": [],
+        "requested_fields": [
+          null,
+          null,
+          null,
+          null
+        ],
+        "final_pose_ok": true,
+        "expected": [
+          {
+            "field": "红色货箱",
+            "view": "front",
+            "expected": true,
+            "bound_and_correct": false
+          },
+          {
+            "field": "蓝色货箱",
+            "view": "front",
+            "expected": true,
+            "bound_and_correct": false
+          },
+          {
+            "field": "绿色货箱",
+            "view": "side",
+            "expected": false,
+            "bound_and_correct": false
+          },
+          {
+            "field": "白色货箱",
+            "view": "side",
+            "expected": false,
+            "bound_and_correct": false
+          }
+        ],
+        "pending_captures": [],
+        "continuation_proposal_admitted": false,
+        "submission_sources": []
+      },
+      {
+        "case": "warehouse-prose-prohibited",
+        "method": "joint",
+        "sends": 3,
+        "whole_s": 96.34504793101223,
+        "strict": true,
+        "restricted_s": 96.34504793101223,
+        "error": null,
+        "actual_service_s": 95.15482257003896,
+        "service_with_action_overlap_s": 0,
+        "motion_while_pending": 0,
+        "permission_violations": [],
+        "requested_fields": [
+          null,
+          null,
+          null
+        ],
+        "final_pose_ok": true,
+        "expected": [
+          {
+            "field": "红色货箱",
+            "view": "front",
+            "expected": true,
+            "bound_and_correct": true
+          },
+          {
+            "field": "蓝色货箱",
+            "view": "front",
+            "expected": true,
+            "bound_and_correct": true
+          },
+          {
+            "field": "绿色货箱",
+            "view": "side",
+            "expected": false,
+            "bound_and_correct": true
+          },
+          {
+            "field": "白色货箱",
+            "view": "side",
+            "expected": false,
+            "bound_and_correct": true
+          }
+        ],
+        "pending_captures": [],
+        "continuation_proposal_admitted": false,
+        "submission_sources": [
+          [
+            "红色货箱",
+            "onboard_0001",
+            true
+          ],
+          [
+            "蓝色货箱",
+            "onboard_0001",
+            true
+          ],
+          [
+            "绿色货箱",
+            "onboard_0003",
+            false
+          ],
+          [
+            "白色货箱",
+            "onboard_0003",
+            false
+          ]
+        ]
+      }
+    ],
+    "strict": 1,
+    "actual_sends": 7,
+    "registration_sha256": "8e3d6f448431e2ad9bd0b04e41e9ae8ca039ae3a1ccb57431e665d16b12d5b35",
+    "sealed_sha256": "d57e07f2bf6b98716c2a5db0e24ae66b20146ebb7b5dc8ab9271531de217466d"
+  },
+  "native_resolved_scope": {
+    "rows": [
+      {
+        "case": "warehouse-resolved-permitted",
+        "method": "joint",
+        "sends": 5,
+        "whole_s": 184.13100307201967,
+        "strict": false,
+        "restricted_s": 240,
+        "error": {
+          "type": "TransportError",
+          "message": "Responses 请求超过总时限，未采纳任何部分结果。",
+          "code": "timeout",
+          "status": null
+        },
+        "actual_service_s": 183.86706349503947,
+        "service_with_action_overlap_s": 1.1034969559987076,
+        "motion_while_pending": 1,
+        "permission_violations": [],
+        "requested_fields": [
+          null,
+          [
+            {
+              "field": "蓝色货箱",
+              "evidence_image_id": "onboard_0002"
+            }
+          ],
+          [
+            {
+              "field": "绿色货箱",
+              "evidence_image_id": "onboard_0003"
+            }
+          ],
+          [
+            {
+              "field": "白色货箱",
+              "evidence_image_id": "onboard_0004"
+            }
+          ],
+          []
+        ],
+        "final_pose_ok": true,
+        "expected": [
+          {
+            "field": "红色货箱",
+            "view": "front",
+            "expected": true,
+            "bound_and_correct": false
+          },
+          {
+            "field": "蓝色货箱",
+            "view": "front",
+            "expected": true,
+            "bound_and_correct": false
+          },
+          {
+            "field": "绿色货箱",
+            "view": "side",
+            "expected": false,
+            "bound_and_correct": false
+          },
+          {
+            "field": "白色货箱",
+            "view": "side",
+            "expected": false,
+            "bound_and_correct": false
+          }
+        ],
+        "pending_captures": [
+          {
+            "image_id": "onboard_0003",
+            "completed_with_request_pending": true,
+            "later_attached": true,
+            "used_in_report": false,
+            "later_legal_fields": [
+              "绿色货箱"
+            ],
+            "final_cited_fields": [],
+            "verified_complete_side_chain": false
+          }
+        ],
+        "continuation_proposal_admitted": true,
+        "submission_sources": []
+      },
+      {
+        "case": "warehouse-resolved-prohibited",
+        "method": "joint",
+        "sends": 4,
+        "whole_s": 160.6562572279945,
+        "strict": false,
+        "restricted_s": 240,
+        "error": {
+          "type": "TransportError",
+          "message": "Responses 请求超过总时限，未采纳任何部分结果。",
+          "code": "timeout",
+          "status": 200
+        },
+        "actual_service_s": 159.25158018700313,
+        "service_with_action_overlap_s": 0,
+        "motion_while_pending": 0,
+        "permission_violations": [],
+        "requested_fields": [
+          null,
+          [
+            {
+              "field": "蓝色货箱",
+              "evidence_image_id": "onboard_0002"
+            }
+          ],
+          [
+            {
+              "field": "绿色货箱",
+              "evidence_image_id": "onboard_0004"
+            }
+          ],
+          [
+            {
+              "field": "白色货箱",
+              "evidence_image_id": "onboard_0005"
+            }
+          ]
+        ],
+        "final_pose_ok": true,
+        "expected": [
+          {
+            "field": "红色货箱",
+            "view": "front",
+            "expected": true,
+            "bound_and_correct": false
+          },
+          {
+            "field": "蓝色货箱",
+            "view": "front",
+            "expected": true,
+            "bound_and_correct": false
+          },
+          {
+            "field": "绿色货箱",
+            "view": "side",
+            "expected": false,
+            "bound_and_correct": false
+          },
+          {
+            "field": "白色货箱",
+            "view": "side",
+            "expected": false,
+            "bound_and_correct": false
+          }
+        ],
+        "pending_captures": [],
+        "continuation_proposal_admitted": true,
+        "submission_sources": []
+      }
+    ],
+    "strict": 0,
+    "actual_sends": 9,
+    "registration_sha256": "d877c668f70023f5c41868727b0787d78c2109fbaa7cc706cec814cfe87eb2e4",
+    "sealed_sha256": "23cb65933153d70932afa684ce318386a7f0119174a3ad386b6560a07fa93a5a"
+  },
+  "native_settled_service_history": {
+    "prior_sources": [
+      "native-joint-execution-dev01",
+      "native-pending-photo-dev02",
+      "cross-source-assay-dev02"
+    ],
+    "new_requests": 0,
+    "samples": {
+      "single": [
+        {
+          "seconds": 9.529715468990617,
+          "delivered": true,
+          "correct": null,
+          "phase": "initial",
+          "cohort": "native-joint-execution-dev01",
+          "source_sha256": "d302be7bab57cabf9874ba92eae642e68ca3dee11c0b225800c2925a8ac53c4d"
+        },
+        {
+          "seconds": 8.850528365001082,
+          "delivered": true,
+          "correct": true,
+          "phase": "initial",
+          "cohort": "native-joint-execution-dev01",
+          "source_sha256": "1e7a7a37fbf08617ccb96c1f0346e522ab66f3185e2c586a4d71eacc3a634ea9"
+        },
+        {
+          "seconds": 10.237405214982573,
+          "delivered": true,
+          "correct": true,
+          "phase": "initial",
+          "cohort": "native-joint-execution-dev01",
+          "source_sha256": "ba7e0c69d814b977622155f6228b9d3ccb82af72110ed1595c543597a8e0ce90"
+        },
+        {
+          "seconds": 9.506642055988777,
+          "delivered": true,
+          "correct": true,
+          "phase": "initial",
+          "cohort": "native-joint-execution-dev01",
+          "source_sha256": "b51ffa22cad766230660a1415501f411e5f79364a3e1a1eca6c4d52c037fedb6"
+        },
+        {
+          "seconds": 11.488565102976281,
+          "delivered": true,
+          "correct": true,
+          "phase": "initial",
+          "cohort": "native-pending-photo-dev02",
+          "source_sha256": "05edfa1e747ebd9ca2631fda39392f089a1db989892fe4190623262772113576"
+        },
+        {
+          "seconds": 8.734849996981211,
+          "delivered": true,
+          "correct": null,
+          "phase": "initial",
+          "cohort": "native-pending-photo-dev02",
+          "source_sha256": "6e5ff8b0fa9632d47974d0a6843645cf40d20f7aed08c2e9476d4227b106cbc7"
+        },
+        {
+          "seconds": 4.040690208959859,
+          "delivered": true,
+          "correct": true,
+          "phase": "calibration",
+          "cohort": "cross-source-assay-dev02",
+          "source_sha256": "7d165f0b9fc960a859ee3826b5914531acd8fd4ed4d1f71f804404973e50e549"
+        },
+        {
+          "seconds": 4.682752633991186,
+          "delivered": true,
+          "correct": true,
+          "phase": "calibration",
+          "cohort": "cross-source-assay-dev02",
+          "source_sha256": "7d165f0b9fc960a859ee3826b5914531acd8fd4ed4d1f71f804404973e50e549"
+        },
+        {
+          "seconds": 3.6360176440211944,
+          "delivered": true,
+          "correct": true,
+          "phase": "calibration",
+          "cohort": "cross-source-assay-dev02",
+          "source_sha256": "7d165f0b9fc960a859ee3826b5914531acd8fd4ed4d1f71f804404973e50e549"
+        },
+        {
+          "seconds": 20.2137296590372,
+          "delivered": true,
+          "correct": false,
+          "phase": "calibration",
+          "cohort": "cross-source-assay-dev02",
+          "source_sha256": "7d165f0b9fc960a859ee3826b5914531acd8fd4ed4d1f71f804404973e50e549"
+        }
+      ],
+      "same": [
+        {
+          "seconds": 119.99717020901153,
+          "delivered": false,
+          "correct": null,
+          "phase": "continuation",
+          "cohort": "native-joint-execution-dev01",
+          "source_sha256": "d302be7bab57cabf9874ba92eae642e68ca3dee11c0b225800c2925a8ac53c4d"
+        },
+        {
+          "seconds": 24.66746572800912,
+          "delivered": true,
+          "correct": true,
+          "phase": "continuation",
+          "cohort": "native-joint-execution-dev01",
+          "source_sha256": "1e7a7a37fbf08617ccb96c1f0346e522ab66f3185e2c586a4d71eacc3a634ea9"
+        },
+        {
+          "seconds": 22.65022365702316,
+          "delivered": true,
+          "correct": true,
+          "phase": "continuation",
+          "cohort": "native-joint-execution-dev01",
+          "source_sha256": "ba7e0c69d814b977622155f6228b9d3ccb82af72110ed1595c543597a8e0ce90"
+        },
+        {
+          "seconds": 19.190162445011083,
+          "delivered": true,
+          "correct": true,
+          "phase": "continuation",
+          "cohort": "native-joint-execution-dev01",
+          "source_sha256": "b51ffa22cad766230660a1415501f411e5f79364a3e1a1eca6c4d52c037fedb6"
+        },
+        {
+          "seconds": 32.83291812799871,
+          "delivered": true,
+          "correct": true,
+          "phase": "continuation",
+          "cohort": "native-pending-photo-dev02",
+          "source_sha256": "05edfa1e747ebd9ca2631fda39392f089a1db989892fe4190623262772113576"
+        },
+        {
+          "seconds": 119.99111585703213,
+          "delivered": false,
+          "correct": null,
+          "phase": "continuation",
+          "cohort": "native-pending-photo-dev02",
+          "source_sha256": "6e5ff8b0fa9632d47974d0a6843645cf40d20f7aed08c2e9476d4227b106cbc7"
+        }
+      ],
+      "cross": [
+        {
+          "seconds": 5.088388131989632,
+          "delivered": true,
+          "correct": true,
+          "phase": "calibration",
+          "cohort": "cross-source-assay-dev02",
+          "source_sha256": "7d165f0b9fc960a859ee3826b5914531acd8fd4ed4d1f71f804404973e50e549"
+        },
+        {
+          "seconds": 101.39549111499218,
+          "delivered": true,
+          "correct": true,
+          "phase": "calibration",
+          "cohort": "cross-source-assay-dev02",
+          "source_sha256": "7d165f0b9fc960a859ee3826b5914531acd8fd4ed4d1f71f804404973e50e549"
+        }
+      ]
+    },
+    "profile": {
+      "single": {
+        "(0, 120)": {
+          "samples": 10,
+          "successful": 9,
+          "nondelivery": 0,
+          "independently_checked": 8,
+          "incorrect": 1,
+          "median_until_usable_s": 8.850528365001082,
+          "estimated_restricted_s": 18.766106062899343
+        },
+        "(0, 30)": {
+          "samples": 10,
+          "successful": 9,
+          "nondelivery": 0,
+          "independently_checked": 8,
+          "incorrect": 1,
+          "median_until_usable_s": 8.850528365001082,
+          "estimated_restricted_s": 10.584287881081162
+        },
+        "(10, 120)": {
+          "samples": 3,
+          "successful": 2,
+          "nondelivery": 0,
+          "independently_checked": 3,
+          "incorrect": 1,
+          "median_until_usable_s": 0.8629851589794271,
+          "estimated_restricted_s": 37.24199010598628
+        }
+      },
+      "same": {
+        "(0, 120)": {
+          "samples": 6,
+          "successful": 4,
+          "nondelivery": 2,
+          "independently_checked": 4,
+          "incorrect": 0,
+          "median_until_usable_s": 23.65884469251614,
+          "estimated_restricted_s": 51.48725285114887
+        },
+        "(0, 30)": {
+          "samples": 6,
+          "successful": 3,
+          "nondelivery": 3,
+          "independently_checked": 3,
+          "incorrect": 0,
+          "median_until_usable_s": 22.65022365702316,
+          "estimated_restricted_s": 25.368264547149053
+        },
+        "(10, 120)": {
+          "samples": 6,
+          "successful": 4,
+          "nondelivery": 2,
+          "independently_checked": 4,
+          "incorrect": 0,
+          "median_until_usable_s": 13.65884469251614,
+          "estimated_restricted_s": 46.55679499300701
+        }
+      },
+      "cross": {
+        "(0, 120)": {
+          "samples": 2,
+          "successful": 2,
+          "nondelivery": 0,
+          "independently_checked": 2,
+          "incorrect": 0,
+          "median_until_usable_s": 53.24193962349091,
+          "estimated_restricted_s": 69.2946264156606
+        },
+        "(0, 30)": {
+          "samples": 2,
+          "successful": 1,
+          "nondelivery": 1,
+          "independently_checked": 1,
+          "incorrect": 0,
+          "median_until_usable_s": 5.088388131989632,
+          "estimated_restricted_s": 21.69612937732988
+        },
+        "(10, 120)": {
+          "samples": 1,
+          "successful": 1,
+          "nondelivery": 0,
+          "independently_checked": 1,
+          "incorrect": 0,
+          "median_until_usable_s": 91.39549111499218,
+          "estimated_restricted_s": 91.39549111499218
+        }
+      }
+    }
+  },
+  "native_public_preflight": {
+    "new_requests": 0,
+    "rooms": {
+      "two-screens-house-29": {
+        "data": {
+          "house": 29,
+          "world": "070ba6a29a8e02f68e751bc8678964feb4ecea3d35a67fa2cd88170de44ad30d",
+          "checks": {
+            "side_pose": true,
+            "camera_pose": true,
+            "return_pose": true,
+            "distinct_rgb": true,
+            "fresh_exposure": true
+          },
+          "photos": {
+            "front": "14a93c1f4f281ce8fd808fc52599b7546ff6cf6ef2560240b914a9c2e09e050b",
+            "side": "741357d7236428ef4a5529a8413aeef7062913252bb53311fd2f202a335a3edd"
+          },
+          "turn_s": 4.103675047983415,
+          "photo_s": 0.23243119101971388,
+          "return_s": 0.7679167949827388,
+          "new_requests": 0
+        },
+        "sha256": "ef97932d338ee906e9d00c8375ff9abf256d6f8e413b8cbf97585a6f15b03ed4"
+      },
+      "crossed-screens-house-56": {
+        "data": {
+          "house": 56,
+          "world": "532ba29e6ff406c2d38189b2294d51363352b7d555efd8ea9fe5743d31d52612",
+          "checks": {
+            "side_pose": true,
+            "camera_pose": true,
+            "return_pose": true,
+            "distinct_rgb": true,
+            "fresh_exposure": true
+          },
+          "photos": {
+            "front": "65985d86b2c90d022db53cf5425ebe61a904fbb89c06212c0a20fb96c1440136",
+            "side": "7a94315e587d95e1c49d35aa47204c9a26f6e1da94e789b6992825597a16a9ca"
+          },
+          "turn_s": 0.9545164100127295,
+          "photo_s": 0.12149049603613093,
+          "return_s": 0.6210093799745664,
+          "new_requests": 0
+        },
+        "sha256": "2e2c4aeda0ae8fddf9696610bd8c1034a59cc8c94664889900777f6c1cd295c1"
+      }
+    }
+  },
   "fixed_transport_critical_path": {
     "scored": 16,
     "paired_strict_device_tasks": [

@@ -1,0 +1,22 @@
+{
+  "id": "native-reply-continuation-dev03",
+  "role": "One whole-task engineering check of an optional continuation proposal in the ordinary model reply, using a continuous-prose version that the original delimiter-based compiler rejects. Evidence acquisition, semantic judgment and final report remain live.",
+  "capture_calibration": "outputs/continuing/native-acquisition-clocks-dev01",
+  "deadline_s": 240,
+  "per_send_s": 120,
+  "per_arm_max_sends": 5,
+  "model": "gpt-6.1-terra",
+  "effort": "max",
+  "retain_pending_photo": true,
+  "propose_work": true,
+  "cases": [
+    {
+      "id": "warehouse-crossed",
+      "instruction": "正面是起始朝向，原地向左转40度为侧面，看看正面照片里有没有红色货箱，如果正面有红色货箱，再检查正面照片里有没有蓝色货箱，也看看侧面照片里有没有绿色货箱，如果正面有蓝色货箱，再检查侧面照片里有没有白色货箱，可以在等待时提前拍摄侧面照片，最后停在侧面，分别报告各项结果，每项附实拍照片，用物品名称作记录标识，布尔字段用 visible。",
+      "referee_task": "正面是起始朝向。原地向左转40度为侧面。看看正面照片里有没有红色货箱。如果正面有红色货箱，再检查正面照片里有没有蓝色货箱。也看看侧面照片里有没有绿色货箱。如果正面有蓝色货箱，再检查侧面照片里有没有白色货箱。可以在等待时提前拍摄侧面照片。最后停在侧面。分别报告各项结果。每项附实拍照片。用物品名称作记录标识，布尔字段用 visible。",
+      "score_predicates": {"红色货箱":"red_carton","蓝色货箱":"blue_carton","绿色货箱":"green_carton","白色货箱":"white_carton"},
+      "order": ["joint"]
+    }
+  ],
+  "acceptance": "Primary engineering check requires the first ordinary response to admit a fully text-bound clause proposal and source-bound first finding. Later actions or queries must use the updated authorized frontier. Assess complete expected fields, source binding, chronology and final pose independently after seal. Report any fallback or partial delivery. One engineering run cannot establish a speed or accuracy advantage."
+}

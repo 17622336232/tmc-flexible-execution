@@ -1,0 +1,46 @@
+{
+  "id": "native-reply-permission-dev04",
+  "role": "Two matched engineering tasks with opposite acquisition permission. Both use ordinary prose without record keys or an authored task list. The same native model, simulator and response schema run with both tasks. The scoring representation is held only by the referee; it is never passed to the controller.",
+  "capture_calibration": "outputs/continuing/native-acquisition-clocks-dev01",
+  "deadline_s": 240,
+  "per_send_s": 120,
+  "per_arm_max_sends": 5,
+  "model": "gpt-6.1-terra",
+  "effort": "max",
+  "retain_pending_photo": true,
+  "propose_work": true,
+  "native_reply_contract": true,
+  "cases": [
+    {
+      "id": "warehouse-prose-permitted",
+      "calibration_case": "warehouse-crossed",
+      "instruction": "正面是起始朝向，原地向左转40度为侧面，看看正面照片里有没有红色货箱，如果正面有红色货箱，再检查正面照片里有没有蓝色货箱，也看看侧面照片里有没有绿色货箱，如果正面有蓝色货箱，再检查侧面照片里有没有白色货箱，可以在等待时提前拍摄侧面照片，最后停在侧面，分别报告各项结果，每项附实拍照片。",
+      "referee_task": "正面是起始朝向。原地向左转40度为侧面。看看正面照片里有没有红色货箱。如果正面有红色货箱，再检查正面照片里有没有蓝色货箱。也看看侧面照片里有没有绿色货箱。如果正面有蓝色货箱，再检查侧面照片里有没有白色货箱。可以在等待时提前拍摄侧面照片。最后停在侧面。分别报告各项结果。每项附实拍照片。",
+      "score_predicates": {
+        "红色货箱": "red_carton",
+        "蓝色货箱": "blue_carton",
+        "绿色货箱": "green_carton",
+        "白色货箱": "white_carton"
+      },
+      "order": [
+        "joint"
+      ]
+    },
+    {
+      "id": "warehouse-prose-prohibited",
+      "calibration_case": "warehouse-crossed",
+      "instruction": "正面是起始朝向，原地向左转40度为侧面，看看正面照片里有没有红色货箱，如果正面有红色货箱，再检查正面照片里有没有蓝色货箱，也看看侧面照片里有没有绿色货箱，如果正面有蓝色货箱，再检查侧面照片里有没有白色货箱，不可以在等待时提前拍摄侧面照片，最后停在侧面，分别报告各项结果，每项附实拍照片。",
+      "referee_task": "正面是起始朝向。原地向左转40度为侧面。看看正面照片里有没有红色货箱。如果正面有红色货箱，再检查正面照片里有没有蓝色货箱。也看看侧面照片里有没有绿色货箱。如果正面有蓝色货箱，再检查侧面照片里有没有白色货箱。不可以在等待时提前拍摄侧面照片。最后停在侧面。分别报告各项结果。每项附实拍照片。",
+      "score_predicates": {
+        "红色货箱": "red_carton",
+        "蓝色货箱": "blue_carton",
+        "绿色货箱": "green_carton",
+        "白色货箱": "white_carton"
+      },
+      "order": [
+        "joint"
+      ]
+    }
+  ],
+  "acceptance": "Whole task must pass ordinary response participation, independently required and confirmed evidence, and final pose. Record whether the original native first response contained valid task work clauses and sourced first fact. Verify early capture, legal subsequent use and complete report for permitted arm, and zero in-flight side movement and scope breaches for denied arm. Preserve all failures. No claim about speed, broad task coverage or significance."
+}

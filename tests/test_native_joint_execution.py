@@ -6,6 +6,7 @@ import unittest
 
 from experiments.flexible_execution.timeline import Timeline,read_trace_rows
 from research.flexible_scheduling.native_joint_execution import run_joint
+from test_native_continuation import CLAUSES
 
 
 TASK=("正面是起始朝向。原地向左转40度为侧面。看看正面照片里有没有红色货箱。"
@@ -102,6 +103,34 @@ class NativeJointExecutionTest(unittest.TestCase):
             side=[e for e in events if e["event"]=="joint_fact" and e["step"]==2]
             self.assertEqual(len(side),2)
             self.assertTrue(all(e["image_sha256"]==capture["image_sha256"] for e in side))
+
+    def test_ordinary_reply_supplies_first_fact_and_prose_continuation(self):
+        camera=Camera()
+
+        class ProposingModel(ReplyModel):
+            def request(self, prompt,payload,images,attempt_limit=1):
+                if payload.get("native_reply_extension"):
+                    self.calls+=1
+                    finding=dict(object_id="红色货箱",facts=dict(visible=True),
+                                 evidence_image_id=payload["current_image_id"],note="actual first source")
+                    return dict(action=dict(type="move",goal={**camera.position,"yaw":2.4}),records=[finding],
+                                continuation_work=dict(clauses=CLAUSES))
+                return super().request(prompt,payload,images,attempt_limit)
+
+        model=ProposingModel(camera,first_wait=camera.side)
+        task="。".join([*CLAUSES[:2],"，".join(CLAUSES[2:4]),*CLAUSES[4:]])+"。"
+        with TemporaryDirectory() as folder:
+            d=Path(folder)
+            trace=Timeline(d/"timeline.jsonl")
+            report,stats=run_joint(camera,task,d,lambda *a,**k:None,150.,model=model,trace=trace,
+                                   mode="joint",prices=PRICES,propose_work=True)
+            self.assertEqual(report["outcome"],"accepted")
+            self.assertEqual(stats["calls"],2)
+            self.assertAlmostEqual(camera.yaw,.4+math.radians(40))
+            trace_rows=read_trace_rows(trace.path)[0]
+            event=next(e for e in trace_rows if e["event"]=="joint_continuation_admitted")
+            self.assertEqual(event["adopted_facts"],[0])
+            self.assertEqual([r["field"] for r in event["remaining"]],["蓝色货箱","白色货箱"])
 
 
 if __name__=="__main__":

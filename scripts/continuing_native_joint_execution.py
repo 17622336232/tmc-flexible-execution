@@ -30,14 +30,21 @@ def register():
     follow=read(parent/"native-natural-followup-dev01/summary.json")
     cross=read(parent/"cross-source-assay-dev02/summary.json")
     motion=read(clock/"summary.json")
+    sources=[clock/"summary.json",parent/"native-natural-frontier-dev01/summary.json",
+             parent/"native-natural-followup-dev01/summary.json",parent/"cross-source-assay-dev02/summary.json"]
+    history={}
+    if cfg.get("request_history"):
+        prior=Path(cfg["request_history"])
+        history=read(prior)["samples"]
+        sources.append(prior)
     if not follow["independent_correct_combination"]:
         raise ValueError("Prior native evidence/permission bridge did not pass")
     cases=[]
     for case in cfg["cases"]:
-        plan=discover(case["instruction"])
+        plan=discover(case.get("referee_task",case["instruction"]))
         if plan is None or set(case["score_predicates"])!={f.name for f in plan.fields}:
             raise ValueError("A declared native task or its independent scoring catalogue is incomplete")
-        i=case["id"]
+        i=case.get("calibration_case",case["id"])
         original=next(v for v in read(clock/"registration.json")["cases"] if v["case"]==i)
         measure=next(v for v in motion["cases"] if v["case"]==i)
         if not measure["world_matches"] or not measure["phases"] or measure["phases"][0]["view"]!="side":
@@ -47,15 +54,17 @@ def register():
         prices=dict(travel_s=[[0,d["motion_s"]],[d["motion_s"],0]],photo_s=d["after_move_capture_s"],
                     single_s=service,same_s=follow["live_service_s"],cross_s=max(
                         c["observations"]["joint"]["service_s"] for c in cross["cases"]),cross_enabled=True)
+        if history:
+            prices.update(per_send_s=cfg["per_send_s"],request_history=history)
         cases.append({**case,"settings":original["settings"],"world":original["world"],"prices":prices})
     core=Path("research/flexible_scheduling")
     files=[SOURCE,Path("experiments/task_attack/agent.py"),Path("experiments/flexible_execution/adapters/original_controller.py"),
-           *(core/(n+".py") for n in ("native_joint_execution","natural_frontier","native_frontier_adapter",
+           *(core/(n+".py") for n in ("native_joint_execution","native_continuation","native_condition_resolution",
+              "native_service_estimate","natural_frontier","native_frontier_adapter",
               "event_workflow","event_policy","event_lookahead","cross_source_workflow","priced_cross_source") if (core/(n+".py")).is_file())]
     ROOT.mkdir(exist_ok=True)
     reg=dict(config=digest(CFG),cases=cases,code={str(f):digest(f) for f in files},
-             sources={str(c):digest(c) for c in (clock/"summary.json",parent/"native-natural-frontier-dev01/summary.json",
-                  parent/"native-natural-followup-dev01/summary.json",parent/"cross-source-assay-dev02/summary.json")})
+             sources={str(c):digest(c) for c in sources})
     assert_snapshot(ROOT/"registration.json",reg)
     return cfg,reg
 
@@ -86,7 +95,8 @@ def execute(cfg,case,method,ep):
             return run_joint(backend,case["instruction"],folder,event,timeout,model=client,trace=trace,
                              mode="joint" if method=="joint-late-shutter" else method,prices=case["prices"],
                              retain_pending_photo=cfg.get("retain_pending_photo",False)
-                             and method!="joint-late-shutter")
+                             and method!="joint-late-shutter",propose_work=cfg.get("propose_work",False),
+                             native_reply_contract=cfg.get("native_reply_contract",False))
         finally:
             state=backend.adapter.snapshot()
             save(ep/"joint_terminal.json",dict(task_s=monotonic()-started,position=state["position"],yaw=state["yaw"],
@@ -172,6 +182,11 @@ def runtime_bindings(ep, plan, poses):
         if [digest(robot/(i+".jpg")) for i in frames]!=c["image_sha256"]:
             raise ValueError("Model attachment does not match recorded native JPEG")
         ready=released(plan,vals)
+        for q in inp.get("this_request_scope",{}).get("open_for_reading",[]):
+            allowed=[i for i in ready if plan.fields[i].name==q["field"]
+                     and plan.fields[i].view==poses.get(q["evidence_image_id"])]
+            if len(allowed)!=1 or q["evidence_image_id"] not in frames:
+                errs.append(dict(turn=ordinal,field=q["field"],kind="request-out-of-scope"))
         reply=c.get("output") or {}
         returned=list(reply.get("records") or [])+list((reply.get("report") or {}).get("records") or [])
         staged={}
@@ -213,7 +228,7 @@ def score(cfg,case,method,ep):
         raise ValueError("Native send reservation and terminal count differ")
     if not files:
         return row
-    plan=discover(case["instruction"])
+    plan=discover(case.get("referee_task",case["instruction"]))
     frames=[read(p) for p in files]
     poses=source_map(plan,frames[0],frames)
     final_pose=source_map(plan,frames[0],[dict(image_id="final",**{k:terminal[k] for k in ("position","yaw")})]).get("final") if terminal else None
@@ -250,6 +265,10 @@ def score(cfg,case,method,ep):
             and len(report.get("records") or [])==len(claimed))
     timeline=read_trace_rows(robot/"timeline.jsonl")[0] if (robot/"timeline.jsonl").is_file() else []
     moves=[e for e in timeline if e["event"]=="joint_motion_during_request"]
+    if moves and not plan.early_capture:
+        issues.append(dict(kind="motion-without-advance-permission"))
+        strict=False
+    continuation=[e for e in timeline if e["event"]=="joint_continuation_admitted"]
     from scripts.continuing_native_report import length
     request_intervals=[(c["dispatched_monotonic_seconds"],c["return_monotonic_seconds"])
                        for c in steps if "dispatched_monotonic_seconds" in c]
@@ -263,6 +282,7 @@ def score(cfg,case,method,ep):
             actions.append((physical_starts.pop(key),e["monotonic_seconds"]))
     overlap=length([(max(a,c),min(b,d)) for a,b in actions for c,d in request_intervals if min(b,d)>max(a,c)])
     early_captures=[]
+    side_required={v["field"] for v in expected if v["view"]=="side"}
     for e in timeline:
         if e["event"]!="joint_pending_capture":
             continue
@@ -270,16 +290,29 @@ def score(cfg,case,method,ep):
                     and f["ros_stamp"]==e["capture_ros"]),None)
         truly_early=any(a<=e["started_monotonic_seconds"]<=e["monotonic_seconds"]<b
                         for a,b in request_intervals)
+        subsequent_fields={
+            q["field"] for c in steps if c.get("dispatched_monotonic_seconds",0)>e["monotonic_seconds"]
+            and e["image_sha256"] in c["image_sha256"]
+            for q in c["input"].get("this_request_scope",{}).get("open_for_reading",[])
+            if image is not None and q["evidence_image_id"]==image
+        }
+        cited_fields={f for f,p,_ in claimed if p==image}
         early_captures.append(dict(image_id=image,completed_with_request_pending=truly_early,
                                    later_attached=any(e["image_sha256"] in c["image_sha256"] and
                                                       c.get("dispatched_monotonic_seconds",0)>e["monotonic_seconds"]
                                                       for c in steps),
-                                   used_in_report=any(v[1]==image for v in claimed)))
+                                   used_in_report=bool(cited_fields),
+                                   later_legal_fields=sorted(subsequent_fields),
+                                   final_cited_fields=sorted(cited_fields),
+                                   verified_complete_side_chain=strict and plan.early_capture and truly_early
+                                       and bool(side_required) and subsequent_fields==side_required
+                                       and cited_fields==side_required))
     return {**row,"strict":strict,"restricted_s":row["whole_s"] if strict else cfg["deadline_s"],
             "actual_service_s":length(request_intervals),"service_with_action_overlap_s":overlap,
             "motion_while_pending":len(moves),"permission_violations":issues,"requested_fields":[
                 c["input"].get("this_request_scope",{}).get("open_for_reading") for c in steps],
             "final_pose_ok":final_pose==plan.finish,"expected":expected,"pending_captures":early_captures,
+            "continuation_proposal_admitted":bool(continuation),
             "submission_sources":[list(v) for v in claimed]}
 
 
@@ -303,7 +336,8 @@ def grade(cfg,reg):
 if __name__=="__main__":
     p=argparse.ArgumentParser()
     p.add_argument("mode",choices=("run","worker","grade","status"))
-    p.add_argument("--study",choices=("native-joint-execution-dev01","native-pending-photo-dev02"),
+    p.add_argument("--study",choices=("native-joint-execution-dev01","native-pending-photo-dev02",
+                   "native-reply-continuation-dev03","native-reply-permission-dev04","native-resolved-scope-dev05"),
                    default="native-joint-execution-dev01")
     p.add_argument("--case")
     p.add_argument("--method")
@@ -311,6 +345,10 @@ if __name__=="__main__":
     if a.study!="native-joint-execution-dev01":
         ROOT=ROOT.parent/a.study
         CFG=Path("config")/(a.study.replace("-","_")+".json")
+    if a.mode=="status" and (ROOT/"registration.json").is_file():
+        print([(c["id"],m,f.with_suffix(".receipt.json").is_file())
+               for c,m,f in slots(read(ROOT/"registration.json"))])
+        sys.exit(0)
     cfg,reg=register()
     if a.mode=="run":
         collect(cfg,reg)
