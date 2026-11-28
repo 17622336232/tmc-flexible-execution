@@ -1,0 +1,57 @@
+{
+  "id": "native-views-dev01",
+  "role": "exposed-development",
+  "model": "gpt-6.1-terra",
+  "effort": "max",
+  "backend": "cpu",
+  "max_requests_per_episode": 24,
+  "episode_s": 360,
+  "cost_config": "outputs/protocol-v2-optimization/custom-final/calibrated_costs.json",
+  "cases": [
+    {
+      "id": "cracked-row",
+      "family": "cracks",
+      "seed": 881201,
+      "layout_seed": 581201,
+      "source_profile": "independent",
+      "count": 2,
+      "early_fields": "identity",
+      "primary": [
+        "native-deferred",
+        "native-off",
+        "original-gpt"
+      ],
+      "comparators": [
+        "native-planner",
+        "native-prefetch",
+        "native-async"
+      ]
+    },
+    {
+      "id": "warehouse-filter",
+      "family": "large_inventory",
+      "seed": 881403,
+      "layout_seed": 581403,
+      "source_profile": "single",
+      "count": 3,
+      "early_fields": "identity",
+      "primary": [
+        "original-gpt",
+        "native-off",
+        "native-deferred"
+      ],
+      "comparators": [
+        "native-async",
+        "native-prefetch",
+        "native-planner"
+      ]
+    }
+  ],
+  "design": [
+    "One snapshot of the original control prompt plus the same optional tool schema for all augmented arms. Original is the pinned upstream loop.",
+    "No cached model responses, OCR guesses or true labels in planning. One excursive view per decision, restored camera, zero additional model requests per acquisition. Release only if a real ordinary response requests the offered view.",
+    "Keep task deadline, independent whole-task coverage and actual image binding for every arm. Additionally inspect accepted claims against actual images and sources; distinguish unverified submissions and actual delivery.",
+    "First six compare original, enhanced serial and deferred scheduling. Freeze the same inputs/order for six strong comparators. Advance to comparator block if there is a demonstrable dispatch+motion+photo+consumption chain and adequate visible candidates. If no candidates become usable, diagnose and change mechanism before spending the comparator block.",
+    "Each logical job may send at most 24 attempts; quota errors suspend remote calls. No test set used. No population inference from two scenes."
+  ]
+}

@@ -13,8 +13,8 @@ def main():
     parser.add_argument("--root", type=Path, required=True)
     args = parser.parse_args()
     parent = psutil.Process(args.pid)
-    if "experiments.flexible_execution.revision_jobs" not in parent.cmdline():
-        raise SystemExit("PID does not identify a revision study controller")
+    if not {"experiments.flexible_execution.revision_jobs", "experiments.flexible_execution.continuing_jobs"}.intersection(parent.cmdline()):
+        raise SystemExit("PID does not identify a study controller")
     birth = parent.create_time()
     path = args.root / ("resources-%d-%d.jsonl" % (args.pid, time.time()))
     with path.open("x",encoding="utf8",buffering=1) as stream:
@@ -25,7 +25,7 @@ def main():
                     d=json.loads(p.read_text())
                 except (FileNotFoundError,json.JSONDecodeError):
                     continue
-                if d["state"]=="starting" and d["controller_pid"]==args.pid:
+                if d["state"] in ("starting","running") and d["controller_pid"]==args.pid:
                     active.append((p.parent.name,d["method"]))
             if len(active)==1:
                 rss=0

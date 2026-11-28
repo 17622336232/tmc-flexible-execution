@@ -1,0 +1,31 @@
+{
+  "status": "RESEARCH_IN_PROGRESS",
+  "stage": "original-loop paired development, independent image-chain audit and remaining-task planning",
+  "resumed_remote": "94bd1e78953164dce48ec38c8cc15dbd010f2e56",
+  "resumed_local": "90f390c8ee332c866f4204dee628d447f8ddab2c",
+  "as_of_utc": "2026-11-28T10:23:47Z",
+  "method_version": "5ca0a43 / native-views-dev01",
+  "prior_formal": {
+    "episodes": 456,
+    "sends": 3842
+  },
+  "prior_revision_dev": {
+    "episodes": 11,
+    "sends": 93
+  },
+  "new_dev": {
+    "scored_episodes": 1,
+    "scored_sends": 8,
+    "in_flight_sends_at_snapshot": 3,
+    "registered_primary": 6,
+    "conditional_comparators": 6,
+    "first_cracks_deferred": {"strict": true, "task_seconds": 169.1153, "requests": 8, "early_photos_delivered": 2, "early_photos_cited_in_final": 0}
+  },
+  "pending_workers": [{"controller_pid": 3650705, "worker_pid": 3652485, "case": "cracked-row", "method": "native-off", "live_heartbeat": "outputs/continuing/native-views-dev01/heartbeat.json"}],
+  "account_remaining_requests": null,
+  "hardware_motion_authorized": false,
+  "current_hypothesis": "Use the original decision loop. Acquire admissible secondary photos during an already outstanding request; interpret them in a subsequent ordinary decision only when useful.",
+  "validated": ["93 prior sends attributed to six roles", "with original requests fixed the nonrequest ceiling is 10.50% on cracks and 5.14% on inventory", "two actual early photos supplied to subsequent normal decisions in first new episode"],
+  "rejected": ["fixed conservative OCR has zero detections on 64 sampled historical image/ROI questions; 31 had independently assigned target identity"],
+  "next": "Verify ledger and RGB bindings across the whole new block, distinguish receipt by GPT from final report citation, and compare a remaining-task scheduler with a same-information exact planner."
+}

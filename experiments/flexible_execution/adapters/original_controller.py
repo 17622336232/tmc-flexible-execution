@@ -11,7 +11,7 @@ AGENT_BLOB = "15c07cd1b55cb5e26d8d6872a603fb3a0b2daf1c"
 AGENT_SHA256 = "6fb095847e927b712f9a8e5bdb1a25ee7119f2cc7d49e72a5aba042a6d781066"
 
 
-def run(backend, task, directory, event, timeout, *, model, trace):
+def upstream():
     root = Path(__file__).resolve().parents[3]
     stored = subprocess.run(["git", "cat-file", "blob", AGENT_BLOB], cwd=root,
                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
@@ -25,6 +25,11 @@ def run(backend, task, directory, event, timeout, *, model, trace):
     module = ModuleType("experiments.task_attack.upstream_agent")
     module.__package__ = "experiments.task_attack"
     exec(compile(source, "upstream/agent.py", "exec"), module.__dict__)
+    return module
+
+
+def run(backend, task, directory, event, timeout, *, model, trace):
+    module = upstream()
     module.ModelClient = lambda path: model
     # The upstream loop emits task decisions, but has no interval clock.
     def timed(call, role):

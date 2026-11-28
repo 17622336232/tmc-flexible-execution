@@ -26,10 +26,12 @@ from ..request_budget import RequestBudget
 from ..runner import _hash
 from ..timeline import Timeline, summarize
 from .gpt_probe import run_paired, run_probe
+from .native_views import MODES as NATIVE_VIEW_MODES
 
 
 METHOD_MODES = {"original-gpt": "UPSTREAM_GPT_HASH_PINNED", "serial": "ACTUAL_GPT_CLEAN_SERIAL", "async-probe": "ACTUAL_GPT_FROZEN_QUERY_INTEGRATION_PROBE",
-                **PAIRED_MODES, **CONDITIONAL_MODES}
+                **PAIRED_MODES, **CONDITIONAL_MODES,
+                **{name:"ORIGINAL_LOOP_"+name.upper().replace("-","_") for name in NATIVE_VIEW_MODES}}
 
 
 def status(store):
@@ -94,12 +96,15 @@ def main(argv=None):
     if not isfinite(planned) or planned < args.episode_timeout:
         parser.error("The logical job duration must cover the attempt duration")
     conditional = args.method in CONDITIONAL_MODES
-    if conditional != bool(args.cost_config) or (
+    native = args.method in NATIVE_VIEW_MODES
+    if native and args.backend != "cpu":
+        parser.error("Native view scheduling is currently registered only for CPU simulation")
+    if (conditional or native) != bool(args.cost_config) or (
             (args.handoff_at_observation or args.compile_task_program
              or args.protocol_v2)
             and not conditional):
         parser.error("Conditional methods require a cost file and own the optional development grant")
-    if (args.early_fields or args.collection_rule) and not (conditional or args.method == "original-gpt"):
+    if (args.early_fields or args.collection_rule) and not (conditional or native or args.method == "original-gpt"):
         parser.error("Collection clauses require a scoped inspection arm")
     if args.scene_fingerprint and (args.layout_seed is None or len(args.scene_fingerprint) != 64
                                    or any(char not in "0123456789abcdef" for char in args.scene_fingerprint)):
@@ -110,7 +115,7 @@ def main(argv=None):
     if args.study_task:
         from ..requirement_program import parse
 
-        if not args.compile_task_program and args.method != "original-gpt":
+        if not args.compile_task_program and args.method != "original-gpt" and not native:
             parser.error("Custom tasks use the shared language-to-program front end")
         study_task = json.loads(args.study_task.read_text(encoding="utf8"))
         if set(study_task) != {"instruction", "oracle_requirement_program"} or not isinstance(study_task["instruction"], str):
@@ -135,7 +140,7 @@ def main(argv=None):
             parser.error("Collection rule must match the registered permission syntax")
         collection_fields = (early[1] if early else late[2]).split("、")
     costs = None
-    if conditional:
+    if conditional or native:
         from .live_inspection import SUPPORTED_MATERIALS, run_live
         if not set(collection_fields) <= SUPPORTED_MATERIALS or len(set(collection_fields)) != len(collection_fields):
             parser.error("The live material checker does not support one of the requested fields")
@@ -208,6 +213,9 @@ def main(argv=None):
         execution = {"serial": run_agent, "async-probe": run_probe}.get(args.method)
         if args.method == "original-gpt":
             from .original_controller import run as execution
+        if native:
+            from .native_views import run as run_native
+            execution = partial(run_native, method=args.method, costs=costs)
         if conditional:
             execution = partial(run_live, method=args.method, costs=costs, hold_at_view=args.handoff_at_observation,
                                 ranked_policy=profile, use_program=args.compile_task_program,

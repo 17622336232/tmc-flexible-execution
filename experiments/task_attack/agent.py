@@ -114,7 +114,7 @@ def _seed_records(prior_records, prior_evidence, evidence_hashes, now):
 def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trace=None,
               prior_views=(), prior_memory='', episode_started=None, step_offset=0, submit_guard=None,
               decision_pipeline=None, fact_types=None, record_adapter=None, evidence_journal=False,
-              prior_records=(), prior_evidence=()):
+              prior_records=(), prior_evidence=(), view_scheduler=None):
     directory.mkdir(parents=True,exist_ok=True)
     if model is None:
         model=ModelClient(directory/'model_calls.jsonl')
@@ -125,7 +125,7 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
     evidence_hashes = {item['image_id']: hashlib.sha256(item['data']).hexdigest() for item in view_archive}
     records, seeded = _seed_records(prior_records, prior_evidence, evidence_hashes, time.monotonic())
     seed_scope = backend.scene.get('catalog', {}).get('scene_conditions', {}).get('state_version') if seeded else None
-    instructions = SYSTEM
+    instructions = SYSTEM if view_scheduler is None else view_scheduler.instructions
     if evidence_journal:
         instructions += ("\nUse the bound visual judgments and evidence memory before requesting a new view. "
                          "Keep complementary fields from earlier photos. Avoid repeating an already settled reading. "
@@ -141,6 +141,12 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
     while time.monotonic()-started<timeout:
         step+=1
         image_id='onboard_%04d'%step
+        released = view_scheduler.release() if view_scheduler is not None else []
+        for view in released:
+            evidence_ids.add(view['image_id'])
+            evidence_hashes[view['image_id']] = hashlib.sha256(view['data']).hexdigest()
+            view_archive.append(view)
+            view_history.append({key:value for key,value in view.items() if key!='data'})
         try:
             with (trace.measure('observation',step,image_id=image_id) if trace else nullcontext()):
                 obs,geometry=backend.observe()
@@ -180,7 +186,7 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
                 return distance+(item['yaw']-obs['yaw'])**2
             priorities = {row['evidence_image_id'] for row in records} & {item['photo'] for item in seeded}
             preferred = [item for item in reversed(view_archive) if item['image_id'] in priorities]
-            for candidate in (*preferred,view_archive[0],max(view_archive,key=diversity),view_archive[-1]):
+            for candidate in (*released,*preferred,view_archive[0],max(view_archive,key=diversity),view_archive[-1]):
                 if candidate['image_id'] not in {x['image_id'] for x in image_memory}:
                     image_memory.append(candidate)
                 if len(image_memory) == 3:
@@ -207,7 +213,15 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
         early_feedback = None
         calls_before_decision = model.calls if evidence_journal else None
         try:
-            if decision_pipeline is None:
+            if view_scheduler is not None:
+                decision = view_scheduler.decide(model, payload, images, obs, geometry, step)
+                if view_scheduler.unrestored:
+                    feedback = dict(ok=False, note="Earlier decision discarded after camera return failed. Replan from actual pose.")
+                    event("frozen_action_invalidated", step=step, image_id=image_id)
+                    view_archive.append(dict(image_id=image_id,position=obs['position'],yaw=obs['yaw'],
+                                             capture_ros=obs['ros_stamp'],data=obs['data']))
+                    continue
+            elif decision_pipeline is None:
                 with (trace.measure('model_request',step,image_id=image_id,image_sha256=meta['sha256'])
                       if trace else nullcontext()):
                     decision=model.request(instructions,payload,images)
