@@ -1,0 +1,35 @@
+{
+  "id": "event-compute-dev02",
+  "parent": "concurrent-workflow-dev01",
+  "rationale": "The first fixed-node comparison gave different feasible costs in only two pairs. Test whether the difference survives a stronger two-dispatch prefetch with an economically sensible single-versus-grouped service option and a real time limit. Keep the earlier baseline unchanged.",
+  "cases": [
+    "paired-screen",
+    "relay-inspection",
+    "shared-followup",
+    "permission-gated-transit",
+    "existing-archive",
+    "no-flexibility",
+    "fan-in-scale"
+  ],
+  "scale_roots": [
+    2,
+    4,
+    6
+  ],
+  "service_tables": [
+    "equipment",
+    "campus"
+  ],
+  "slots": [
+    1,
+    2
+  ],
+  "search_budgets_ms": [
+    10,
+    50,
+    150
+  ],
+  "repetitions": 3,
+  "design": "All versions start with the same feasible rollout. The measured online clock begins before building a fresh planner, excluding only Python imports and the scenario's public input. A process alarm returns the last available fully evaluated incumbent. A predeclared always-executable serial default is available at time zero; its expected cost can be assessed after the deadline and does not inform planning. Use the same legal actions, costs, order, fallback hierarchy, cost lower bound and two-dispatch portfolio for generic and continuation-equivalent search. The compute-only experiment runs after timed natural tasks on this host settle. Interleave solver order across repetitions. Report overruns and elapsed percentiles, candidate quality and proven optimality separately; a fractional state expansion is never a result.",
+  "limits": "One host, Python implementation, synthetic public stochastic work orders replaying genuine cost anchors. Both exact when complete. A comparison with equal canonicalization is the same algorithm. No robot, physical duration claim, fresh inference, hidden semantic answer or independent benchmark."
+}

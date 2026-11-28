@@ -126,6 +126,8 @@ def main():
     room_cal=optional("matched-event-rooms-dev01/calibration/summary.json")
     room_live=optional("matched-event-rooms-dev01/live/summary.json")
     room_bounds=optional("matched-event-rooms-dev01/prior_bounds.json")
+    deadline_result=optional("deadline-coalescing-dev01/summary.json")
+    limit_result=optional("event-compute-dev02/summary.json")
     room_workers=[]
     room_slots=0;room_settled=0;room_sends=0
     if (room_base/"live/registration.json").is_file():
@@ -191,12 +193,16 @@ def main():
     if room_slots:
         status+=f"新房屋完整开发任务已结算 {room_settled}/{room_slots}，实发 {room_sends} 次。"
         if room_workers:status+="当前进程 "+", ".join(str(w["pid"])+" "+w["case"]+"/"+w["method"] for w in room_workers)+"。"
+    if room_live:
+        status+=f"独立核验严格通过 {room_live['strict']}/{room_live['registered']}。"
+    if limit_result:
+        status+=f"强化对照在 {limit_result['matched_cells']} 组相同墙钟预算下与通用规划的中位可行成本相同 {limit_result['cost_tied_with_generic']} 组。"
     if unavailable:
         next_step="等待现有 Diff-VLA 套餐显示可用，再从未发送且已登记的位置恢复。"
     elif workers:
         next_step="跟踪正在进行的 "+workers[0]["cohort"]+" 批次，逐一保留原始收据并复核完整评分。"
     elif room_live:
-        next_step="比较相同图片、相同问题下的服务与判断差异，核对完整报告、共享证据与真实动作重叠；检验强化预取对照及有界计算下的剩余优势，并将经过验证的安排接回原版 GPT 的正常决策。"
+        next_step="在原版 GPT 的同一次正常决策中验证，能否由用户原话提出合法的多判断工作单，复用已报告字段，等真实条件回来再合问后续字段。先检验结构和来源，再进入匹配整项。"
     elif room_slots:
         next_step="按已登记的两个公开房屋任务收齐六个对照。相同的工作单、相机与验收让我们检验等待中取证和合问能否缩短整项交付，并量出相同输入的服务波动。"
     elif fv_reg:
@@ -238,6 +244,7 @@ def main():
         event_workflow=event_grid,matched_rooms=dict(calibration=room_cal,prior_bounds=room_bounds,
             scheduled=room_slots,settled=room_settled,sends=room_sends,workers=room_workers,
             graded=None if not room_live else {"strict":room_live["strict"],"registered":room_live["registered"]}),
+        deadline_policy_sensitivity=deadline_result,hard_compute_budget=limit_result,
         first_decision_study=dict(registered=fv_slots,sends=fv_sends,sealed=fv_sealed,pids=fv_pids,
           sealed_file_sha256=digest(first_view/"sealed_replies.json") if fv_sealed else None,receipts=fv_rows,
           replay_entry_present=Path("scripts/continuing_first_view_replay.py").is_file(),replay=fv_replay),

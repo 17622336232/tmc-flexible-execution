@@ -3,7 +3,7 @@
   "stage": "event-driven scheduling of physical evidence and dependent semantic requests",
   "resumed_remote": "94bd1e78953164dce48ec38c8cc15dbd010f2e56",
   "resumed_local": "90f390c8ee332c866f4204dee628d447f8ddab2c",
-  "as_of_utc": "2026-11-28T16:10:56+00:00",
+  "as_of_utc": "2026-11-28T16:28:56+00:00",
   "method_version": {
     "native-views-dev01": "2e8e26cb8f0099bb68d02e5aa1c1e9569423706ec413227f9d9aa7714ffcef2b",
     "native-evidence-dev02": "6c5dab53a9faf9d2de88df4c2d988619c066176423a1223341f30e75b84c2577",
@@ -46,7 +46,7 @@
   "pending_workers": [],
   "account_remaining_requests": null,
   "hardware_motion_authorized": false,
-  "current_hypothesis": "按已登记的两个公开房屋任务收齐六个对照。相同的工作单、相机与验收让我们检验等待中取证和合问能否缩短整项交付，并量出相同输入的服务波动。",
+  "current_hypothesis": "在原版 GPT 的同一次正常决策中验证，能否由用户原话提出合法的多判断工作单，复用已报告字段，等真实条件回来再合问后续字段。先检验结构和来源，再进入匹配整项。",
   "validated": [
     "93 prior sends attributed to six roles",
     "with original requests fixed the nonrequest ceiling is 10.50% on cracks and 5.14% on inventory",
@@ -55,7 +55,7 @@
   "rejected": [
     "fixed conservative OCR has zero detections on 64 sampled historical image/ROI questions; 31 had independently assigned target identity"
   ],
-  "next": "按已登记的两个公开房屋任务收齐六个对照。相同的工作单、相机与验收让我们检验等待中取证和合问能否缩短整项交付，并量出相同输入的服务波动。",
+  "next": "在原版 GPT 的同一次正常决策中验证，能否由用户原话提出合法的多判断工作单，复用已报告字段，等真实条件回来再合问后续字段。先检验结构和来源，再进入匹配整项。",
   "phase": "event-driven scheduling of physical evidence and dependent semantic requests",
   "paired_rgb_assay": {
     "sends": 18,
@@ -78,7 +78,7 @@
     "explicit_roster_mechanism": 0,
     "standalone_first_decisions": 8,
     "matched_room_cost_calibration": 6,
-    "matched_room_tasks": 4
+    "matched_room_tasks": 9
   },
   "closed_external_attempts": [
     {
@@ -1444,15 +1444,280 @@
       "new_model_requests": 0
     },
     "scheduled": 6,
-    "settled": 3,
-    "sends": 4,
-    "workers": [
+    "settled": 6,
+    "sends": 9,
+    "workers": [],
+    "graded": {
+      "strict": 4,
+      "registered": 6
+    }
+  },
+  "deadline_policy_sensitivity": {
+    "scenarios": 18,
+    "changed_first": 1,
+    "expected_restricted_improved": 1,
+    "maximum_expected_gain_s": 1.6421522352430529,
+    "joint_generic_identical_values": 18,
+    "comparisons": [
+      {
+        "case": "two-screens-house-29",
+        "history": "old-single-smoke",
+        "hazard": "no-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1"
+        ]
+      },
+      {
+        "case": "two-screens-house-29",
+        "history": "old-single-smoke",
+        "hazard": "shared-call-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1"
+        ]
+      },
+      {
+        "case": "two-screens-house-29",
+        "history": "old-single-smoke",
+        "hazard": "group-as-two-exposures",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1"
+        ]
+      },
+      {
+        "case": "two-screens-house-29",
+        "history": "site-history",
+        "hazard": "no-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1"
+        ]
+      },
+      {
+        "case": "two-screens-house-29",
+        "history": "site-history",
+        "hazard": "shared-call-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1"
+        ]
+      },
+      {
+        "case": "two-screens-house-29",
+        "history": "site-history",
+        "hazard": "group-as-two-exposures",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1"
+        ]
+      },
+      {
+        "case": "two-screens-house-29",
+        "history": "other-site-history",
+        "hazard": "no-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1"
+        ]
+      },
+      {
+        "case": "two-screens-house-29",
+        "history": "other-site-history",
+        "hazard": "shared-call-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1"
+        ]
+      },
+      {
+        "case": "two-screens-house-29",
+        "history": "other-site-history",
+        "hazard": "group-as-two-exposures",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1"
+        ]
+      },
       {
         "case": "crossed-screens-house-56",
-        "method": "strong-prefetch",
-        "pid": 3866453
+        "history": "old-single-smoke",
+        "hazard": "no-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1",
+          "q3"
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "history": "old-single-smoke",
+        "hazard": "shared-call-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1",
+          "q3"
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "history": "old-single-smoke",
+        "hazard": "group-as-two-exposures",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1",
+          "q3"
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "history": "site-history",
+        "hazard": "no-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1",
+          "q3"
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "history": "site-history",
+        "hazard": "shared-call-hazard",
+        "changed_first": true,
+        "expected_restricted_gain_s": 1.6421522352430529,
+        "expected_delivery_gain": 0.008023485725308643,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1",
+          "q3"
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "history": "site-history",
+        "hazard": "group-as-two-exposures",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1",
+          "q3"
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "history": "other-site-history",
+        "hazard": "no-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1",
+          "q3"
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "history": "other-site-history",
+        "hazard": "shared-call-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1",
+          "q3"
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "history": "other-site-history",
+        "hazard": "group-as-two-exposures",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1",
+          "q3"
+        ]
       }
     ],
-    "graded": null
+    "actual_model_requests": 0,
+    "note": "All costs and probabilities are model-based sensitivity results. The two timeout rates for a two-question one-image call are not estimates from an adequate sample. Previously measured motion at a specific site is available on revisits only."
+  },
+  "hard_compute_budget": {
+    "trials": 972,
+    "matched_cells": 108,
+    "cost_improved_against_generic": 0,
+    "cost_tied_with_generic": 108,
+    "cost_worse_than_generic": 0,
+    "improved_against_strong": 3,
+    "worse_than_strong": 0,
+    "more_certificates_than_generic": 3,
+    "fewer_certificates_than_generic": 0,
+    "max_observed_overrun_ms": 15.952070034109056,
+    "median_observed_overrun_ms": 0.0,
+    "zero_request": true
   }
 }

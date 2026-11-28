@@ -3761,6 +3761,899 @@
     ],
     "new_model_requests": 0
   },
+  "matched_room_live_tasks": {
+    "role": "matched complete development simulator tasks",
+    "cases": [
+      {
+        "case": "two-screens-house-29",
+        "method": "serial",
+        "strict": true,
+        "task_s": 17.16195181600051,
+        "restricted_s": 17.16195181600051,
+        "startup_s": 13.182596029015258,
+        "actual_sends": 1,
+        "source_and_permissions_verified": true,
+        "missing_scores": [],
+        "expected_fields": {
+          "q0": {
+            "value": "negative",
+            "source": "front",
+            "sha256": "d67676cb9b082e499102b0362d04e9c2be0679157faf52ffe07958bf39b99fe0"
+          },
+          "q1": {
+            "value": "negative",
+            "source": "front",
+            "sha256": "d67676cb9b082e499102b0362d04e9c2be0679157faf52ffe07958bf39b99fe0"
+          }
+        },
+        "report": {
+          "fields": {
+            "q0": {
+              "value": "negative",
+              "source": "front",
+              "sha256": "d67676cb9b082e499102b0362d04e9c2be0679157faf52ffe07958bf39b99fe0"
+            },
+            "q1": {
+              "value": "negative",
+              "source": "front",
+              "sha256": "d67676cb9b082e499102b0362d04e9c2be0679157faf52ffe07958bf39b99fe0"
+            }
+          },
+          "ended_at": "front",
+          "final_pose_checked": true,
+          "source_digests": {
+            "front": "d67676cb9b082e499102b0362d04e9c2be0679157faf52ffe07958bf39b99fe0"
+          }
+        },
+        "failure": null,
+        "return_without_submission": false,
+        "bindings": [
+          {
+            "input_sha256": "29fe89c2aa641ad38f73440f03ff080e1858c9ff4963301f70e31f25cf5c843c",
+            "questions": [
+              "q0",
+              "q1"
+            ],
+            "service_s": 17.141662963025738,
+            "output": {
+              "q0": "negative",
+              "q1": "negative"
+            },
+            "clock": [
+              430712.653566628,
+              430729.795229591
+            ]
+          }
+        ],
+        "model_service_s": 17.141662963025738,
+        "real_motion_or_shutter_overlap_s": 0,
+        "serialized_fixed_outputs_preserving_idle_s": 17.16195181600051,
+        "planner_cpu_wall_s": 0.002727970015257597,
+        "result_sha256": "5ef7915ab434098903641a5e3e9591714c06eb57c57f3d8f0aedca977453360a"
+      },
+      {
+        "case": "two-screens-house-29",
+        "method": "joint",
+        "strict": false,
+        "task_s": 120.01547343400307,
+        "restricted_s": 240.0,
+        "startup_s": 10.98768486699555,
+        "actual_sends": 1,
+        "source_and_permissions_verified": true,
+        "missing_scores": [],
+        "expected_fields": {
+          "q0": {
+            "value": "negative",
+            "source": "front",
+            "sha256": "14a93c1f4f281ce8fd808fc52599b7546ff6cf6ef2560240b914a9c2e09e050b"
+          },
+          "q1": {
+            "value": "negative",
+            "source": "front",
+            "sha256": "14a93c1f4f281ce8fd808fc52599b7546ff6cf6ef2560240b914a9c2e09e050b"
+          }
+        },
+        "report": {},
+        "failure": {
+          "code": "timeout",
+          "detail": "Responses 请求超过总时限，未采纳任何部分结果。"
+        },
+        "return_without_submission": true,
+        "bindings": [
+          {
+            "input_sha256": "180a5db757a81e77d0e08d1d115dc1264dd57d4b941ea97e9f96f0c3b84a0087",
+            "questions": [
+              "q0",
+              "q1"
+            ],
+            "service_s": 119.9919163120212,
+            "output": null,
+            "clock": [
+              430741.172366125,
+              430861.164282437
+            ]
+          }
+        ],
+        "model_service_s": 119.9919163120212,
+        "real_motion_or_shutter_overlap_s": 6.2227285370463505,
+        "serialized_fixed_outputs_preserving_idle_s": 126.23820197104942,
+        "planner_cpu_wall_s": 0.008290993049740791,
+        "result_sha256": "b3018c6b910fccf86d67493f4015319909b9037e67498badad673bdb7cf873cc"
+      },
+      {
+        "case": "two-screens-house-29",
+        "method": "strong-prefetch",
+        "strict": true,
+        "task_s": 26.337000379979145,
+        "restricted_s": 26.337000379979145,
+        "startup_s": 10.530444097006693,
+        "actual_sends": 1,
+        "source_and_permissions_verified": true,
+        "missing_scores": [],
+        "expected_fields": {
+          "q0": {
+            "value": "negative",
+            "source": "front",
+            "sha256": "14a93c1f4f281ce8fd808fc52599b7546ff6cf6ef2560240b914a9c2e09e050b"
+          },
+          "q1": {
+            "value": "negative",
+            "source": "front",
+            "sha256": "14a93c1f4f281ce8fd808fc52599b7546ff6cf6ef2560240b914a9c2e09e050b"
+          }
+        },
+        "report": {
+          "fields": {
+            "q0": {
+              "value": "negative",
+              "source": "front",
+              "sha256": "14a93c1f4f281ce8fd808fc52599b7546ff6cf6ef2560240b914a9c2e09e050b"
+            },
+            "q1": {
+              "value": "negative",
+              "source": "front",
+              "sha256": "14a93c1f4f281ce8fd808fc52599b7546ff6cf6ef2560240b914a9c2e09e050b"
+            }
+          },
+          "ended_at": "front",
+          "final_pose_checked": true,
+          "source_digests": {
+            "front": "14a93c1f4f281ce8fd808fc52599b7546ff6cf6ef2560240b914a9c2e09e050b",
+            "side": "395704d93d4d0963f2d882c284e93ed67213665dcfd46819fc10156e1bcc4ec9"
+          }
+        },
+        "failure": null,
+        "return_without_submission": false,
+        "bindings": [
+          {
+            "input_sha256": "180a5db757a81e77d0e08d1d115dc1264dd57d4b941ea97e9f96f0c3b84a0087",
+            "questions": [
+              "q0",
+              "q1"
+            ],
+            "service_s": 26.31886093900539,
+            "output": {
+              "q0": "negative",
+              "q1": "negative"
+            },
+            "clock": [
+              430872.066400652,
+              430898.385261591
+            ]
+          }
+        ],
+        "model_service_s": 26.31886093900539,
+        "real_motion_or_shutter_overlap_s": 4.970519807946403,
+        "serialized_fixed_outputs_preserving_idle_s": 31.307520187925547,
+        "planner_cpu_wall_s": 0.006951142044272274,
+        "result_sha256": "69495ffba642edd879ada7ddfd533326f256acebdfa4bb88409777ecd0ce59ee"
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "method": "strong-prefetch",
+        "strict": false,
+        "task_s": 120.01182738598436,
+        "restricted_s": 240.0,
+        "startup_s": 8.206195659004152,
+        "actual_sends": 1,
+        "source_and_permissions_verified": true,
+        "missing_scores": [],
+        "expected_fields": {
+          "q0": {
+            "value": "negative",
+            "source": "front",
+            "sha256": "65985d86b2c90d022db53cf5425ebe61a904fbb89c06212c0a20fb96c1440136"
+          },
+          "q1": {
+            "value": "positive",
+            "source": "side",
+            "sha256": "c607323d8c710684d43536ceddffdda773ddea1cd5df5f381b7a4372ca6ceacc"
+          },
+          "q3": {
+            "value": "negative",
+            "source": "front",
+            "sha256": "65985d86b2c90d022db53cf5425ebe61a904fbb89c06212c0a20fb96c1440136"
+          }
+        },
+        "report": {},
+        "failure": {
+          "code": "timeout",
+          "detail": "Responses 请求超过总时限，未采纳任何部分结果。"
+        },
+        "return_without_submission": true,
+        "bindings": [
+          {
+            "input_sha256": "cff3acf106288cff5f28dc7f9a0b82ce92ef4a85e31e55d8061698753c1317c9",
+            "questions": [
+              "q0"
+            ],
+            "service_s": 119.9910889909952,
+            "output": null,
+            "clock": [
+              430906.99282409,
+              431026.983913081
+            ]
+          }
+        ],
+        "model_service_s": 119.9910889909952,
+        "real_motion_or_shutter_overlap_s": 0.19647384801646695,
+        "serialized_fixed_outputs_preserving_idle_s": 120.20830123400083,
+        "planner_cpu_wall_s": 0.0031204689876176417,
+        "result_sha256": "876a95948bd800e68dfd127d9323c3186f40b4f57561707c220a721ce7c2ac4e"
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "method": "joint",
+        "strict": true,
+        "task_s": 10.589294903038535,
+        "restricted_s": 10.589294903038535,
+        "startup_s": 8.122904343996197,
+        "actual_sends": 3,
+        "source_and_permissions_verified": true,
+        "missing_scores": [],
+        "expected_fields": {
+          "q0": {
+            "value": "negative",
+            "source": "front",
+            "sha256": "65985d86b2c90d022db53cf5425ebe61a904fbb89c06212c0a20fb96c1440136"
+          },
+          "q1": {
+            "value": "positive",
+            "source": "side",
+            "sha256": "c607323d8c710684d43536ceddffdda773ddea1cd5df5f381b7a4372ca6ceacc"
+          },
+          "q3": {
+            "value": "negative",
+            "source": "front",
+            "sha256": "65985d86b2c90d022db53cf5425ebe61a904fbb89c06212c0a20fb96c1440136"
+          }
+        },
+        "report": {
+          "fields": {
+            "q0": {
+              "value": "negative",
+              "source": "front",
+              "sha256": "65985d86b2c90d022db53cf5425ebe61a904fbb89c06212c0a20fb96c1440136"
+            },
+            "q1": {
+              "value": "positive",
+              "source": "side",
+              "sha256": "c607323d8c710684d43536ceddffdda773ddea1cd5df5f381b7a4372ca6ceacc"
+            },
+            "q3": {
+              "value": "negative",
+              "source": "front",
+              "sha256": "65985d86b2c90d022db53cf5425ebe61a904fbb89c06212c0a20fb96c1440136"
+            }
+          },
+          "ended_at": "side",
+          "final_pose_checked": true,
+          "source_digests": {
+            "front": "65985d86b2c90d022db53cf5425ebe61a904fbb89c06212c0a20fb96c1440136",
+            "side": "c607323d8c710684d43536ceddffdda773ddea1cd5df5f381b7a4372ca6ceacc"
+          }
+        },
+        "failure": null,
+        "return_without_submission": false,
+        "bindings": [
+          {
+            "input_sha256": "cff3acf106288cff5f28dc7f9a0b82ce92ef4a85e31e55d8061698753c1317c9",
+            "questions": [
+              "q0"
+            ],
+            "service_s": 3.6330978730111383,
+            "output": {
+              "q0": "negative"
+            },
+            "clock": [
+              431035.527154595,
+              431039.160252468
+            ]
+          },
+          {
+            "input_sha256": "cbb22fe4d3a8f9b4212be7c2b511596c9906d632b2cd444d4343483ecb940859",
+            "questions": [
+              "q1"
+            ],
+            "service_s": 3.5079601159668528,
+            "output": {
+              "q1": "positive"
+            },
+            "clock": [
+              431039.169915807,
+              431042.677875923
+            ]
+          },
+          {
+            "input_sha256": "d73424803cb5a6d37401518ccff6021fea4568fb0aaed1f06aca672ded6507d8",
+            "questions": [
+              "q3"
+            ],
+            "service_s": 3.405493784986902,
+            "output": {
+              "q3": "negative"
+            },
+            "clock": [
+              431042.688880992,
+              431046.094374777
+            ]
+          }
+        ],
+        "model_service_s": 10.546551773964893,
+        "real_motion_or_shutter_overlap_s": 0.19821343693183735,
+        "serialized_fixed_outputs_preserving_idle_s": 10.787508339970373,
+        "planner_cpu_wall_s": 0.004325288929976523,
+        "result_sha256": "c665fb10aea986b61d259e8ac8cbcb7be9695e83588c8557dee3a3012b61b6ad"
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "method": "serial",
+        "strict": true,
+        "task_s": 7.453061142005026,
+        "restricted_s": 7.453061142005026,
+        "startup_s": 8.380045156984124,
+        "actual_sends": 2,
+        "source_and_permissions_verified": true,
+        "missing_scores": [],
+        "expected_fields": {
+          "q0": {
+            "value": "negative",
+            "source": "front",
+            "sha256": "65985d86b2c90d022db53cf5425ebe61a904fbb89c06212c0a20fb96c1440136"
+          },
+          "q1": {
+            "value": "positive",
+            "source": "side",
+            "sha256": "c607323d8c710684d43536ceddffdda773ddea1cd5df5f381b7a4372ca6ceacc"
+          },
+          "q3": {
+            "value": "negative",
+            "source": "front",
+            "sha256": "65985d86b2c90d022db53cf5425ebe61a904fbb89c06212c0a20fb96c1440136"
+          }
+        },
+        "report": {
+          "fields": {
+            "q0": {
+              "value": "negative",
+              "source": "front",
+              "sha256": "65985d86b2c90d022db53cf5425ebe61a904fbb89c06212c0a20fb96c1440136"
+            },
+            "q1": {
+              "value": "positive",
+              "source": "side",
+              "sha256": "c607323d8c710684d43536ceddffdda773ddea1cd5df5f381b7a4372ca6ceacc"
+            },
+            "q3": {
+              "value": "negative",
+              "source": "front",
+              "sha256": "65985d86b2c90d022db53cf5425ebe61a904fbb89c06212c0a20fb96c1440136"
+            }
+          },
+          "ended_at": "side",
+          "final_pose_checked": true,
+          "source_digests": {
+            "front": "65985d86b2c90d022db53cf5425ebe61a904fbb89c06212c0a20fb96c1440136",
+            "side": "c607323d8c710684d43536ceddffdda773ddea1cd5df5f381b7a4372ca6ceacc"
+          }
+        },
+        "failure": null,
+        "return_without_submission": false,
+        "bindings": [
+          {
+            "input_sha256": "cbb22fe4d3a8f9b4212be7c2b511596c9906d632b2cd444d4343483ecb940859",
+            "questions": [
+              "q1"
+            ],
+            "service_s": 3.142205942014698,
+            "output": {
+              "q1": "positive"
+            },
+            "clock": [
+              431055.145765888,
+              431058.28797183
+            ]
+          },
+          {
+            "input_sha256": "97777870d0f2595c80559a4a2f5a28a12eb3cae94f911f2065326c5822796cd4",
+            "questions": [
+              "q0",
+              "q3"
+            ],
+            "service_s": 4.06729350797832,
+            "output": {
+              "q0": "negative",
+              "q3": "negative"
+            },
+            "clock": [
+              431058.298324654,
+              431062.365618162
+            ]
+          }
+        ],
+        "model_service_s": 7.209499449993018,
+        "real_motion_or_shutter_overlap_s": 0,
+        "serialized_fixed_outputs_preserving_idle_s": 7.453061142005026,
+        "planner_cpu_wall_s": 0.005006846040487289,
+        "result_sha256": "c361a547821e517c12e69f3d73b956d97db410a7571cf495a1595dc1ea0ae8d4"
+      }
+    ],
+    "identical_request_bindings": [
+      {
+        "case": "two-screens-house-29",
+        "input_sha256": "180a5db757a81e77d0e08d1d115dc1264dd57d4b941ea97e9f96f0c3b84a0087",
+        "observations": [
+          {
+            "method": "joint",
+            "service_s": 119.9919163120212,
+            "output": null
+          },
+          {
+            "method": "strong-prefetch",
+            "service_s": 26.31886093900539,
+            "output": {
+              "q0": "negative",
+              "q1": "negative"
+            }
+          }
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "input_sha256": "cff3acf106288cff5f28dc7f9a0b82ce92ef4a85e31e55d8061698753c1317c9",
+        "observations": [
+          {
+            "method": "strong-prefetch",
+            "service_s": 119.9910889909952,
+            "output": null
+          },
+          {
+            "method": "joint",
+            "service_s": 3.6330978730111383,
+            "output": {
+              "q0": "negative"
+            }
+          }
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "input_sha256": "cbb22fe4d3a8f9b4212be7c2b511596c9906d632b2cd444d4343483ecb940859",
+        "observations": [
+          {
+            "method": "joint",
+            "service_s": 3.5079601159668528,
+            "output": {
+              "q1": "positive"
+            }
+          },
+          {
+            "method": "serial",
+            "service_s": 3.142205942014698,
+            "output": {
+              "q1": "positive"
+            }
+          }
+        ]
+      }
+    ],
+    "registered": 6,
+    "strict": 4,
+    "actual_sends": 9,
+    "source": "c4ff7372ad5acb29e1dd608bfeda365c806e0aac39c019fca7fd87a06ba9dd0f"
+  },
+  "matched_room_same_source_break_even": {
+    "registered_live_sha256": "c4ff7372ad5acb29e1dd608bfeda365c806e0aac39c019fca7fd87a06ba9dd0f",
+    "identical_request_replications": [
+      {
+        "case": "two-screens-house-29",
+        "input_sha256": "180a5db757a81e77d0e08d1d115dc1264dd57d4b941ea97e9f96f0c3b84a0087",
+        "count": 2,
+        "result_available": 1,
+        "minimum_observed_s": 26.31886093900539,
+        "maximum_observed_s": 119.9919163120212,
+        "has_censored": true
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "input_sha256": "cff3acf106288cff5f28dc7f9a0b82ce92ef4a85e31e55d8061698753c1317c9",
+        "count": 2,
+        "result_available": 1,
+        "minimum_observed_s": 3.6330978730111383,
+        "maximum_observed_s": 119.9910889909952,
+        "has_censored": true
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "input_sha256": "cbb22fe4d3a8f9b4212be7c2b511596c9906d632b2cd444d4343483ecb940859",
+        "count": 2,
+        "result_available": 2,
+        "minimum_observed_s": 3.142205942014698,
+        "maximum_observed_s": 3.5079601159668528,
+        "has_censored": false
+      }
+    ],
+    "new_model_requests": 0,
+    "calibration_single_s": 3.778669441497186,
+    "calibration_double_s": 6.631247840530705,
+    "paired_completed_case": "crossed-screens-house-56",
+    "identical_front_and_side_hashes": true,
+    "actual_front_two_single_service_s": 7.03859165799804,
+    "actual_joint_front_service_s": 4.06729350797832,
+    "same_observed_answers": true,
+    "saved_front_service_s": 2.97129815001972,
+    "actual_whole_side_first_minus_front_first_s": -3.136233761033509,
+    "old_planner_outward_and_shutter_s": 2.8810099049296696,
+    "predicted_side_first_gain_on_observed_branch_at_old_cost_s": -1.9549188624660019,
+    "positive_threshold_trip_s": 0.9260910424636677,
+    "observed_task_trips": [
+      {
+        "method": "strong-prefetch",
+        "measured_transit_and_capture_s": 0.20851503603626043,
+        "predicted_side_first_gain_on_observed_branch_s": 0.7175760064274073
+      },
+      {
+        "method": "joint",
+        "measured_transit_and_capture_s": 0.20927380601642653,
+        "predicted_side_first_gain_on_observed_branch_s": 0.7168172364472412
+      },
+      {
+        "method": "serial",
+        "measured_transit_and_capture_s": 0.2104719629860483,
+        "predicted_side_first_gain_on_observed_branch_s": 0.7156190794776194
+      }
+    ],
+    "prior_same_house": {
+      "n": 3,
+      "median_s": 0.23478506099490914,
+      "below_threshold": 3
+    },
+    "prior_other_houses": {
+      "n": 10,
+      "median_s": 2.840122755500488,
+      "below_threshold": 0
+    },
+    "formula": "For the observed branch front-negative and side-positive, both views fixed and finish at side: front-first costs max(s,t)+2s; side-first costs t+s+b. Terms are equal singleton s, actual side transit with capture t, and paired request b. Numeric calibration implies b>s; side-first wins for t<2s-b. Field outcomes were unavailable to the controller; this is path-specific and excludes startup, controller overhead and timeout.",
+    "reliability": "If independent caller-level failure rates are h1 for a single and h2 for a grouped call, this particular two-call plan is more likely to deliver than three singles when h2 < 1-(1-h1)^2. No failure probabilities are inferred from the two exact-input timeout pairs."
+  },
+  "stronger_equal_wall_clock_comparison": {
+    "trials": 972,
+    "matched_cells": 108,
+    "cost_improved_against_generic": 0,
+    "cost_tied_with_generic": 108,
+    "cost_worse_than_generic": 0,
+    "improved_against_strong": 3,
+    "worse_than_strong": 0,
+    "more_certificates_than_generic": 3,
+    "fewer_certificates_than_generic": 0,
+    "max_observed_overrun_ms": 15.952070034109056,
+    "median_observed_overrun_ms": 0.0,
+    "zero_request": true
+  },
+  "native_semantic_frontier": {
+    "all": {
+      "ordinary_requests": 168,
+      "valid_replies": 163,
+      "new_source_bound_primary_facts": 80,
+      "turns_already_combining_new_fields_on_same_photo": 11,
+      "newly_cited_facts_on_earlier_supplied_photos": 8,
+      "nonmotion_candidate_turns": 0,
+      "service_on_candidates_s": 0
+    },
+    "original": {
+      "ordinary_requests": 34,
+      "valid_replies": 32,
+      "new_source_bound_primary_facts": 14,
+      "turns_already_combining_new_fields_on_same_photo": 2,
+      "newly_cited_facts_on_earlier_supplied_photos": 4,
+      "nonmotion_candidate_turns": 0,
+      "service_on_candidates_s": 0
+    },
+    "by_cohort": {
+      "native-views-dev01": {
+        "ordinary_requests": 67,
+        "valid_replies": 67,
+        "new_source_bound_primary_facts": 22,
+        "turns_already_combining_new_fields_on_same_photo": 1,
+        "newly_cited_facts_on_earlier_supplied_photos": 2,
+        "nonmotion_candidate_turns": 0,
+        "service_on_candidates_s": 0
+      },
+      "native-evidence-dev02": {
+        "ordinary_requests": 57,
+        "valid_replies": 54,
+        "new_source_bound_primary_facts": 40,
+        "turns_already_combining_new_fields_on_same_photo": 9,
+        "newly_cited_facts_on_earlier_supplied_photos": 2,
+        "nonmotion_candidate_turns": 0,
+        "service_on_candidates_s": 0
+      },
+      "coordinated-handoff-dev03": {
+        "ordinary_requests": 44,
+        "valid_replies": 42,
+        "new_source_bound_primary_facts": 18,
+        "turns_already_combining_new_fields_on_same_photo": 1,
+        "newly_cited_facts_on_earlier_supplied_photos": 4,
+        "nonmotion_candidate_turns": 0,
+        "service_on_candidates_s": 0
+      }
+    },
+    "criterion": "Only genuine in-input source hashes and correctly typed primary predicates are counted; counting a later observed fact is not proof the same answer was obtainable earlier. Candidate-only durations cannot be counted as task savings. Exact source-claim triples repeated in a later report count once per trajectory. No simulator labels or extra requests."
+  },
+  "deadline_sensitive_workflow": {
+    "scenarios": 18,
+    "changed_first": 1,
+    "expected_restricted_improved": 1,
+    "maximum_expected_gain_s": 1.6421522352430529,
+    "joint_generic_identical_values": 18,
+    "comparisons": [
+      {
+        "case": "two-screens-house-29",
+        "history": "old-single-smoke",
+        "hazard": "no-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1"
+        ]
+      },
+      {
+        "case": "two-screens-house-29",
+        "history": "old-single-smoke",
+        "hazard": "shared-call-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1"
+        ]
+      },
+      {
+        "case": "two-screens-house-29",
+        "history": "old-single-smoke",
+        "hazard": "group-as-two-exposures",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1"
+        ]
+      },
+      {
+        "case": "two-screens-house-29",
+        "history": "site-history",
+        "hazard": "no-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1"
+        ]
+      },
+      {
+        "case": "two-screens-house-29",
+        "history": "site-history",
+        "hazard": "shared-call-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1"
+        ]
+      },
+      {
+        "case": "two-screens-house-29",
+        "history": "site-history",
+        "hazard": "group-as-two-exposures",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1"
+        ]
+      },
+      {
+        "case": "two-screens-house-29",
+        "history": "other-site-history",
+        "hazard": "no-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1"
+        ]
+      },
+      {
+        "case": "two-screens-house-29",
+        "history": "other-site-history",
+        "hazard": "shared-call-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1"
+        ]
+      },
+      {
+        "case": "two-screens-house-29",
+        "history": "other-site-history",
+        "hazard": "group-as-two-exposures",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1"
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "history": "old-single-smoke",
+        "hazard": "no-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1",
+          "q3"
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "history": "old-single-smoke",
+        "hazard": "shared-call-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1",
+          "q3"
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "history": "old-single-smoke",
+        "hazard": "group-as-two-exposures",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1",
+          "q3"
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "history": "site-history",
+        "hazard": "no-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1",
+          "q3"
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "history": "site-history",
+        "hazard": "shared-call-hazard",
+        "changed_first": true,
+        "expected_restricted_gain_s": 1.6421522352430529,
+        "expected_delivery_gain": 0.008023485725308643,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1",
+          "q3"
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "history": "site-history",
+        "hazard": "group-as-two-exposures",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1",
+          "q3"
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "history": "other-site-history",
+        "hazard": "no-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1",
+          "q3"
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "history": "other-site-history",
+        "hazard": "shared-call-hazard",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1",
+          "q3"
+        ]
+      },
+      {
+        "case": "crossed-screens-house-56",
+        "history": "other-site-history",
+        "hazard": "group-as-two-exposures",
+        "changed_first": false,
+        "expected_restricted_gain_s": 0.0,
+        "expected_delivery_gain": 0.0,
+        "two_dispatch_gap_s": 0.0,
+        "observed_active_fields": [
+          "q0",
+          "q1",
+          "q3"
+        ]
+      }
+    ],
+    "actual_model_requests": 0,
+    "note": "All costs and probabilities are model-based sensitivity results. The two timeout rates for a two-question one-image call are not estimates from an adequate sample. Previously measured motion at a specific site is available on revisits only."
+  },
   "fixed_transport_critical_path": {
     "scored": 16,
     "paired_strict_device_tasks": [
