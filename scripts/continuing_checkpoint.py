@@ -131,12 +131,20 @@ def main():
     ordinary_section=optional("native-section-dev01/proposal_summary.json")
     ordinary_binding=optional("native-action-binding-dev01/summary.json")
     acquisition_clocks=optional("native-acquisition-clocks-dev01/summary.json")
+    clock_audit=optional("online-cost-dev01/clock_audit.json")
+    cost_replay=optional("online-cost-dev01/summary.json")
+    cross_source=optional("cross-source-assay-dev02/summary.json")
+    natural_probe=optional("native-natural-frontier-dev01/summary.json")
+    permission_cache=optional("online-cost-dev01/permission-cache/summary.json")
+    permission_wall=optional("online-cost-dev01/permission-cache/wall/summary.json")
     section_ledger=local/"native-section-dev01/sends.jsonl"
     section_sends=len(section_ledger.read_bytes().splitlines()) if section_ledger.is_file() else 0
     ordinary_workers=[]
     ordinary_scripts={
         b"continuing_native_section_study.py":(b"run",),
         b"continuing_native_acquisition_clocks.py":(b"run",b"worker"),
+        b"continuing_cross_source_assay.py":(b"run",),
+        b"continuing_natural_frontier_probe.py":(b"run",),
     }
     for proc in Path("/proc").glob("[0-9]*/cmdline"):
         try:
@@ -227,12 +235,29 @@ def main():
         cases=acquisition_clocks["cases"]
         completed=sum(len(case["phases"])==2 for case in cases)
         status+=f"两站转向时钟校准完成 {len(cases)} 次尝试，其中往返均到位 {completed}/{len(cases)}，新增模型请求为零。"
+    if clock_audit:
+        parts=clock_audit["components_s"]
+        status+=(f"房屋56联合版整项慢 {clock_audit['joint_minus_serial_s']:.2f} 秒，"
+                 f"增加 {parts['model_on_path_s']:.2f} 秒串行服务时间，少占 {-parts['physical_exposed_s']:.2f} 秒动作时间。")
+    if cross_source:
+        status+=(f"固定原图的跨图合问标定实发 {cross_source['actual_sends']}/6 次，"
+                 f"整对答对合问 {cross_source['both_correct_joint']}/2、逐问 {cross_source['both_correct_separate']}/2。")
+    if natural_probe:
+        accepted=sum(r["ready_for_new_closed_loop"] for r in natural_probe["rows"])
+        status+=f"无编号任务用原版提示实发 {natural_probe['closed']}/2 次，{accepted}/2 达到预先登记的接入条件。"
+    if permission_wall:
+        status+=(f"新跨图事件模型完成 {permission_wall['trials']} 次等墙钟规划，"
+                 f"合并版对通用规划更快的可行任务方案出现在 {permission_wall['residual_better']}/{permission_wall['cells']} 组。")
     if ordinary_workers:
         status+="当前首轮答复或动作测量进程 "+", ".join(str(w["pid"]) for w in ordinary_workers)+"。"
     if unavailable:
         next_step="等待现有 Diff-VLA 套餐显示可用，再从未发送且已登记的位置恢复。"
     elif workers:
         next_step="跟踪正在进行的 "+workers[0]["cohort"]+" 批次，逐一保留原始收据并复核完整评分。"
+    elif natural_probe and cost_replay:
+        next_step=("为实际闭环准备一项新的无编号自然任务。以独立来源、实际返回的字段和测得的动作代价为输入，"
+                   "先检查现有证据能否让跨图合问在合理的服务波动下少一轮串行请求。"
+                   "原版、共用优化串行和强预取同时获得相同的材料许可、时钟和合问能力。")
     elif acquisition_clocks:
         next_step=("用已封存的模型和动作时钟，比较先发问并同步取证，与先拿齐两张已许可原图再合问。"
                    "逐条检查真实结果回来前可以回答哪些问题，并列出原版 GPT、优化串行和强预取的请求轮数与时间下界。"
@@ -263,6 +288,8 @@ def main():
         stage="event-driven scheduling of physical evidence and dependent semantic requests"
     if ordinary_binding:
         stage="native controller source binding and legal multi-view request scheduling"
+    if cost_replay:
+        stage="causal timing, cross-camera batch calibration and native task discovery"
     execution_state=requested_state or doc.get("execution_state","active")
     if execution_state=="paused":
         if workers or fv_pids or room_workers or ordinary_workers:
@@ -289,6 +316,10 @@ def main():
         deadline_policy_sensitivity=deadline_result,hard_compute_budget=limit_result,
         native_ordinary_frontier=dict(proposals=ordinary_section,binding=ordinary_binding,
                                       acquisition_clocks=acquisition_clocks,workers=ordinary_workers),
+        adaptive_cost_development=dict(clock=clock_audit,cross_source_calibration=cross_source,
+            native_natural=natural_probe,cost_scenarios=cost_replay.get("comparisons",0),
+            node_budget={k:v for k,v in permission_cache.items() if k!="rows"},
+            wall_budget={k:v for k,v in permission_wall.items() if k!="comparisons"}),
         first_decision_study=dict(registered=fv_slots,sends=fv_sends,sealed=fv_sealed,pids=fv_pids,
           sealed_file_sha256=digest(first_view/"sealed_replies.json") if fv_sealed else None,receipts=fv_rows,
           replay_entry_present=Path("scripts/continuing_first_view_replay.py").is_file(),replay=fv_replay),
@@ -302,7 +333,9 @@ def main():
           continued_native_development=totals,archived_rgb_assay=assay_sends,one_image_regions=regional_sends,
           explicit_roster_mechanism=scoped_sends,standalone_first_decisions=fv_sends,
           matched_room_cost_calibration=room_cal.get("actual_sends",0),matched_room_tasks=room_sends,
-          ordinary_section_first_decisions=section_sends),
+          ordinary_section_first_decisions=section_sends,
+          cross_source_calibration=cross_source.get("actual_sends",0),
+          natural_ordinary_gate=natural_probe.get("closed",0)),
         next=next_step)
     save(Path("RESEARCH_STATE.json"),doc)
     tally="；".join(f"{k} 主对照 {v['primary']}/{planned_counts[k]['primary']}、强对照 {v['comparators']}/{planned_counts[k]['comparators']}" for k,v in cohorts.items())
@@ -332,6 +365,8 @@ def main():
         recovery+="主线的零请求复核命令是 `scripts/continuing_v3_attribution.py`、`scripts/continuing_concurrent_workflow.py summary`。运行 `scripts/continuing_matched_event_rooms.py status` 可核对正式登记的六个开发位置。"
     if ordinary_binding:
         recovery+="可用 `python scripts/continuing_native_action_binding.py grade` 核验四份封存答复，用 `python scripts/continuing_native_acquisition_clocks.py summary` 核对两条实测记录。两条命令均为零新增模型请求。"
+    if cost_replay:
+        recovery+="签出当前版本后运行 `python scripts/continuing_room_clock_replay.py`、`python scripts/continuing_online_cost_replay.py`。使用 `python scripts/continuing_cross_source_assay.py grade` 和 `python scripts/continuing_natural_frontier_probe.py grade` 复核真实回复。这四个命令均不发送请求。"
     upsert(Path("NEXT_ACTION.md"),"## 最近一次恢复位置",stat+"\n\n"+next_step+"\n\n"+recovery)
     manuscript=Path("docs/DEVELOPMENT_EVIDENCE_CN.md")
     if manuscript.exists():

@@ -1,9 +1,9 @@
 {
   "status": "RESEARCH_IN_PROGRESS",
-  "stage": "native controller source binding and legal multi-view request scheduling",
+  "stage": "causal timing, cross-camera batch calibration and native task discovery",
   "resumed_remote": "94bd1e78953164dce48ec38c8cc15dbd010f2e56",
   "resumed_local": "90f390c8ee332c866f4204dee628d447f8ddab2c",
-  "as_of_utc": "2026-11-28T16:50:27+00:00",
+  "as_of_utc": "2026-11-28T17:15:34+00:00",
   "method_version": {
     "native-views-dev01": "2e8e26cb8f0099bb68d02e5aa1c1e9569423706ec413227f9d9aa7714ffcef2b",
     "native-evidence-dev02": "6c5dab53a9faf9d2de88df4c2d988619c066176423a1223341f30e75b84c2577",
@@ -46,7 +46,7 @@
   "pending_workers": [],
   "account_remaining_requests": null,
   "hardware_motion_authorized": false,
-  "current_hypothesis": "用已封存的模型和动作时钟，比较先发问并同步取证，与先拿齐两张已许可原图再合问。逐条检查真实结果回来前可以回答哪些问题，并列出原版 GPT、优化串行和强预取的请求轮数与时间下界。这能判断联合安排是否少掉一轮串行推理。地图拒绝的两条动作保留原始失败，回位收益目前缺少完整路径时钟。",
+  "current_hypothesis": "为实际闭环准备一项新的无编号自然任务。以独立来源、实际返回的字段和测得的动作代价为输入，先检查现有证据能否让跨图合问在合理的服务波动下少一轮串行请求。原版、共用优化串行和强预取同时获得相同的材料许可、时钟和合问能力。",
   "validated": [
     "93 prior sends attributed to six roles",
     "with original requests fixed the nonrequest ceiling is 10.50% on cracks and 5.14% on inventory",
@@ -55,8 +55,8 @@
   "rejected": [
     "fixed conservative OCR has zero detections on 64 sampled historical image/ROI questions; 31 had independently assigned target identity"
   ],
-  "next": "用已封存的模型和动作时钟，比较先发问并同步取证，与先拿齐两张已许可原图再合问。逐条检查真实结果回来前可以回答哪些问题，并列出原版 GPT、优化串行和强预取的请求轮数与时间下界。这能判断联合安排是否少掉一轮串行推理。地图拒绝的两条动作保留原始失败，回位收益目前缺少完整路径时钟。",
-  "phase": "native controller source binding and legal multi-view request scheduling",
+  "next": "为实际闭环准备一项新的无编号自然任务。以独立来源、实际返回的字段和测得的动作代价为输入，先检查现有证据能否让跨图合问在合理的服务波动下少一轮串行请求。原版、共用优化串行和强预取同时获得相同的材料许可、时钟和合问能力。",
+  "phase": "causal timing, cross-camera batch calibration and native task discovery",
   "paired_rgb_assay": {
     "sends": 18,
     "results": {
@@ -79,7 +79,9 @@
     "standalone_first_decisions": 8,
     "matched_room_cost_calibration": 6,
     "matched_room_tasks": 9,
-    "ordinary_section_first_decisions": 4
+    "ordinary_section_first_decisions": 4,
+    "cross_source_calibration": 6,
+    "natural_ordinary_gate": 2
   },
   "closed_external_attempts": [
     {
@@ -605,7 +607,7 @@
     "scoped_mechanism_admitted": false,
     "region_summary_sha256": "59791085a516fd82b660ba09ea32baad37b0b880acd7114dd308b9987e351b83"
   },
-  "execution_state": "paused",
+  "execution_state": "active",
   "mandatory_itinerary_direct": {
     "role": "calibration",
     "registrations": "527109b2661a58d2adcc6cd01fe6ad8df969b9b3b984d0c98bfc71f92d0b276f",
@@ -2026,5 +2028,478 @@
       ]
     },
     "workers": []
+  },
+  "adaptive_cost_development": {
+    "clock": {
+      "new_requests": 0,
+      "case": "crossed-screens-house-56",
+      "actual": {
+        "joint": {
+          "task_s": 10.589294903038535,
+          "evidence": {
+            "front": "65985d86b2c90d022db53cf5425ebe61a904fbb89c06212c0a20fb96c1440136",
+            "side": "c607323d8c710684d43536ceddffdda773ddea1cd5df5f381b7a4372ca6ceacc"
+          },
+          "calls": [
+            {
+              "site": "front",
+              "keys": [
+                "q0"
+              ],
+              "send_s": 0.020743634027894586,
+              "reply_s": 3.653841507039033,
+              "service_s": 3.6330978730111383,
+              "output": {
+                "q0": "negative"
+              },
+              "error": null
+            },
+            {
+              "site": "side",
+              "keys": [
+                "q1"
+              ],
+              "send_s": 3.663504846044816,
+              "reply_s": 7.171464962011669,
+              "service_s": 3.5079601159668528,
+              "output": {
+                "q1": "positive"
+              },
+              "error": null
+            },
+            {
+              "site": "front",
+              "keys": [
+                "q3"
+              ],
+              "send_s": 7.1824700310244225,
+              "reply_s": 10.587963816011325,
+              "service_s": 3.405493784986902,
+              "output": {
+                "q3": "negative"
+              },
+              "error": null
+            }
+          ],
+          "travel_and_capture_s": 0.20927380601642653,
+          "physical_overlapped_s": 0.19915076199686155,
+          "physical_exposed_s": 0.010123044019564986,
+          "model_on_path_s": 10.546551773964893,
+          "other_on_path_s": 0.03262008505407721,
+          "delivered": true,
+          "source_digests": [
+            "368c57ebb053bd26b407e7fa34b10435518433dcf9fccecd28a504409afab712",
+            "b33e30e26ca4c7ff4ec23ba882fcb8bbd4dea5c64c66722d2d8787699b9455e9",
+            "c665fb10aea986b61d259e8ac8cbcb7be9695e83588c8557dee3a3012b61b6ad"
+          ]
+        },
+        "serial": {
+          "task_s": 7.453061142005026,
+          "evidence": {
+            "front": "65985d86b2c90d022db53cf5425ebe61a904fbb89c06212c0a20fb96c1440136",
+            "side": "c607323d8c710684d43536ceddffdda773ddea1cd5df5f381b7a4372ca6ceacc"
+          },
+          "calls": [
+            {
+              "site": "side",
+              "keys": [
+                "q1"
+              ],
+              "send_s": 0.23078488500323147,
+              "reply_s": 3.3729908270179294,
+              "service_s": 3.142205942014698,
+              "output": {
+                "q1": "positive"
+              },
+              "error": null
+            },
+            {
+              "site": "front",
+              "keys": [
+                "q0",
+                "q3"
+              ],
+              "send_s": 3.38334365101764,
+              "reply_s": 7.45063715899596,
+              "service_s": 4.06729350797832,
+              "output": {
+                "q0": "negative",
+                "q3": "negative"
+              },
+              "error": null
+            }
+          ],
+          "travel_and_capture_s": 0.2104719629860483,
+          "physical_overlapped_s": 0,
+          "physical_exposed_s": 0.2104719629860483,
+          "model_on_path_s": 7.209499449993018,
+          "other_on_path_s": 0.03308972902595997,
+          "delivered": true,
+          "source_digests": [
+            "121edcacb2f4d132b5215b75ff0f2311422f27652db7c3e68680210c55092132",
+            "da26ad938a1307297a90741fe6fccc38563260587c98990e53482d021ecad01e",
+            "c361a547821e517c12e69f3d73b956d97db410a7571cf495a1595dc1ea0ae8d4"
+          ]
+        },
+        "strong-prefetch": {
+          "task_s": 120.01182738598436,
+          "evidence": {
+            "front": "65985d86b2c90d022db53cf5425ebe61a904fbb89c06212c0a20fb96c1440136",
+            "side": "c607323d8c710684d43536ceddffdda773ddea1cd5df5f381b7a4372ca6ceacc"
+          },
+          "calls": [
+            {
+              "site": "front",
+              "keys": [
+                "q0"
+              ],
+              "send_s": 0.01958244200795889,
+              "reply_s": 120.01067143300315,
+              "service_s": 119.9910889909952,
+              "output": null,
+              "error": "timeout"
+            }
+          ],
+          "travel_and_capture_s": 0.20851503603626043,
+          "physical_overlapped_s": 0.19803154101828113,
+          "physical_exposed_s": 0.010483495017979294,
+          "model_on_path_s": 119.9910889909952,
+          "other_on_path_s": 0.010254899971187115,
+          "delivered": false,
+          "source_digests": [
+            "ce30dff81f7b00d0fad55f33ecc00bbf4ad9f132a88807cc87cfe561c3a74242",
+            "e2bf329426df50b06a40455104f87b23c07010ae4b6cab69335a02b8e7e403fd",
+            "876a95948bd800e68dfd127d9323c3186f40b4f57561707c220a721ce7c2ac4e"
+          ]
+        }
+      },
+      "joint_minus_serial_s": 3.136233761033509,
+      "components_s": {
+        "model_on_path_s": 3.337052323971875,
+        "physical_exposed_s": -0.20034891896648332,
+        "other_on_path_s": -0.0004696439718827605
+      },
+      "prior_same_site": [
+        {
+          "s": 0.23478506099490914,
+          "sha256": "bcb4fd3eec6acd08587abc63aeda0ad9601a50a7f3b3a3f3645cdd211295078b"
+        },
+        {
+          "s": 0.24306899000657722,
+          "sha256": "f7d54df03747093c344d6be00db1091937afd5a2a58bca3ff9a71e0be3157a22"
+        },
+        {
+          "s": 0.21196971500467043,
+          "sha256": "406ee08f72e5ae9e0a662751f4d014bb6af9f8f48c952b1b25d101fb2a81eb90"
+        }
+      ],
+      "branch": [
+        {
+          "cost_source": "old_transfer",
+          "trip_s": 2.8810099049296696,
+          "immediately_ask_front_and_move_s": 11.336008324491559,
+          "collect_then_ask_side_and_group_front_s": 13.29092718695756,
+          "ask_front_then_collect_then_separate_s": 14.217018229421228,
+          "collect_then_group_roots_upper_service_for_win_s": 4.676328978064703,
+          "scope": "Observed front negative, side positive and subsequent front detail negative. Fixed calibrated clocks. Cross-source combined roots still need a later released front detail; its service time is not assumed measured."
+        },
+        {
+          "cost_source": "previous_same_site",
+          "trip_s": 0.24307003196736332,
+          "immediately_ask_front_and_move_s": 11.336008324491559,
+          "collect_then_ask_side_and_group_front_s": 10.652987313995254,
+          "ask_front_then_collect_then_separate_s": 11.579078356458922,
+          "collect_then_group_roots_upper_service_for_win_s": 7.314268851027009,
+          "scope": "Observed front negative, side positive and subsequent front detail negative. Fixed calibrated clocks. Cross-source combined roots still need a later released front detail; its service time is not assumed measured."
+        },
+        {
+          "cost_source": "observed_joint",
+          "trip_s": 0.20927380601642653,
+          "immediately_ask_front_and_move_s": 11.336008324491559,
+          "collect_then_ask_side_and_group_front_s": 10.619191088044317,
+          "ask_front_then_collect_then_separate_s": 11.545282130507985,
+          "collect_then_group_roots_upper_service_for_win_s": 7.348065076977946,
+          "scope": "Observed front negative, side positive and subsequent front detail negative. Fixed calibrated clocks. Cross-source combined roots still need a later released front detail; its service time is not assumed measured."
+        }
+      ],
+      "stronger_comparator": {
+        "delivered": false,
+        "same_first_answer_class_and_source": true,
+        "terminal_time_s": 120.01182738598436
+      }
+    },
+    "cross_source_calibration": {
+      "actual_sends": 6,
+      "seal_sha256": "19a0da682d63dbed38f10f3ffc4f51fd6a836477c64ab83a5e510ed5aeb3f84a",
+      "cases": [
+        {
+          "house": "56",
+          "expected": {
+            "front": "negative",
+            "side": "positive"
+          },
+          "observations": {
+            "joint": {
+              "mode": "joint",
+              "house": "56",
+              "sent": true,
+              "valid": true,
+              "answer": {
+                "front": "negative",
+                "side": "positive"
+              },
+              "error": null,
+              "external_block": false,
+              "wall_s": 5.0990107280085795,
+              "service_s": 5.088388131989632,
+              "raw_sha256": "bb2cbcc2d110391c04666a08e3121deab3adb67a99e0c54dd9f79df4f8738650"
+            },
+            "side": {
+              "mode": "side",
+              "house": "56",
+              "sent": true,
+              "valid": true,
+              "answer": {
+                "side": "positive"
+              },
+              "error": null,
+              "external_block": false,
+              "wall_s": 4.050603370997123,
+              "service_s": 4.040690208959859,
+              "raw_sha256": "9fa3ae3967a2ed4274ae5fb26ad75c3ef43ea8d18fb15215ab282df28e21f2c3"
+            },
+            "front": {
+              "mode": "front",
+              "house": "56",
+              "sent": true,
+              "valid": true,
+              "answer": {
+                "front": "negative"
+              },
+              "error": null,
+              "external_block": false,
+              "wall_s": 4.906956544960849,
+              "service_s": 4.682752633991186,
+              "raw_sha256": "5523ec201e946a002cef095c88aa6d40e88c4b382100ae63e545432ea3be1e1d"
+            }
+          },
+          "correct": {
+            "joint": {
+              "front": true,
+              "side": true
+            },
+            "side": {
+              "side": true
+            },
+            "front": {
+              "front": true
+            }
+          },
+          "image_sha256": {
+            "front": "65985d86b2c90d022db53cf5425ebe61a904fbb89c06212c0a20fb96c1440136",
+            "side": "c607323d8c710684d43536ceddffdda773ddea1cd5df5f381b7a4372ca6ceacc"
+          },
+          "both_correct_joint": true,
+          "both_correct_separate": true,
+          "paired_answers_delivered": true,
+          "service_delta_s": 3.6350547109614126
+        },
+        {
+          "house": "76",
+          "expected": {
+            "front": "positive",
+            "side": "negative"
+          },
+          "observations": {
+            "front": {
+              "mode": "front",
+              "house": "76",
+              "sent": true,
+              "valid": true,
+              "answer": {
+                "front": "positive"
+              },
+              "error": null,
+              "external_block": false,
+              "wall_s": 3.6448739980114624,
+              "service_s": 3.6360176440211944,
+              "raw_sha256": "a3493702c3264c24c35f927c3e708d2779ca840e718f7cbf81d1c8d0fa4f5ac4"
+            },
+            "side": {
+              "mode": "side",
+              "house": "76",
+              "sent": true,
+              "valid": true,
+              "answer": {
+                "side": "positive"
+              },
+              "error": null,
+              "external_block": false,
+              "wall_s": 20.224285066011362,
+              "service_s": 20.2137296590372,
+              "raw_sha256": "e55b9c1c75414cb4c0d09c29a5ad411bbaf2e89abac14ac9691caaccb0d3fccf"
+            },
+            "joint": {
+              "mode": "joint",
+              "house": "76",
+              "sent": true,
+              "valid": true,
+              "answer": {
+                "front": "positive",
+                "side": "negative"
+              },
+              "error": null,
+              "external_block": false,
+              "wall_s": 101.40562662499724,
+              "service_s": 101.39549111499218,
+              "raw_sha256": "c943f344befb27cdd3bc8212b9ebb34ca6998a760f97b475984e3f5b6086258d"
+            }
+          },
+          "correct": {
+            "front": {
+              "front": true
+            },
+            "side": {
+              "side": false
+            },
+            "joint": {
+              "front": true,
+              "side": true
+            }
+          },
+          "image_sha256": {
+            "front": "8720fb21a234eb73c8ebd7fae9e3bd7d9c6432eaaae45ff957a2a31b5b266824",
+            "side": "3d903ae53bcb88e50c85602cd021d9433babcb4108b27a535adb08bb91bdd57e"
+          },
+          "both_correct_joint": true,
+          "both_correct_separate": false,
+          "paired_answers_delivered": true,
+          "service_delta_s": -77.54574381193379
+        }
+      ],
+      "timeouts_joint": 0,
+      "timeouts_separate": 0,
+      "both_correct_joint": 2,
+      "both_correct_separate": 1,
+      "matched_delivery_pairs": 2,
+      "paired_service_delta_median_s": -36.95534455048619
+    },
+    "native_natural": {
+      "rows": [
+        {
+          "case": "warehouse-crossed",
+          "fields_discovered": 5,
+          "action": "move",
+          "exact_source_fields": [
+            {
+              "field": "红色货箱",
+              "visible": true
+            }
+          ],
+          "expected_front_roots": 1,
+          "complete_front_assignment": true,
+          "planned_turn_matches": true,
+          "ready_for_new_closed_loop": true,
+          "shadow": {
+            "status": "observed",
+            "newly_bound": [
+              "红色货箱"
+            ],
+            "available_sources": {
+              "onboard_0001": {
+                "view": "front",
+                "sha256": "18a363710a122072596cd8ac1a748dde713d94659ed9cbce70bb43f3dcf07e7e"
+              }
+            },
+            "authorized_next": [
+              {
+                "field": "蓝色货箱",
+                "view": "side",
+                "photos": []
+              },
+              {
+                "field": "白色货箱",
+                "view": "side",
+                "photos": []
+              }
+            ],
+            "initial_side_capture_grant": true
+          },
+          "error": null,
+          "response_sha256": "3209d83bc540a58d99b72c5db74e99930b69acdef8d875ae12660d2ee84722d9",
+          "service_s": 15.723811528005172
+        },
+        {
+          "case": "campus-two-screens",
+          "fields_discovered": 4,
+          "action": "move",
+          "exact_source_fields": [
+            {
+              "field": "停放车辆",
+              "visible": true
+            }
+          ],
+          "expected_front_roots": 2,
+          "complete_front_assignment": false,
+          "planned_turn_matches": true,
+          "ready_for_new_closed_loop": false,
+          "shadow": {
+            "status": "observed",
+            "newly_bound": [
+              "停放车辆"
+            ],
+            "available_sources": {
+              "onboard_0001": {
+                "view": "front",
+                "sha256": "b8a7a551c2eacb70d84b1705a83737f7d0887516cd596bb0ffce133043cc396d"
+              }
+            },
+            "authorized_next": [
+              {
+                "field": "灭火器",
+                "view": "front",
+                "photos": [
+                  "onboard_0001"
+                ]
+              },
+              {
+                "field": "灭火器",
+                "view": "side",
+                "photos": []
+              }
+            ],
+            "initial_side_capture_grant": true
+          },
+          "error": null,
+          "response_sha256": "5c4a2f04b0797be05caa3cdbd26f347e96fc7715cd4515bc864f920e0835cc64",
+          "service_s": 23.40738260000944
+        }
+      ],
+      "closed": 2,
+      "raw_sha256": "4be8db363fece75d1dd336df97dcb72ca1daa3c3b469027100866007fdb04132"
+    },
+    "cost_scenarios": 18,
+    "node_budget": {
+      "pairs": 32,
+      "same_feasible": 29,
+      "residual_lower": 3,
+      "generic_lower": 0,
+      "residual_certificates": 0,
+      "generic_certificates": 0,
+      "median_residual_over_generic_wall": 1.0366177597682116,
+      "median_residual_over_generic_permissions": 0.7439024390243902,
+      "new_model_requests": 0
+    },
+    "wall_budget": {
+      "cells": 48,
+      "trials": 432,
+      "residual_better": 5,
+      "residual_tied": 43,
+      "residual_worse": 0,
+      "better_than_strong": 13,
+      "worse_than_strong": 0,
+      "worst_overrun_ms": 18.39360498590395,
+      "no_model_requests": true
+    }
   }
 }

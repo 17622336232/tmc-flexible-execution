@@ -1,0 +1,11 @@
+{
+  "id": "native-natural-frontier-dev01",
+  "role": "Check that ordinary GPT can provide reusable, source-bound observations for an unnumbered task. Exactly one normal request for each of two existing development first cameras. No additional parsing, work-order schema or verification call. Seal before checking model records. This probe measures discovery and reuse, not delivery or speed.",
+  "max_sends": 2,
+  "per_call_s": 120,
+  "cases": [
+    {"id": "warehouse-crossed", "task": "正面是起始朝向。原地向左转40度为侧面。看看正面照片里有没有红色货箱。也检查侧面照片里有没有蓝色货箱。如果正面有红色货箱，就检查侧面照片里有无白色货箱。如果侧面有蓝色货箱，就检查正面照片里有无蓝色货箱。如果侧面有白色货箱或者正面有蓝色货箱，就判断侧面照片里有无红色货箱。允许在等待时提前拍摄侧面照片。最后停在侧面。每项附实拍照片。用物品名称作记录标识，布尔字段用 visible。"},
+    {"id": "campus-two-screens", "task": "正面是起始朝向。原地向右转40度为侧面。检查正面照片中是否能看到停放车辆。也看看正面照片里有没有灭火器。如果正面有停放车辆，就判断侧面照片里有无灭火器。如果正面有灭火器，就检查侧面照片里有没有通道上的货箱障碍物。允许提前拍摄侧面原图。最后恢复起始朝向。每项附实拍照片。用物品名称作记录标识，布尔字段用 visible。"}
+  ],
+  "admission": "Discover named scopes, view angle, distinct source-specific predicates, exact prerequisite references and finish from the task text alone. On a registered source accept a Boolean only if ordinary reply supplies it with the real photo and an unambiguous natural object name. Allow a future closed-loop trial only after a matching actual native action and every unconditionally due front field. No alternative prompt or unplanned repeat if either condition fails."
+}

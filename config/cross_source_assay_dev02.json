@@ -1,0 +1,13 @@
+{
+  "id": "cross-source-assay-dev02",
+  "role": "Matched development probe on already exposed validation-house photographs. In this standalone probe the listed two class questions are explicitly unconditional and permitted on their own recorded sources. The original complete-task conditional answers are outside the probe.",
+  "model": "gpt-6.1-terra",
+  "effort": "max",
+  "max_total_sends": 6,
+  "per_call_seconds": 120,
+  "cases": [
+    {"house": "56", "source": "outputs/continuing/matched-event-rooms-dev01/live/crossed-screens-house-56/serial", "targets": {"front": "Chair", "side": "Window"}, "score_fields": {"front": "q0", "side": "q1"}, "order": ["joint", "side", "front"]},
+    {"house": "76", "source": "outputs/continuing/room-workflow-dev01/smoke/archive-and-screen/camera-check", "targets": {"front": "Sofa", "side": "CoffeeTable"}, "score_fields": {"front": "front_0", "side": "side_0"}, "order": ["front", "side", "joint"]}
+  ],
+  "protocol": "Use identical JPEG bytes and exact same independent presence instructions in all arms. Fix the two exposed locations and choose their first declared question in each direction, independent of visual answers. Both-questions-correct is a paired outcome. Expose only those two classes. Keep unavailable replies as undelivered, preserve error kinds and summarize timeout counts per slot and per matched pair. Before loading scoring masks, seal all six request logs and receipts. Where both forms return defined outputs, compare service time for two genuine single calls against the one joint call. These are service measurements on fixed images; the complete-task saving has to be computed separately."
+}
