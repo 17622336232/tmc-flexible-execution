@@ -3,6 +3,7 @@ import ast
 import csv
 import json
 import subprocess
+import os
 from collections import defaultdict
 from hashlib import sha256
 from pathlib import Path
@@ -13,12 +14,24 @@ from experiments.flexible_execution.timeline import read_trace_rows
 
 
 def main():
-    code=subprocess.check_output(["git","cat-file","blob",AGENT_BLOB])
+    upstream = Path(os.environ.get("VLA_LEGACY_ROOT", Path.home()/"uav/Embodied-intelligent-behavior"))
+    found=subprocess.run(["git","cat-file","blob",AGENT_BLOB],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
+    code=found.stdout if found.returncode==0 else (upstream/"experiments/task_attack/agent.py").read_bytes()
     assert sha256(code).hexdigest()==AGENT_SHA256
     syntax=ast.parse(code)
     system=next(ast.literal_eval(s.value) for s in syntax.body if isinstance(s,ast.Assign)
                 and any(isinstance(name,ast.Name) and name.id=="SYSTEM" for name in s.targets))
     prompt=sha256(system.encode()).hexdigest()
+    helpers={}
+    base=Path("experiments/task_attack")
+    for filename,names in (("records.py",("object_id","validate_record","facts")),("runtime.py",("append_json","write_json"))):
+        versions=[]
+        for origin in (upstream, Path.cwd()):
+            syntax=ast.parse((origin/base/filename).read_text())
+            versions.append({f.name:sha256(ast.dump(f,include_attributes=False).encode()).hexdigest()
+                             for f in syntax.body if isinstance(f,ast.FunctionDef) and f.name in names})
+        assert versions[0]==versions[1] and set(versions[0])==set(names)
+        helpers[filename]=versions[0]
     originals=[]
     for log in sorted(OUT.glob("dev-*/original-gpt/private/robot/model_calls.jsonl")):
         calls,_=read_trace_rows(log,allow_truncated=True)
@@ -40,7 +53,7 @@ def main():
         if any(len(s)!=1 for s in equality[case].values()):
             raise ValueError("Scene sources differ between compared arms")
     save(OUT/"run_provenance.json",dict(original_source_sha256=AGENT_SHA256,upstream_system_sha256=prompt,
-         original_calls=originals,paired_input_digests=equality))
+         original_calls=originals,original_record_and_output_helpers=helpers,paired_input_digests=equality))
     samples=defaultdict(list)
     for p in OUT.rglob("resources-*.jsonl"):
         for row in read_trace_rows(p,allow_truncated=True)[0]:

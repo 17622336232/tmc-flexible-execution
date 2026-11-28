@@ -26,7 +26,7 @@ def main():
     w=next(a for a in ep["early_action_witnesses"] if a["outcome"]=="negative" and a["photo_seconds_before_reply"]>0)
     p=Path(ep["artifact_dir"])/"private/robot"/(w["photo_id"]+".jpg")
     assert digest(p)==w["photo_sha256"]
-    attach("Early photo unused","Negative result made the label unnecessary.",p,case["case"])
+    attach("Early photo unused","The query concerned the right-hand cabinet.",p,case["case"])
     case,ep=arm("152")
     assert not ep["early_action_witnesses"]
     attach("Early movement declined","Permission granted; cost check declined.",Path(ep["artifact_dir"])/"private/robot/probe_0001.jpg",case["case"])

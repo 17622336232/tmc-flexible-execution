@@ -1,0 +1,188 @@
+{
+  "role": "exposed-development; never independent formal evidence",
+  "units": "seconds",
+  "first_block": [
+    {
+      "case": "dev-cracks-prim",
+      "method": "original-gpt",
+      "strict_success": true,
+      "sends": 8,
+      "raw_result_sha256": "75edd3526f3384ad98b4e3c9f0f9497ff9e145b561290c3b43ed686669adcee0",
+      "whole_s": 231.1280387089937,
+      "restricted_s": 231.1280387089937,
+      "compile_s": 0.0,
+      "overlap_s": 0.0
+    },
+    {
+      "case": "dev-cracks-prim",
+      "method": "conditional-async",
+      "strict_success": false,
+      "sends": 11,
+      "raw_result_sha256": "d9b67a0c6f862b996b71a2608c7cfef3bfc0bc18dd5dd5d3949776a6c15e3f9c",
+      "whole_s": 360.00801519100787,
+      "restricted_s": 360.0,
+      "compile_s": 117.54424186999677,
+      "overlap_s": 0.0
+    },
+    {
+      "case": "dev-cracks-prim",
+      "method": "conditional-a",
+      "strict_success": false,
+      "sends": 9,
+      "raw_result_sha256": "c83e1f29c6364e6272267e16ac207c13b520b0d5c39c2a90c73e4658fe844e4e",
+      "whole_s": 360.0035125580034,
+      "restricted_s": 360.0,
+      "compile_s": 46.8890095219831,
+      "overlap_s": 8.863085500022862
+    },
+    {
+      "case": "dev-cracks-prim",
+      "method": "conditional-planner",
+      "strict_success": false,
+      "sends": 8,
+      "raw_result_sha256": "7db0b8567343252aa93686c756c879cb4986d620bd2db952e3c58aea9222d52e",
+      "whole_s": 360.0033348890138,
+      "restricted_s": 360.0,
+      "compile_s": 110.00715145497816,
+      "overlap_s": 8.91984664805932
+    },
+    {
+      "case": "dev-locate-control",
+      "method": "conditional-planner",
+      "strict_success": true,
+      "sends": 6,
+      "raw_result_sha256": "b70bb4eb329f7d3aeda6071a3b4d922cc773602bd2d597b24f200fe2c7628c5d",
+      "whole_s": 124.60022543999366,
+      "restricted_s": 124.60022543999366,
+      "compile_s": 43.026351244945545,
+      "overlap_s": 0.0
+    },
+    {
+      "case": "dev-locate-control",
+      "method": "conditional-a",
+      "strict_success": true,
+      "sends": 9,
+      "raw_result_sha256": "f0c26f1af6beb43fe38f90f8248d3ae6914c2e9d0cb8633c7af463697fb6b6d7",
+      "whole_s": 328.6037398680346,
+      "restricted_s": 328.6037398680346,
+      "compile_s": 162.66826281900285,
+      "overlap_s": 0.0
+    },
+    {
+      "case": "dev-locate-control",
+      "method": "conditional-async",
+      "strict_success": true,
+      "sends": 6,
+      "raw_result_sha256": "2a832ce963f51a8e358a8cb0d65ecb9a4f2b32f3cdb78f7d07e47bf17115dd8b",
+      "whole_s": 163.70051091903588,
+      "restricted_s": 163.70051091903588,
+      "compile_s": 77.91318909497932,
+      "overlap_s": 0.0
+    },
+    {
+      "case": "dev-locate-control",
+      "method": "original-gpt",
+      "strict_success": true,
+      "sends": 5,
+      "raw_result_sha256": "d9eff2b782cd41833bdea0f9f98c13d6a6a57a4772bddab7ac4e00f258c53e34",
+      "whole_s": 230.11393548600608,
+      "restricted_s": 230.11393548600608,
+      "compile_s": 0.0,
+      "overlap_s": 0.0
+    }
+  ],
+  "third_round": [
+    {
+      "case": "dev-cracks-prim",
+      "method": "conditional-planner",
+      "strict_success": false,
+      "sends": 11,
+      "raw_result_sha256": "98d37fbe6cd180ad2710f642ea71758cf1599da7c6024bd66406ef45512c1dc9",
+      "whole_s": 360.0066523660207,
+      "restricted_s": 360.0,
+      "compile_s": 0.0,
+      "overlap_s": 8.919342588051222
+    },
+    {
+      "case": "dev-cracks-prim",
+      "method": "conditional-async",
+      "strict_success": false,
+      "sends": 13,
+      "raw_result_sha256": "789671ccd1d7d85a9f328c0908f3e6cf7b9a9c294f5580b09386f4f9257b83f8",
+      "whole_s": 360.0063497829833,
+      "restricted_s": 360.0,
+      "compile_s": 0.0,
+      "overlap_s": 0.0
+    },
+    {
+      "case": "dev-cracks-prim",
+      "method": "conditional-a",
+      "strict_success": false,
+      "sends": 7,
+      "raw_result_sha256": "da0b3e4d54fe3204a22767fd363cb5e646216c40b52592fd00bb136e678a6049",
+      "whole_s": 360.0035568160238,
+      "restricted_s": 360.0,
+      "compile_s": 0.0,
+      "overlap_s": 8.417819487047382
+    }
+  ],
+  "sends": 93,
+  "integrity": {
+    "historical_episodes": 456,
+    "historical_reports_hashes_match": true,
+    "symbolic_regraded": 600,
+    "ablations_regraded": 96,
+    "development_episodes": 11,
+    "natural_sends": 93,
+    "raw_files": 731
+  },
+  "historic_funnel": {
+    "All A scenes": 72,
+    "Query submitted": 49,
+    "Branch-specific material": 36,
+    "Explicit grant": 3,
+    "Mapped legal view": 3,
+    "Movement before reply": 2,
+    "Photo before reply": 2,
+    "Early photo verified": 0,
+    "Early material in report": 0
+  },
+  "symbolic_initial_decisions": {
+    "adaptive-progress": {
+      "n": 120,
+      "optimal": 120,
+      "unmapped": 0
+    },
+    "conditional-async": {
+      "n": 120,
+      "optimal": 84,
+      "unmapped": 0
+    },
+    "conditional-planner": {
+      "n": 120,
+      "optimal": 120,
+      "unmapped": 0
+    },
+    "conditional-prefetch": {
+      "n": 120,
+      "optimal": 120,
+      "unmapped": 0
+    }
+  },
+  "early_a_actions": 4,
+  "used_early_materials_in_passing_a_reports": 0,
+  "final_draft": {
+    "claimed": [
+      "EQ-10"
+    ],
+    "expected": [
+      "EQ-01"
+    ],
+    "correct": false,
+    "acceptance_timeout_seconds": [
+      120.00028968998231,
+      58.29981867701281
+    ]
+  },
+  "decision_report_sha256": "511fc28f15593d7c82fb0e20d766ed9aa05eba8e4b5f96ae909944e2f5c4542b"
+}

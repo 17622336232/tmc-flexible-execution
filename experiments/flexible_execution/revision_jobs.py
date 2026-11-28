@@ -92,11 +92,21 @@ def main():
         for case, arm, directory, command in jobs(config, out):
             receipt = directory.parent / (arm + ".receipt.json")
             row = observed(directory)
-            print(case["id"], arm, row, flush=True)
+            existing = read(receipt) if receipt.exists() else {}
+            if existing.get("state") == "scored":
+                if row["state"] != "scored" or any(existing.get(k) != row[k] for k in
+                        ("result_sha256", "sends", "strict", "seconds")):
+                    raise ValueError("Completed receipt differs from original evidence: " + str(directory))
+            display = dict(row)
+            if row["state"] == "unfinished":
+                display["state"] = existing.get("state", "unregistered-start" if directory.exists() else "queued")
+                if display["state"] == "starting" and worker_active(directory):
+                    display["state"] = "running"
+            print(case["id"], arm, display, flush=True)
             if not args.run:
                 continue
-            if receipt.exists():
-                recorded = read(receipt)
+            if existing:
+                recorded = existing
                 if recorded["state"] == "endpoint-blocked":
                     raise SystemExit("Endpoint failure recorded; diagnose before dispatch")
                 if recorded["state"] in ("scored", "closed-failure", "interrupted-after-dispatch"):

@@ -5,7 +5,9 @@ object pose, task answer or evaluation label is exported or consulted.
 """
 import gzip
 import json
+import math
 from hashlib import sha256
+from itertools import combinations
 from pathlib import Path
 
 from experiments.flexible_execution.public_schedule import TEST_SHA256
@@ -39,8 +41,6 @@ def metadata(path):
             scene = json.loads(line)
             # Coarse side/diagonal distances ignore translation, rotation, mirroring
             # and vertex order. Different arrangements can conservatively collide.
-            import math
-            from itertools import combinations
             shapes = sorted(sorted(round(math.hypot(a["x"]-b["x"], a["z"]-b["z"]) * 2)
                                    for a, b in combinations(room["floorPolygon"], 2)) for room in scene["rooms"])
             geometry = sha256(json.dumps(shapes).encode()).hexdigest()
@@ -95,16 +95,31 @@ def main():
                           instruction=TASKS[slot][2], split="reserve-no-render"))
         if len(drawn) == 32:
             break
+    unconditioned = []
+    for index in sorted(sets, key=lambda i: sha256(f"layout-only-reserve-v1/{i}".encode()).digest()):
+        geometry = sets[index][1]
+        if index in seen_test or geometry in geometries:
+            continue
+        slot = int.from_bytes(sha256(f"layout-task-v1/{index}".encode()).digest()[:2], "big") % len(TASKS)
+        unconditioned.append(dict(house_index=index, geometry_group=geometry, structure=TASKS[slot][0],
+                                  instruction=TASKS[slot][2], split="layout-only-no-render"))
+        geometries.add(geometry)
+        if len(unconditioned) == 32:
+            break
     record = dict(role="asset-screened reserve only; no images opened, no test run", archive_sha256=digest(test),
                   exposed_test_houses=len(seen_test), known_validation_houses=len(seen_val), houses_scanned=len(sets),
                   exposed_asset_count=len(exposed), unseen_house_ids=len(sets.keys()-seen_test), eligible=len(candidates),
                   pairwise_asset_disjoint_reserve=reserved, definition="all movable object, door and window catalog asset IDs, including children; no task outcome labels",
                   limitations="Common background assets may recur in the separately listed task-source split. Polygon-distance grouping uses half-metre bins; it cannot certify all perceptual near-duplicates.",
-                  task_source_reserve=len(drawn), reserve_role="capacity only, independent sample size not determined")
+                  task_source_reserve=len(drawn), layout_only_reserve=len(unconditioned),
+                  reserve_role="capacity only, independent sample size not determined")
     OUT.mkdir(parents=True,exist_ok=True)
     save(OUT / "public_reserve.json",record)
-    save(OUT / "public_reserve_manifest.json", dict(role="sealed candidates only; paired development gate closed",
-         source_archive_sha256=digest(test), task_design=TASKS, rows=drawn))
+    prior = OUT / "public_reserve_manifest.json"
+    if prior.exists() and read(prior)["rows"] != drawn:
+        raise ValueError("Previously reserved candidates changed")
+    save(prior, dict(role="sealed candidates only; paired development gate closed",
+         source_archive_sha256=digest(test), task_design=TASKS, rows=drawn, layout_only=unconditioned))
     print(json.dumps(record))
 
 

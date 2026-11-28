@@ -9,6 +9,7 @@ from experiments.flexible_execution.timeline import read_trace_rows
 
 def main():
     rows=[]
+    stages=[]
     with (BASE/"reports/public-final/episodes.csv").open() as stream:
         episodes=list(csv.DictReader(stream))
     for episode in episodes:
@@ -16,6 +17,7 @@ def main():
         for path in sorted(arm.glob("attempt-*/episode/model_calls.jsonl")):
             ep=path.parent
             calls,_=read_trace_rows(path,allow_truncated=True)
+            bound_front=None
             for c in calls:
                 q=c.get("input") or {}
                 view=q.get("frame")
@@ -27,11 +29,22 @@ def main():
                 expected=(_grade_segmentation(ep/"scoring",view) if hashed and label.is_file() and
                           read(label)["category"]==q["target_class"] else None)
                 result=(c.get("output") or {}).get("outcome")
+                if view=="front" and hashed and result=="positive":
+                    bound_front=c
+                if view=="side" and hashed and result in ("positive","negative","uncertain") and bound_front:
+                    after=c.get("dispatched_monotonic_seconds")
+                    before=bound_front.get("return_monotonic_seconds")
+                    if (isinstance(after,(int,float)) and isinstance(before,(int,float)) and after>=before
+                            and c["image_sha256"]!=bound_front["image_sha256"]):
+                        stages.append(dict(case=episode["case"],method=episode["method"],front_reply="positive",
+                           front_sha256=bound_front["image_sha256"][0],side_sha256=q["sha256"],
+                           next_dispatch_after_reply_s=after-before,complete=episode["success"]))
                 rows.append(dict(case=episode["case"],group=episode["group"],method=episode["method"],frame=view,
                                  category=q["target_class"],photo_sha256=q.get("sha256"),photo_verified=hashed,
                                  expected=expected,answer=result,correct=(expected==result) if expected and result else None,
                                  error=c.get("error_code"),dispatch=c.get("logical_job_attempt")))
     write_table(OUT/"archived_vision_decisions.csv",rows)
+    write_table(OUT/"observed_second_stage.csv",stages)
     groups=defaultdict(list)
     for r in rows:
         groups[r["frame"]].append(r)

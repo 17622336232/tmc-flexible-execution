@@ -4,6 +4,7 @@ import json
 from collections import Counter, defaultdict
 from hashlib import sha256
 from pathlib import Path
+from math import dist
 from statistics import mean, median
 from urllib.parse import unquote
 
@@ -24,6 +25,27 @@ def percent(values, p):
     i = (len(xs)-1)*p
     j = int(i)
     return xs[j]+(i-j)*(xs[min(j+1,len(xs)-1)]-xs[j])
+
+
+def sampled_route(robot):
+    observations=[]
+    for photo in robot.glob("*.jpg"):
+        meta=photo.with_suffix(".json")
+        if not meta.exists():
+            continue
+        d=read(meta)
+        stamp=d.get("capture_ros",d.get("ros_stamp"))
+        if stamp is not None and d.get("sha256")==digest(photo) and "position" in d:
+            observations.append((stamp,tuple(d["position"][k] for k in ("x","y","z"))))
+    poses=[xyz for _,xyz in sorted(set(observations))]
+    if not poses:
+        return None,None
+    length=sum(dist(a,b) for a,b in zip(poses,poses[1:]))
+    returns=0
+    for i,p in enumerate(poses[1:],1):
+        if dist(p,poses[i-1])>.8 and any(dist(p,q)<=.4 for q in poses[:i-1]):
+            returns+=1
+    return length,returns
 
 
 def history_tables():
@@ -110,6 +132,12 @@ def development(*, round3=False):
         compiles=[x["wall_seconds"] for x in calls if "supported_fields" in x.get("input",{}) and "wall_seconds" in x]
         guard_calls=[x for x in calls if any(k in x.get("input",{}) for k in ("proposed_report","verified_groups"))]
         intervals=data.get("intervals",{})
+        compile_events={e["event"]:e["monotonic_seconds"] for e in events if e["event"] in ("local_compile_started","local_compile_finished")}
+        local_compile_s=(compile_events["local_compile_finished"]-compile_events["local_compile_started"]
+                         if len(compile_events)==2 else None)
+        verified_starts=[a["start"] for a in intervals.get("action",[]) if a.get("ok") is True]
+        first_ok=min(verified_starts)-events[0]["monotonic_seconds"] if events and verified_starts else None
+        polyline,returns=sampled_route(p/"private/robot")
         def interval_seconds(name):
             return sum(v["seconds"] for v in intervals.get(name,[]) if v.get("seconds") is not None)
         scene=p/"inspection.world"
@@ -122,8 +150,10 @@ def development(*, round3=False):
                          call_p50_s=percent(ctimes,.5),call_p95_s=percent(ctimes,.95),compile_s=sum(compiles),
                          model_s=data.get("model_request_seconds"),actions_s=interval_seconds("action"),
                          overlap_s=data.get("model_action_overlap_seconds"),first_logged_action_s=first,
+                         first_successfully_finished_action_start_s=first_ok,
+                         camera_sampled_polyline_m=polyline,camera_pose_returns=returns,
                          independent_online_guard_calls=len(guard_calls),ranking_search_s=interval_seconds("search"),
-                         shared_fragment_regrade=strict.get("complete"),local_compile_s=interval_seconds("local_compile"),
+                         shared_fragment_regrade=strict.get("complete"),local_compile_s=local_compile_s,
                          missing_fields=str(coverage.get("missing_fields_by_object")),
                          raw_result_sha256=digest(p/"result.json") if result else None,
                          world_sha256=digest(scene) if scene.exists() else None,

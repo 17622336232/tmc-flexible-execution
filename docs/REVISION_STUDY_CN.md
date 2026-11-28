@@ -51,4 +51,8 @@ python -m experiments.flexible_execution.revision_jobs
 
 `python scripts/revision_camera.py` 使用已保存的 RGB、类别、模型输入和原始分割图独立重算公开房屋视觉题。正面共 95 次发送，93 条可评分，正确 81 条，漏看 9 条，误认 3 条，另 2 条没有可评分的绑定回复。它们覆盖 24 个房屋来源组、45 个不同的照片和类别组合。侧面可评的 23 条全部正确，来自 6 个房屋和 12 个不同的照片和类别组合，侧面的样本受到前序分支选择影响。
 
-`python scripts/revision_report.py` 生成按方法的成本、任务族和变化组表，以及离线延迟与运动成本曲线。`python scripts/revision_provenance.py` 核对所有新原版调用的原始提示指纹、去除本地资源路径差异后的世界指纹、图像纹理与指令的逐臂一致性。`python scripts/revision_examples.py` 从实拍仿真图重建可追溯案例图。
+`python scripts/revision_report.py` 生成按方法的成本、任务族和变化组表，以及离线延迟与运动成本曲线。`python scripts/revision_provenance.py` 核对所有新原版调用的原始提示指纹、去除本地资源路径差异后的世界指纹、图像纹理与指令的逐臂一致性。`python scripts/revision_examples.py` 从仿真相机原图重建可追溯案例图。
+
+完整复核命令是 `bash scripts/verify_revision_study.sh`。它读取本机保留的原始回合、请求和符号轨迹，重建论文表图，不发送模型请求。开发层的独立枚举位于 `scripts/revision_decisions.py`，它对还未揭晓的结果按各分支求期望，只在接到回复时区分分支。初始决策核验是名义可读条件下的有限状态实验。需要重做独立计算时运行该脚本；需要从头生成开发轨迹时运行 `scripts/revision_mechanisms.py` 与 `scripts/revision_ablation.py`。搜索时间为本机实测，重新生成轨迹时会有微小变化。
+
+第三轮本地文字解析默认关闭。预登记的开发入口 `python -m experiments.flexible_execution.revision_jobs --round3 --run` 对三臂提供同一冷解析器，只接受完整识别的措辞和字段类型。出现未知附加限制或无法表达的组合条件时，仍调用原共同模型前端。第三轮结果位于 `outputs/revision-study/round3/`。
