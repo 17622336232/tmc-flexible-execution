@@ -114,7 +114,7 @@ def _seed_records(prior_records, prior_evidence, evidence_hashes, now):
 def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trace=None,
               prior_views=(), prior_memory='', episode_started=None, step_offset=0, submit_guard=None,
               decision_pipeline=None, fact_types=None, record_adapter=None, evidence_journal=False,
-              prior_records=(), prior_evidence=(), view_scheduler=None):
+              prior_records=(), prior_evidence=(), view_scheduler=None, observe_next=None):
     directory.mkdir(parents=True,exist_ok=True)
     if model is None:
         model=ModelClient(directory/'model_calls.jsonl')
@@ -149,7 +149,7 @@ def run_agent(backend, task, directory, event, timeout=1800, *, model=None, trac
             view_history.append({key:value for key,value in view.items() if key!='data'})
         try:
             with (trace.measure('observation',step,image_id=image_id) if trace else nullcontext()):
-                obs,geometry=backend.observe()
+                obs,geometry=(observe_next or backend.observe)()
         except Exception:
             if time.monotonic()>=started+timeout:
                 event('episode_budget_exhausted_during_observation',step=step);break

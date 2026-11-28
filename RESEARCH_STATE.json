@@ -1,9 +1,9 @@
 {
   "status": "RESEARCH_IN_PROGRESS",
-  "stage": "causal timing, cross-camera batch calibration and native task discovery",
+  "stage": "native controller closed-loop matched development",
   "resumed_remote": "94bd1e78953164dce48ec38c8cc15dbd010f2e56",
   "resumed_local": "90f390c8ee332c866f4204dee628d447f8ddab2c",
-  "as_of_utc": "2026-11-28T17:34:53+00:00",
+  "as_of_utc": "2026-11-28T18:13:25+00:00",
   "method_version": {
     "native-views-dev01": "2e8e26cb8f0099bb68d02e5aa1c1e9569423706ec413227f9d9aa7714ffcef2b",
     "native-evidence-dev02": "6c5dab53a9faf9d2de88df4c2d988619c066176423a1223341f30e75b84c2577",
@@ -46,7 +46,7 @@
   "pending_workers": [],
   "account_remaining_requests": null,
   "hardware_motion_authorized": false,
-  "current_hypothesis": "用仓库封存的真实首轮判断，放行实际侧面照片里的两项已开放问题。先复核登记，只使用一轮原版模型回复并独立验收来源和许可。该检查用于验证从用户自然语言到真实后续请求的连接。三问顺序切换的整项匹配仍须保留通用和强预取，不使用正式数据。",
+  "current_hypothesis": "让原版正常回复顺带提议剩余任务及依赖，独立校验完整用户原文和任务许可。用改写指令、明确禁止提前和没有收益的匹配开发条件，检验执行器能否据此选择不同顺序。",
   "validated": [
     "93 prior sends attributed to six roles",
     "with original requests fixed the nonrequest ceiling is 10.50% on cracks and 5.14% on inventory",
@@ -55,8 +55,8 @@
   "rejected": [
     "fixed conservative OCR has zero detections on 64 sampled historical image/ROI questions; 31 had independently assigned target identity"
   ],
-  "next": "用仓库封存的真实首轮判断，放行实际侧面照片里的两项已开放问题。先复核登记，只使用一轮原版模型回复并独立验收来源和许可。该检查用于验证从用户自然语言到真实后续请求的连接。三问顺序切换的整项匹配仍须保留通用和强预取，不使用正式数据。",
-  "phase": "causal timing, cross-camera batch calibration and native task discovery",
+  "next": "让原版正常回复顺带提议剩余任务及依赖，独立校验完整用户原文和任务许可。用改写指令、明确禁止提前和没有收益的匹配开发条件，检验执行器能否据此选择不同顺序。",
+  "phase": "native controller closed-loop matched development",
   "paired_rgb_assay": {
     "sends": 18,
     "results": {
@@ -82,7 +82,9 @@
     "ordinary_section_first_decisions": 4,
     "cross_source_calibration": 6,
     "natural_ordinary_gate": 2,
-    "natural_bound_followup": 0
+    "natural_bound_followup": 1,
+    "native_joint_closed_loop": 10,
+    "native_pending_photo": 4
   },
   "closed_external_attempts": [
     {
@@ -2583,7 +2585,605 @@
     },
     "native_fixed_followup": {
       "registered": true,
-      "result": {}
+      "result": {
+        "registration_sha256": "be70ba4aa489ac94462c528bbf51fa43021ad685027e536fc1a7ed9e105083d4",
+        "receipt_sha256": "be262d923d1cbb7de7652d814bcad7c9697d1b7e1cf44fab7d7ae0bf2ca1fcb6",
+        "actual_sends": 1,
+        "independent_correct_combination": true,
+        "observed_fields": {
+          "蓝色货箱": true,
+          "白色货箱": false
+        },
+        "source_alignment": 0.9767491319444445,
+        "truth": {
+          "白色货箱": false,
+          "蓝色货箱": true
+        },
+        "scope_violations": [],
+        "reported_action": "record",
+        "live_service_s": 21.06589044397697,
+        "error": null,
+        "next_authorized": [
+          {
+            "field": "蓝色货箱",
+            "view": "front",
+            "photos": []
+          }
+        ]
+      }
+    }
+  },
+  "native_joint_execution": {
+    "slots": [
+      {
+        "case": "warehouse-crossed",
+        "method": "common-serial",
+        "settled": true,
+        "started": true,
+        "sends": 2,
+        "endpoint_block": null,
+        "pid": 3978543
+      },
+      {
+        "case": "warehouse-crossed",
+        "method": "joint",
+        "settled": true,
+        "started": true,
+        "sends": 2,
+        "endpoint_block": null,
+        "pid": 3980073
+      },
+      {
+        "case": "warehouse-crossed",
+        "method": "original-gpt",
+        "settled": true,
+        "started": true,
+        "sends": 2,
+        "endpoint_block": null,
+        "pid": 3981046
+      },
+      {
+        "case": "warehouse-crossed",
+        "method": "strong-prefetch",
+        "settled": true,
+        "started": true,
+        "sends": 2,
+        "endpoint_block": null,
+        "pid": 3982015
+      },
+      {
+        "case": "warehouse-crossed",
+        "method": "generic",
+        "settled": true,
+        "started": true,
+        "sends": 2,
+        "endpoint_block": null,
+        "pid": 3982876
+      }
+    ],
+    "sends": 10,
+    "settled": 5,
+    "result": {
+      "rows": [
+        {
+          "case": "warehouse-crossed",
+          "method": "common-serial",
+          "sends": 2,
+          "whole_s": 130.5716947199544,
+          "strict": false,
+          "restricted_s": 240,
+          "error": {
+            "type": "TransportError",
+            "message": "Responses 请求超过总时限，未采纳任何部分结果。",
+            "code": "timeout",
+            "status": null
+          },
+          "actual_service_s": 129.52688567800215,
+          "service_with_action_overlap_s": 0,
+          "motion_while_pending": 0,
+          "permission_violations": [],
+          "requested_fields": [
+            [
+              {
+                "field": "红色货箱",
+                "evidence_image_id": "onboard_0001"
+              }
+            ],
+            [
+              {
+                "field": "蓝色货箱",
+                "evidence_image_id": "onboard_0003"
+              },
+              {
+                "field": "白色货箱",
+                "evidence_image_id": "onboard_0003"
+              }
+            ]
+          ],
+          "final_pose_ok": true,
+          "expected": [
+            {
+              "field": "红色货箱",
+              "view": "front",
+              "expected": true,
+              "bound_and_correct": false
+            },
+            {
+              "field": "蓝色货箱",
+              "view": "side",
+              "expected": true,
+              "bound_and_correct": false
+            },
+            {
+              "field": "白色货箱",
+              "view": "side",
+              "expected": false,
+              "bound_and_correct": false
+            }
+          ],
+          "submission_sources": []
+        },
+        {
+          "case": "warehouse-crossed",
+          "method": "joint",
+          "sends": 2,
+          "whole_s": 33.56741368200164,
+          "strict": true,
+          "restricted_s": 33.56741368200164,
+          "error": null,
+          "actual_service_s": 33.5179940930102,
+          "service_with_action_overlap_s": 1.0030466530006379,
+          "motion_while_pending": 1,
+          "permission_violations": [],
+          "requested_fields": [
+            [
+              {
+                "field": "红色货箱",
+                "evidence_image_id": "onboard_0001"
+              }
+            ],
+            [
+              {
+                "field": "蓝色货箱",
+                "evidence_image_id": "onboard_0002"
+              },
+              {
+                "field": "白色货箱",
+                "evidence_image_id": "onboard_0002"
+              }
+            ]
+          ],
+          "final_pose_ok": true,
+          "expected": [
+            {
+              "field": "红色货箱",
+              "view": "front",
+              "expected": true,
+              "bound_and_correct": true
+            },
+            {
+              "field": "蓝色货箱",
+              "view": "side",
+              "expected": true,
+              "bound_and_correct": true
+            },
+            {
+              "field": "白色货箱",
+              "view": "side",
+              "expected": false,
+              "bound_and_correct": true
+            }
+          ],
+          "submission_sources": [
+            [
+              "红色货箱",
+              "onboard_0001",
+              true
+            ],
+            [
+              "蓝色货箱",
+              "onboard_0002",
+              true
+            ],
+            [
+              "白色货箱",
+              "onboard_0002",
+              false
+            ]
+          ]
+        },
+        {
+          "case": "warehouse-crossed",
+          "method": "original-gpt",
+          "sends": 2,
+          "whole_s": 35.096080154995434,
+          "strict": true,
+          "restricted_s": 35.096080154995434,
+          "error": null,
+          "actual_service_s": 33.96968098799698,
+          "service_with_action_overlap_s": 0,
+          "motion_while_pending": 0,
+          "permission_violations": [],
+          "requested_fields": [
+            null,
+            null
+          ],
+          "final_pose_ok": true,
+          "expected": [
+            {
+              "field": "红色货箱",
+              "view": "front",
+              "expected": true,
+              "bound_and_correct": true
+            },
+            {
+              "field": "蓝色货箱",
+              "view": "side",
+              "expected": true,
+              "bound_and_correct": true
+            },
+            {
+              "field": "白色货箱",
+              "view": "side",
+              "expected": false,
+              "bound_and_correct": true
+            }
+          ],
+          "submission_sources": [
+            [
+              "红色货箱",
+              "onboard_0001",
+              true
+            ],
+            [
+              "蓝色货箱",
+              "onboard_0002",
+              true
+            ],
+            [
+              "白色货箱",
+              "onboard_0002",
+              false
+            ]
+          ]
+        },
+        {
+          "case": "warehouse-crossed",
+          "method": "strong-prefetch",
+          "sends": 2,
+          "whole_s": 32.92669628903968,
+          "strict": true,
+          "restricted_s": 32.92669628903968,
+          "error": null,
+          "actual_service_s": 32.887628872005735,
+          "service_with_action_overlap_s": 1.1034214989631437,
+          "motion_while_pending": 1,
+          "permission_violations": [],
+          "requested_fields": [
+            [
+              {
+                "field": "红色货箱",
+                "evidence_image_id": "onboard_0001"
+              }
+            ],
+            [
+              {
+                "field": "蓝色货箱",
+                "evidence_image_id": "onboard_0002"
+              },
+              {
+                "field": "白色货箱",
+                "evidence_image_id": "onboard_0002"
+              }
+            ]
+          ],
+          "final_pose_ok": true,
+          "expected": [
+            {
+              "field": "红色货箱",
+              "view": "front",
+              "expected": true,
+              "bound_and_correct": true
+            },
+            {
+              "field": "蓝色货箱",
+              "view": "side",
+              "expected": true,
+              "bound_and_correct": true
+            },
+            {
+              "field": "白色货箱",
+              "view": "side",
+              "expected": false,
+              "bound_and_correct": true
+            }
+          ],
+          "submission_sources": [
+            [
+              "红色货箱",
+              "onboard_0001",
+              true
+            ],
+            [
+              "蓝色货箱",
+              "onboard_0002",
+              true
+            ],
+            [
+              "白色货箱",
+              "onboard_0002",
+              false
+            ]
+          ]
+        },
+        {
+          "case": "warehouse-crossed",
+          "method": "generic",
+          "sends": 2,
+          "whole_s": 28.72824279597262,
+          "strict": true,
+          "restricted_s": 28.72824279597262,
+          "error": null,
+          "actual_service_s": 28.69680450099986,
+          "service_with_action_overlap_s": 1.0028673780034296,
+          "motion_while_pending": 1,
+          "permission_violations": [],
+          "requested_fields": [
+            [
+              {
+                "field": "红色货箱",
+                "evidence_image_id": "onboard_0001"
+              }
+            ],
+            [
+              {
+                "field": "蓝色货箱",
+                "evidence_image_id": "onboard_0002"
+              },
+              {
+                "field": "白色货箱",
+                "evidence_image_id": "onboard_0002"
+              }
+            ]
+          ],
+          "final_pose_ok": true,
+          "expected": [
+            {
+              "field": "红色货箱",
+              "view": "front",
+              "expected": true,
+              "bound_and_correct": true
+            },
+            {
+              "field": "蓝色货箱",
+              "view": "side",
+              "expected": true,
+              "bound_and_correct": true
+            },
+            {
+              "field": "白色货箱",
+              "view": "side",
+              "expected": false,
+              "bound_and_correct": true
+            }
+          ],
+          "submission_sources": [
+            [
+              "红色货箱",
+              "onboard_0001",
+              true
+            ],
+            [
+              "蓝色货箱",
+              "onboard_0002",
+              true
+            ],
+            [
+              "白色货箱",
+              "onboard_0002",
+              false
+            ]
+          ]
+        }
+      ],
+      "strict": 4,
+      "actual_sends": 10,
+      "registration_sha256": "9ba0dc8754e772e1c07e31e9096008e8b3b8760e00b0bddacf6f68ab4d20bdc4",
+      "sealed_sha256": "0b6da0076965c848c9cc3db60c5eb20290a7cd2b29dc3da56c685c04edaa3ed1"
+    }
+  },
+  "native_pending_photo": {
+    "slots": [
+      {
+        "case": "warehouse-crossed",
+        "method": "joint-late-shutter",
+        "started": true,
+        "settled": true,
+        "sends": 2
+      },
+      {
+        "case": "warehouse-crossed",
+        "method": "joint",
+        "started": true,
+        "settled": true,
+        "sends": 2
+      }
+    ],
+    "sends": 4,
+    "settled": 2,
+    "result": {
+      "rows": [
+        {
+          "case": "warehouse-crossed",
+          "method": "joint-late-shutter",
+          "sends": 2,
+          "whole_s": 44.36276892101159,
+          "strict": true,
+          "restricted_s": 44.36276892101159,
+          "error": null,
+          "actual_service_s": 44.32148323097499,
+          "service_with_action_overlap_s": 1.0036491639912128,
+          "motion_while_pending": 1,
+          "permission_violations": [],
+          "requested_fields": [
+            [
+              {
+                "field": "红色货箱",
+                "evidence_image_id": "onboard_0001"
+              }
+            ],
+            [
+              {
+                "field": "蓝色货箱",
+                "evidence_image_id": "onboard_0002"
+              },
+              {
+                "field": "白色货箱",
+                "evidence_image_id": "onboard_0002"
+              }
+            ]
+          ],
+          "final_pose_ok": true,
+          "expected": [
+            {
+              "field": "红色货箱",
+              "view": "front",
+              "expected": true,
+              "bound_and_correct": true
+            },
+            {
+              "field": "蓝色货箱",
+              "view": "side",
+              "expected": true,
+              "bound_and_correct": true
+            },
+            {
+              "field": "白色货箱",
+              "view": "side",
+              "expected": false,
+              "bound_and_correct": true
+            }
+          ],
+          "pending_captures": [],
+          "submission_sources": [
+            [
+              "红色货箱",
+              "onboard_0001",
+              true
+            ],
+            [
+              "蓝色货箱",
+              "onboard_0002",
+              true
+            ],
+            [
+              "白色货箱",
+              "onboard_0002",
+              false
+            ]
+          ]
+        },
+        {
+          "case": "warehouse-crossed",
+          "method": "joint",
+          "sends": 2,
+          "whole_s": 128.7620497100288,
+          "strict": false,
+          "restricted_s": 240,
+          "error": {
+            "type": "TransportError",
+            "message": "Responses 请求超过总时限，未采纳任何部分结果。",
+            "code": "timeout",
+            "status": null
+          },
+          "actual_service_s": 128.72596585401334,
+          "service_with_action_overlap_s": 1.1029826480080374,
+          "motion_while_pending": 1,
+          "permission_violations": [],
+          "requested_fields": [
+            [
+              {
+                "field": "红色货箱",
+                "evidence_image_id": "onboard_0001"
+              }
+            ],
+            [
+              {
+                "field": "蓝色货箱",
+                "evidence_image_id": "onboard_0002"
+              },
+              {
+                "field": "白色货箱",
+                "evidence_image_id": "onboard_0002"
+              }
+            ]
+          ],
+          "final_pose_ok": true,
+          "expected": [
+            {
+              "field": "红色货箱",
+              "view": "front",
+              "expected": true,
+              "bound_and_correct": false
+            },
+            {
+              "field": "蓝色货箱",
+              "view": "side",
+              "expected": true,
+              "bound_and_correct": false
+            },
+            {
+              "field": "白色货箱",
+              "view": "side",
+              "expected": false,
+              "bound_and_correct": false
+            }
+          ],
+          "pending_captures": [
+            {
+              "image_id": "onboard_0002",
+              "completed_with_request_pending": true,
+              "later_attached": true,
+              "used_in_report": false
+            }
+          ],
+          "submission_sources": []
+        }
+      ],
+      "strict": 1,
+      "actual_sends": 4,
+      "registration_sha256": "848c74320599f216878593a5d56714de13154b37a5b80fa430adcb94e67d147c",
+      "sealed_sha256": "c68f884f3cbe3907a39e38b93e8bcb49675193e194f707e153ee2c33a71c15dd"
+    },
+    "audit": {
+      "sealed_sha256": "c68f884f3cbe3907a39e38b93e8bcb49675193e194f707e153ee2c33a71c15dd",
+      "new_requests": 0,
+      "rows": [
+        {
+          "case": "warehouse-crossed",
+          "method": "joint-late-shutter",
+          "verified": false,
+          "captures": []
+        },
+        {
+          "case": "warehouse-crossed",
+          "method": "joint",
+          "verified": false,
+          "captures": [
+            {
+              "image_id": "onboard_0002",
+              "sha256": "e532a35b1d2d374cfa94ed9d7ac160695d690fa1af8f715663aa203311f4e636",
+              "first_request_s": 8.734849996981211,
+              "start_after_dispatch_s": 1.107261570985429,
+              "captured_before_return_s": 7.626040842034854,
+              "early_allowance_in_registered_task": true,
+              "first_request_was_only_red": true,
+              "both_side_questions_using_exact_photo": true,
+              "both_final_side_answers_cite_exact_photo": false
+            }
+          ]
+        }
+      ]
     }
   }
 }

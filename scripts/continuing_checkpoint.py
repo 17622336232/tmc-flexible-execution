@@ -141,6 +141,38 @@ def main():
     switch_witness=optional("online-cost-dev01/switch-witness/summary.json")
     native_followup=optional("native-natural-followup-dev01/summary.json")
     followup_registered=(local/"native-natural-followup-dev01/registration.json").is_file()
+    joint_root=local/"native-joint-execution-dev01"
+    joint_result=optional("native-joint-execution-dev01/summary.json")
+    joint_cases=optional("native-joint-execution-dev01/registration.json").get("cases",[])
+    joint_slots=[]
+    for case in joint_cases:
+        for method in case["order"]:
+            key=case["id"]+"/"+method
+            episode=joint_root/key
+            receipt=optional(f"native-joint-execution-dev01/{key}.receipt.json")
+            worker=optional(f"native-joint-execution-dev01/{key}.worker.json")
+            ledger=episode/"private/robot/sends.jsonl"
+            joint_slots.append(dict(case=case["id"],method=method,settled=bool(receipt),
+                                    started=episode.with_suffix(".start.json").is_file(),
+                                    sends=len(ledger.read_bytes().splitlines()) if ledger.is_file() else 0,
+                                    endpoint_block=receipt.get("endpoint_block"),pid=worker.get("pid")))
+    joint_sends=sum(row["sends"] for row in joint_slots)
+    joint_settled=sum(row["settled"] for row in joint_slots)
+    pending_name="native-pending-photo-dev02"
+    pending_root=local/pending_name
+    pending_result=optional(pending_name+"/summary.json")
+    pending_audit=optional(pending_name+"/capture_audit.json")
+    pending_slots=[]
+    for case in optional(pending_name+"/registration.json").get("cases",[]):
+        for method in case["order"]:
+            episode=pending_root/case["id"]/method
+            ledger=episode/"private/robot/sends.jsonl"
+            pending_slots.append(dict(case=case["id"],method=method,
+                started=episode.with_suffix(".start.json").is_file(),
+                settled=episode.with_suffix(".receipt.json").is_file(),
+                sends=len(ledger.read_bytes().splitlines()) if ledger.is_file() else 0))
+    pending_sends=sum(row["sends"] for row in pending_slots)
+    pending_settled=sum(row["settled"] for row in pending_slots)
     section_ledger=local/"native-section-dev01/sends.jsonl"
     section_sends=len(section_ledger.read_bytes().splitlines()) if section_ledger.is_file() else 0
     ordinary_workers=[]
@@ -150,6 +182,7 @@ def main():
         b"continuing_cross_source_assay.py":(b"run",),
         b"continuing_natural_frontier_probe.py":(b"run",),
         b"continuing_native_bound_followup.py":(b"run",),
+        b"continuing_native_joint_execution.py":(b"run",b"worker",b"grade"),
     }
     for proc in Path("/proc").glob("[0-9]*/cmdline"):
         try:
@@ -262,12 +295,35 @@ def main():
         status+=f"真实时钟驱动的三问换序记录 {switch_witness['count']} 个离线条件。"
     if followup_registered and not native_followup:
         status+="一次仓库侧面后续判断已登记，当前无发送收据。"
+    if native_followup:
+        status+=(f"仓库已授权的侧面两问合问实发 {native_followup['actual_sends']} 次，"
+                 f"独立通过 {int(native_followup['independent_correct_combination'])}/1。")
+    if joint_slots:
+        status+=f"仓库原版闭环匹配开发已结算 {joint_settled}/{len(joint_slots)} 个位置，实发 {joint_sends} 次。"
+    if joint_result:
+        status+=f"其中严格整项通过 {joint_result['strict']}/{len(joint_result['rows'])}。"
+    if pending_slots:
+        status+=f"仓库快门时序消融已结算 {pending_settled}/{len(pending_slots)}，实发 {pending_sends} 次。"
+    if pending_audit:
+        count=sum(r["verified"] for r in pending_audit["rows"])
+        status+=f"在等待中取得原图、随后使用且严格交付的消融位置有 {count} 个。"
     if ordinary_workers:
         status+="当前首轮答复或动作测量进程 "+", ".join(str(w["pid"]) for w in ordinary_workers)+"。"
     if unavailable:
         next_step="等待现有 Diff-VLA 套餐显示可用，再从未发送且已登记的位置恢复。"
     elif workers:
         next_step="跟踪正在进行的 "+workers[0]["cohort"]+" 批次，逐一保留原始收据并复核完整评分。"
+    elif pending_slots and not pending_audit:
+        next_step=("收齐快门时序消融并封存。核验派发、取图、回包解锁、同图合法合问与最终报告是否使用同一照片。")
+    elif joint_result:
+        next_step=("让原版正常回复顺带提议剩余任务及依赖，独立校验完整用户原文和任务许可。"
+                   "用改写指令、明确禁止提前和没有收益的匹配开发条件，检验执行器能否据此选择不同顺序。")
+    elif joint_slots:
+        next_step=("核对已登记的五种仓库对照，保留每轮原始请求和仿真动作。"
+                   "待封存后核验发问与取证的因果顺序、证据和严格整项验收。")
+    elif native_followup:
+        next_step=("将已预登记并通过侧面复核的材料许可接进原版完整执行。"
+                   "用同一任务比较原版、串行、强预取、通用规划与联合调度。")
     elif followup_registered and not native_followup:
         next_step=("用仓库封存的真实首轮判断，放行实际侧面照片里的两项已开放问题。"
                    "先复核登记，只使用一轮原版模型回复并独立验收来源和许可。"
@@ -309,6 +365,8 @@ def main():
         stage="native controller source binding and legal multi-view request scheduling"
     if cost_replay:
         stage="causal timing, cross-camera batch calibration and native task discovery"
+    if joint_slots:
+        stage="native controller closed-loop matched development"
     execution_state=requested_state or doc.get("execution_state","active")
     if execution_state=="paused":
         if workers or fv_pids or room_workers or ordinary_workers:
@@ -335,6 +393,10 @@ def main():
         deadline_policy_sensitivity=deadline_result,hard_compute_budget=limit_result,
         native_ordinary_frontier=dict(proposals=ordinary_section,binding=ordinary_binding,
                                       acquisition_clocks=acquisition_clocks,workers=ordinary_workers),
+        native_joint_execution=dict(slots=joint_slots,sends=joint_sends,settled=joint_settled,
+                                    result=joint_result),
+        native_pending_photo=dict(slots=pending_slots,sends=pending_sends,settled=pending_settled,
+                                  result=pending_result,audit=pending_audit),
         adaptive_cost_development=dict(clock=clock_audit,cross_source_calibration=cross_source,
             native_natural=natural_probe,cost_scenarios=cost_replay.get("comparisons",0),
             node_budget={k:v for k,v in permission_cache.items() if k!="rows"},
@@ -358,7 +420,8 @@ def main():
           ordinary_section_first_decisions=section_sends,
           cross_source_calibration=cross_source.get("actual_sends",0),
           natural_ordinary_gate=natural_probe.get("closed",0),
-          natural_bound_followup=native_followup.get("actual_sends",0)),
+          natural_bound_followup=native_followup.get("actual_sends",0),native_joint_closed_loop=joint_sends,
+          native_pending_photo=pending_sends),
         next=next_step)
     save(Path("RESEARCH_STATE.json"),doc)
     tally="；".join(f"{k} 主对照 {v['primary']}/{planned_counts[k]['primary']}、强对照 {v['comparators']}/{planned_counts[k]['comparators']}" for k,v in cohorts.items())
@@ -392,6 +455,10 @@ def main():
         recovery+="签出当前版本后运行 `python scripts/continuing_room_clock_replay.py`、`python scripts/continuing_online_cost_replay.py`。使用 `python scripts/continuing_cross_source_assay.py grade` 和 `python scripts/continuing_natural_frontier_probe.py grade` 复核真实回复。这四个命令均不发送请求。"
     if switch_witness:
         recovery+="用 `python scripts/continuing_switch_witness.py` 核对三问换序。用 `python scripts/continuing_native_bound_followup.py register` 核对仓库真实来源与两项许可，这两条也不发送请求。"
+    if joint_slots:
+        recovery+="第一批仓库匹配开发按原始代码版本 `a394efa` 的 `python scripts/continuing_native_joint_execution.py status` 或 `grade` 零请求核对。"
+    if pending_slots:
+        recovery+="本版用 `python scripts/continuing_native_joint_execution.py status --study native-pending-photo-dev02` 核对登记，封存后运行 `python scripts/continuing_pending_capture_audit.py`，不发送请求。"
     upsert(Path("NEXT_ACTION.md"),"## 最近一次恢复位置",stat+"\n\n"+next_step+"\n\n"+recovery)
     manuscript=Path("docs/DEVELOPMENT_EVIDENCE_CN.md")
     if manuscript.exists():

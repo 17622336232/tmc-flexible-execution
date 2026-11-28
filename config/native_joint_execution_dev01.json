@@ -1,0 +1,20 @@
+{
+  "id": "native-joint-execution-dev01",
+  "role": "First matched end-to-end engineering block on the previously exposed native warehouse scene. Same natural task, actual aircraft simulator, service, request cap and independent report requirements in all arms. No hidden scene truth reaches execution.",
+  "capture_calibration": "outputs/continuing/native-acquisition-clocks-dev01",
+  "deadline_s": 240,
+  "per_send_s": 120,
+  "per_arm_max_sends": 5,
+  "model": "gpt-6.1-terra",
+  "effort": "max",
+  "cases": [
+    {
+      "id": "warehouse-crossed",
+      "instruction": "正面是起始朝向。原地向左转40度为侧面。看看正面照片里有没有红色货箱。也看看侧面照片里有没有蓝色货箱。如果正面有红色货箱，再检查侧面照片里有没有白色货箱。可以在等待时提前拍摄侧面照片。最后停在侧面。分别报告各项结果。每项附实拍照片。用物品名称作记录标识，布尔字段用 visible。",
+      "score_predicates": {"红色货箱":"red_carton","蓝色货箱":"blue_carton","白色货箱":"white_carton"},
+      "order": ["common-serial","joint","original-gpt","strong-prefetch","generic"]
+    }
+  ],
+  "costs": "Use measured outward native movement and shutter referenced by the warehouse receipt, existing native first/follow-up service timings and the two observed cross-camera completion/protocol results. Cross-camera price is a conservative maximum of both observed timings until a matched task-local result is available. No artificial sleeps or using future response timings.",
+  "acceptance": "Independent score after the full matched block is sealed. Report all and only objectively active fields, each grounded to an actual supplied JPEG from its stated heading. Required final pose and accepted native report. Preserve incorrect, incomplete and no-delivery at the task deadline and log premature interpretation separately even if a later field corrected."
+}
