@@ -1,9 +1,9 @@
 {
   "status": "RESEARCH_IN_PROGRESS",
-  "stage": "frozen first-decision replies and pending simulator verification",
+  "stage": "event-driven scheduling of physical evidence and dependent semantic requests",
   "resumed_remote": "94bd1e78953164dce48ec38c8cc15dbd010f2e56",
   "resumed_local": "90f390c8ee332c866f4204dee628d447f8ddab2c",
-  "as_of_utc": "2026-11-28T15:28:39+00:00",
+  "as_of_utc": "2026-11-28T16:10:56+00:00",
   "method_version": {
     "native-views-dev01": "2e8e26cb8f0099bb68d02e5aa1c1e9569423706ec413227f9d9aa7714ffcef2b",
     "native-evidence-dev02": "6c5dab53a9faf9d2de88df4c2d988619c066176423a1223341f30e75b84c2577",
@@ -46,7 +46,7 @@
   "pending_workers": [],
   "account_remaining_requests": null,
   "hardware_motion_authorized": false,
-  "current_hypothesis": "恢复研发后，先补齐从封存回复驱动仿真的运行入口，再逐份检验动作、拒绝原因和现场照片。已消耗的八次模型请求无需重发。",
+  "current_hypothesis": "按已登记的两个公开房屋任务收齐六个对照。相同的工作单、相机与验收让我们检验等待中取证和合问能否缩短整项交付，并量出相同输入的服务波动。",
   "validated": [
     "93 prior sends attributed to six roles",
     "with original requests fixed the nonrequest ceiling is 10.50% on cracks and 5.14% on inventory",
@@ -55,8 +55,8 @@
   "rejected": [
     "fixed conservative OCR has zero detections on 64 sampled historical image/ROI questions; 31 had independently assigned target identity"
   ],
-  "next": "恢复研发后，先补齐从封存回复驱动仿真的运行入口，再逐份检验动作、拒绝原因和现场照片。已消耗的八次模型请求无需重发。",
-  "phase": "frozen first-decision replies and pending simulator verification",
+  "next": "按已登记的两个公开房屋任务收齐六个对照。相同的工作单、相机与验收让我们检验等待中取证和合问能否缩短整项交付，并量出相同输入的服务波动。",
+  "phase": "event-driven scheduling of physical evidence and dependent semantic requests",
   "paired_rgb_assay": {
     "sends": 18,
     "results": {
@@ -76,7 +76,9 @@
     "archived_rgb_assay": 18,
     "one_image_regions": 6,
     "explicit_roster_mechanism": 0,
-    "standalone_first_decisions": 8
+    "standalone_first_decisions": 8,
+    "matched_room_cost_calibration": 6,
+    "matched_room_tasks": 4
   },
   "closed_external_attempts": [
     {
@@ -602,7 +604,7 @@
     "scoped_mechanism_admitted": false,
     "region_summary_sha256": "59791085a516fd82b660ba09ea32baad37b0b880acd7114dd308b9987e351b83"
   },
-  "execution_state": "paused",
+  "execution_state": "active",
   "mandatory_itinerary_direct": {
     "role": "calibration",
     "registrations": "527109b2661a58d2adcc6cd01fe6ad8df969b9b3b984d0c98bfc71f92d0b276f",
@@ -979,7 +981,478 @@
         "error": null
       }
     ],
-    "replay_entry_present": false,
-    "replay": {}
+    "replay_entry_present": true,
+    "replay": {
+      "role": "source-matched single-decision physical replay",
+      "sealed_responses_sha256": "880b6b29f44b4414a2b389e6a0081f2525baf064ac57bb3a1b6862a13002911c",
+      "sealed_measurements_sha256": "7d1ca4f3e7d1f88308bea4e5b750d7b9d8ad866ae7d54e6e4fdf399b0a6b2956",
+      "actual_attempts": 8,
+      "new_model_requests": 0,
+      "source_bound": 8,
+      "reached": 4,
+      "guarded_movements": 1,
+      "registered_witnesses": 0,
+      "cases": [
+        {
+          "case": "cracked-row",
+          "method": "ordinary",
+          "source_bound": true,
+          "kind": "move",
+          "primary_refusal": null,
+          "fallback": false,
+          "reached": true,
+          "action_error": null,
+          "failure": null,
+          "timings_s": 6.4493334889994,
+          "source_pixels": {
+            "before": {
+              "label": 473,
+              "door_surface": 3600
+            },
+            "after": {
+              "label": 4920,
+              "door_surface": 37364
+            }
+          },
+          "limiting_ratio": 10.40169133192389,
+          "witness": false,
+          "render_alignment": {
+            "before": 0.9780338541666667,
+            "after": 0.9969140625
+          },
+          "unique_source": true,
+          "scored_subject": "EQ-02",
+          "requested_same_subject": null
+        },
+        {
+          "case": "cracked-row",
+          "method": "contingent",
+          "source_bound": true,
+          "kind": "approach",
+          "primary_refusal": "unproven_foreground",
+          "fallback": true,
+          "reached": true,
+          "action_error": null,
+          "failure": null,
+          "timings_s": 0.8801231439574622,
+          "source_pixels": {
+            "before": {
+              "label": 473,
+              "door_surface": 3605
+            },
+            "after": {
+              "label": 489,
+              "door_surface": 3624
+            }
+          },
+          "limiting_ratio": 1.0338266384778012,
+          "witness": false,
+          "render_alignment": {
+            "before": 0.9775520833333333,
+            "after": 0.9761197916666666
+          },
+          "unique_source": true,
+          "scored_subject": "EQ-02",
+          "requested_same_subject": true
+        },
+        {
+          "case": "cracked-row-02",
+          "method": "contingent",
+          "source_bound": true,
+          "kind": null,
+          "primary_refusal": null,
+          "fallback": false,
+          "reached": false,
+          "action_error": {
+            "code": "goal_unobserved",
+            "message": "接近点的机体空间尚未充分观测或地图不可用，请重新观察"
+          },
+          "failure": null,
+          "timings_s": 0.38483992399415,
+          "source_pixels": {
+            "before": {
+              "label": 506,
+              "door_surface": 3823
+            },
+            "after": {
+              "label": 504,
+              "door_surface": 3827
+            }
+          },
+          "limiting_ratio": 0.9960474308300395,
+          "witness": false,
+          "render_alignment": {
+            "before": 0.9778211805555556,
+            "after": 0.9784288194444445
+          },
+          "unique_source": true,
+          "scored_subject": "EQ-02",
+          "requested_same_subject": null
+        },
+        {
+          "case": "cracked-row-02",
+          "method": "ordinary",
+          "source_bound": true,
+          "kind": "approach",
+          "primary_refusal": "unproven_foreground",
+          "fallback": false,
+          "reached": false,
+          "action_error": null,
+          "failure": null,
+          "timings_s": 0.42121670802589506,
+          "source_pixels": {
+            "before": {
+              "label": 505,
+              "door_surface": 3824
+            },
+            "after": {
+              "label": 505,
+              "door_surface": 3828
+            }
+          },
+          "limiting_ratio": 1.0,
+          "witness": false,
+          "render_alignment": {
+            "before": 0.9774913194444445,
+            "after": 0.9781727430555556
+          },
+          "unique_source": true,
+          "scored_subject": "EQ-02",
+          "requested_same_subject": true
+        },
+        {
+          "case": "equipment-inspection-03",
+          "method": "ordinary",
+          "source_bound": true,
+          "kind": null,
+          "primary_refusal": null,
+          "fallback": false,
+          "reached": false,
+          "action_error": {
+            "code": "goal_unobserved",
+            "message": "接近点的机体空间尚未充分观测或地图不可用，请重新观察"
+          },
+          "failure": null,
+          "timings_s": 0.49261278402991593,
+          "source_pixels": {
+            "before": {
+              "label": 593,
+              "door_surface": 4552
+            },
+            "after": {
+              "label": 594,
+              "door_surface": 4548
+            }
+          },
+          "limiting_ratio": 1.0016863406408094,
+          "witness": false,
+          "render_alignment": {
+            "before": 0.9787673611111111,
+            "after": 0.9784765625
+          },
+          "unique_source": true,
+          "scored_subject": "EQ-01",
+          "requested_same_subject": null
+        },
+        {
+          "case": "equipment-inspection-03",
+          "method": "contingent",
+          "source_bound": true,
+          "kind": "approach",
+          "primary_refusal": "move_too_far",
+          "fallback": false,
+          "reached": false,
+          "action_error": null,
+          "failure": null,
+          "timings_s": 0.5297954039997421,
+          "source_pixels": {
+            "before": {
+              "label": 593,
+              "door_surface": 4551
+            },
+            "after": {
+              "label": 595,
+              "door_surface": 4549
+            }
+          },
+          "limiting_ratio": 1.0033726812816188,
+          "witness": false,
+          "render_alignment": {
+            "before": 0.9775998263888889,
+            "after": 0.9786631944444445
+          },
+          "unique_source": true,
+          "scored_subject": "EQ-01",
+          "requested_same_subject": true
+        },
+        {
+          "case": "warehouse-filter-02",
+          "method": "contingent",
+          "source_bound": true,
+          "kind": "move",
+          "primary_refusal": null,
+          "fallback": false,
+          "reached": true,
+          "action_error": null,
+          "failure": null,
+          "timings_s": 7.012999424012378,
+          "source_pixels": {},
+          "limiting_ratio": null,
+          "witness": false,
+          "render_alignment": {
+            "before": 0.9664626736111112,
+            "after": 0.9725694444444445
+          },
+          "unique_source": false
+        },
+        {
+          "case": "warehouse-filter-02",
+          "method": "ordinary",
+          "source_bound": true,
+          "kind": "move",
+          "primary_refusal": null,
+          "fallback": false,
+          "reached": true,
+          "action_error": null,
+          "failure": null,
+          "timings_s": 6.613673101004679,
+          "source_pixels": {},
+          "limiting_ratio": null,
+          "witness": false,
+          "render_alignment": {
+            "before": 0.9656119791666666,
+            "after": 0.97640625
+          },
+          "unique_source": false
+        }
+      ]
+    }
+  },
+  "event_workflow": {
+    "registered": 296,
+    "finished": 296,
+    "paired_equal_budgets": 76,
+    "both_certified": 50,
+    "jointly_certified_only": 3,
+    "generic_certified_only": 0,
+    "different_feasible_costs": 2,
+    "new_model_requests": 0
+  },
+  "matched_rooms": {
+    "calibration": {
+      "cases": [
+        {
+          "case": "already-exposed-82",
+          "method": "joint",
+          "field": "q0",
+          "category": "Chair",
+          "answer": "negative",
+          "expected": "negative",
+          "correct": true,
+          "source_sha256": "0ef74d43a4ec24d58ecf094ff80635b4ec1728340c67a1dee2efa582f9fc5127",
+          "service_s": 8.727350104018115
+        },
+        {
+          "case": "already-exposed-82",
+          "method": "joint",
+          "field": "q1",
+          "category": "Window",
+          "answer": "positive",
+          "expected": "positive",
+          "correct": true,
+          "source_sha256": "0ef74d43a4ec24d58ecf094ff80635b4ec1728340c67a1dee2efa582f9fc5127",
+          "service_s": 8.727350104018115
+        },
+        {
+          "case": "already-exposed-82",
+          "method": "first",
+          "field": "q0",
+          "category": "Chair",
+          "answer": "negative",
+          "expected": "negative",
+          "correct": true,
+          "source_sha256": "0ef74d43a4ec24d58ecf094ff80635b4ec1728340c67a1dee2efa582f9fc5127",
+          "service_s": 4.0533213060116395
+        },
+        {
+          "case": "already-exposed-82",
+          "method": "second",
+          "field": "q1",
+          "category": "Window",
+          "answer": "positive",
+          "expected": "positive",
+          "correct": true,
+          "source_sha256": "0ef74d43a4ec24d58ecf094ff80635b4ec1728340c67a1dee2efa582f9fc5127",
+          "service_s": 3.504017576982733
+        },
+        {
+          "case": "already-exposed-76",
+          "method": "second",
+          "field": "q1",
+          "category": "HousePlant",
+          "answer": "negative",
+          "expected": "negative",
+          "correct": true,
+          "source_sha256": "8720fb21a234eb73c8ebd7fae9e3bd7d9c6432eaaae45ff957a2a31b5b266824",
+          "service_s": 5.873976778006181
+        },
+        {
+          "case": "already-exposed-76",
+          "method": "first",
+          "field": "q0",
+          "category": "Sofa",
+          "answer": "positive",
+          "expected": "positive",
+          "correct": true,
+          "source_sha256": "8720fb21a234eb73c8ebd7fae9e3bd7d9c6432eaaae45ff957a2a31b5b266824",
+          "service_s": 3.4727832910139114
+        },
+        {
+          "case": "already-exposed-76",
+          "method": "joint",
+          "field": "q0",
+          "category": "Sofa",
+          "answer": "positive",
+          "expected": "positive",
+          "correct": true,
+          "source_sha256": "8720fb21a234eb73c8ebd7fae9e3bd7d9c6432eaaae45ff957a2a31b5b266824",
+          "service_s": 4.535145577043295
+        },
+        {
+          "case": "already-exposed-76",
+          "method": "joint",
+          "field": "q1",
+          "category": "HousePlant",
+          "answer": "negative",
+          "expected": "negative",
+          "correct": true,
+          "source_sha256": "8720fb21a234eb73c8ebd7fae9e3bd7d9c6432eaaae45ff957a2a31b5b266824",
+          "service_s": 4.535145577043295
+        }
+      ],
+      "actual_sends": 6,
+      "single_s": 3.778669441497186,
+      "pair_s": 6.631247840530705,
+      "singleton_correct": 4,
+      "grouped_correct": 4,
+      "sealed_sha256": "aee624e0ce56e2641b51d3130c5d732255ac071faa601238a10245838ee5386e"
+    },
+    "prior_bounds": {
+      "calibration_sha256": "a130946fc6f6d52c02db6b67f62ccfdf8fb8e53aa99c0cb2c8f1882dea908e7b",
+      "cases": [
+        {
+          "case": "two-screens-house-29",
+          "cost": {
+            "outward": 1.990827794012148,
+            "return_s": 3.3954094870132394,
+            "photo": 0.008536305016605183,
+            "single": 3.778669441497186,
+            "pair": 6.631247840530705,
+            "return": 3.3954094870132394
+          },
+          "estimates": {
+            "joint": {
+              "expected_s": 10.15,
+              "proved": true,
+              "expansions": 59,
+              "strong_first_two_dispatches_s": 10.15,
+              "root_lower_s": 6.6
+            },
+            "generic": {
+              "expected_s": 10.15,
+              "proved": true,
+              "expansions": 67,
+              "strong_first_two_dispatches_s": 10.15,
+              "root_lower_s": 6.6
+            },
+            "serial": {
+              "expected_s": 14.275,
+              "proved": true,
+              "expansions": 23,
+              "strong_first_two_dispatches_s": 14.275,
+              "root_lower_s": 6.6
+            },
+            "single-read": {
+              "expected_s": 11.4,
+              "proved": true,
+              "expansions": 62,
+              "strong_first_two_dispatches_s": 11.4,
+              "root_lower_s": 6.6
+            },
+            "no-early": {
+              "expected_s": 11.675,
+              "proved": true,
+              "expansions": 33,
+              "strong_first_two_dispatches_s": 11.675,
+              "root_lower_s": 6.6
+            }
+          },
+          "possible_fractional_improvement_over_optimized_serial_pct": 28.896672504378284,
+          "comparable": "Mission clocks measured from the initial photo, current declared prior of independent 0.5. This is a conditional model capacity; live correctness and delivery are unmeasured here."
+        },
+        {
+          "case": "crossed-screens-house-56",
+          "cost": {
+            "outward": 2.8727249339572154,
+            "return_s": 2.9545251760282554,
+            "photo": 0.008284970972454175,
+            "single": 3.778669441497186,
+            "pair": 6.631247840530705,
+            "return": 2.9545251760282554
+          },
+          "estimates": {
+            "joint": {
+              "expected_s": 12.5625,
+              "proved": true,
+              "expansions": 30,
+              "strong_first_two_dispatches_s": 12.5625,
+              "root_lower_s": 6.6
+            },
+            "generic": {
+              "expected_s": 12.5625,
+              "proved": true,
+              "expansions": 36,
+              "strong_first_two_dispatches_s": 12.5625,
+              "root_lower_s": 6.6
+            },
+            "serial": {
+              "expected_s": 15.4375,
+              "proved": true,
+              "expansions": 26,
+              "strong_first_two_dispatches_s": 15.4375,
+              "root_lower_s": 6.6
+            },
+            "single-read": {
+              "expected_s": 13.0625,
+              "proved": true,
+              "expansions": 30,
+              "strong_first_two_dispatches_s": 13.0625,
+              "root_lower_s": 6.6
+            },
+            "no-early": {
+              "expected_s": 12.5625,
+              "proved": true,
+              "expansions": 30,
+              "strong_first_two_dispatches_s": 12.5625,
+              "root_lower_s": 6.6
+            }
+          },
+          "possible_fractional_improvement_over_optimized_serial_pct": 18.62348178137652,
+          "comparable": "Mission clocks measured from the initial photo, current declared prior of independent 0.5. This is a conditional model capacity; live correctness and delivery are unmeasured here."
+        }
+      ],
+      "new_model_requests": 0
+    },
+    "scheduled": 6,
+    "settled": 3,
+    "sends": 4,
+    "workers": [
+      {
+        "case": "crossed-screens-house-56",
+        "method": "strong-prefetch",
+        "pid": 3866453
+      }
+    ],
+    "graded": null
   }
 }

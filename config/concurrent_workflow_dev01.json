@@ -1,0 +1,27 @@
+{
+  "id": "concurrent-workflow-dev01",
+  "scope": "Development mechanism benchmark. Reusable static observations, a non-returning two-stop robot until its declared finish, two-stage or three-stage conditional facts, and one or two service slots. Each request is allowed to read predicates on one identified photo only. No unseen labels during planning. Slot=2 is controlled concurrency, not a historical cloud measurement.",
+  "clock": "Integer deciseconds. Use the actual single-region median and actual same-photo grouped duration from each of the separately registered equipment and campus pairs (the slow campus pair remains). Use median outward and return clocks from all confirmed paired navigation trials as directed robot time proxies and measured capture times from the independently recorded two-stop robot. Inputs across experiments are composed only for controlled event analysis; no assisted aircraft time or perception success is imputed.",
+  "balanced": [
+    "paired-screen",
+    "relay-inspection",
+    "shared-followup",
+    "permission-gated-transit",
+    "existing-archive",
+    "no-flexibility",
+    "fan-in-scale"
+  ],
+  "budgets": [
+    32,
+    256
+  ],
+  "full_small_budget": 20000,
+  "scale_roots": [
+    2,
+    4,
+    6
+  ],
+  "prior": 0.5,
+  "primary": "Report all planned mechanisms under both real service tables and both common server capacities; compare strong conditional lookahead, ordinary asynchronous, same-engine serial, equal-action generic AND/OR search, and continuation-equivalent search, reporting proven bound, feasible expected time, expansions, CPU, cache and a fixed-budget quality curve. Single-read, no-overlap and no-early-work ablations use the same sources and permissions. A computed optimum is only for the declared prior and resource model. A generic solver with the same equivalence optimization is entitled to the same answer.",
+  "scientific_gate": "No advantage is claimed over an exact generic optimum. Measure which gaps come from shared legal group reads, overlapping independent travel, and finite search reuse. Use exact small cases to validate equivalence and preserve inconclusive or negative results. Do not open a new independent set. A small matched live development test may exercise same-photo conditional group formation on publicly scoped questions when a serial-service reduction is predicted; no whole-task efficacy claim without actual complete source-bound reports."
+}

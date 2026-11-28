@@ -121,6 +121,22 @@ def main():
     fv_sends=len(fv_ledger.read_bytes().splitlines()) if fv_ledger.exists() else 0
     fv_sealed=(first_view/"sealed_replies.json").is_file()
     fv_replay=optional("first-view-contingency-dev01/replay_summary.json")
+    event_grid=optional("concurrent-workflow-dev01/summary.json")
+    room_base=local/"matched-event-rooms-dev01"
+    room_cal=optional("matched-event-rooms-dev01/calibration/summary.json")
+    room_live=optional("matched-event-rooms-dev01/live/summary.json")
+    room_bounds=optional("matched-event-rooms-dev01/prior_bounds.json")
+    room_workers=[]
+    room_slots=0;room_settled=0;room_sends=0
+    if (room_base/"live/registration.json").is_file():
+        room_slots=sum(len(v) for v in read(room_base/"live/registration.json")["orders"].values())
+        for rc in room_base.glob("live/*/*.receipt.json"):
+            d=read(rc);pid=d.get("worker")
+            ep=rc.parent/d["method"];ledger=ep/"sends.jsonl"
+            room_sends+=len(ledger.read_bytes().splitlines()) if ledger.exists() else 0
+            room_settled+=d["state"]=="settled"
+            if d["state"]=="running" and pid and Path(f"/proc/{pid}").exists():
+                room_workers.append(dict(case=d["case"],method=d["method"],pid=pid))
     fv_rows=[]
     if fv_sealed:
         sealed=read(first_view/"sealed_replies.json")
@@ -162,19 +178,32 @@ def main():
             status+=f"{sum(r['actual_reply'] for r in fv_rows)} 份真实答复已封存，允许给备选动作的 {arms} 份中有 {count} 份给出备选。"
         if not fv_replay:
             status+="首次决策的仿真动作尚未取得评分。"
+        else:
+            status+=f"8 份实际答复已完成独立仿真验证，新增模型请求为零，备用动作到位 {fv_replay['guarded_movements']} 次，满足登记证据要求 {fv_replay['registered_witnesses']} 次。"
         if fv_pids:
             status+="当前独立试验进程 "+", ".join(map(str,fv_pids))+"。"
     if planned_assay:
         status+=f"另行登记的单图多区域感知比较实发 {regional_sends}/{planned_assay} 次。"
+    if event_grid:
+        status+=f"多判断调度的 {event_grid['finished']}/{event_grid['registered']} 项离线计算已落盘。"
+    if room_cal:
+        status+=f"房屋成本标定实发 {room_cal['actual_sends']} 次，单问与合问的四个字段分别答对 {room_cal['singleton_correct']}、{room_cal['grouped_correct']} 个。"
+    if room_slots:
+        status+=f"新房屋完整开发任务已结算 {room_settled}/{room_slots}，实发 {room_sends} 次。"
+        if room_workers:status+="当前进程 "+", ".join(str(w["pid"])+" "+w["case"]+"/"+w["method"] for w in room_workers)+"。"
     if unavailable:
         next_step="等待现有 Diff-VLA 套餐显示可用，再从未发送且已登记的位置恢复。"
     elif workers:
         next_step="跟踪正在进行的 "+workers[0]["cohort"]+" 批次，逐一保留原始收据并复核完整评分。"
+    elif room_live:
+        next_step="比较相同图片、相同问题下的服务与判断差异，核对完整报告、共享证据与真实动作重叠；检验强化预取对照及有界计算下的剩余优势，并将经过验证的安排接回原版 GPT 的正常决策。"
+    elif room_slots:
+        next_step="按已登记的两个公开房屋任务收齐六个对照。相同的工作单、相机与验收让我们检验等待中取证和合问能否缩短整项交付，并量出相同输入的服务波动。"
     elif fv_reg:
         if fv_replay:
-            next_step="按独立的首次决策及位姿来源评分决定是否把备用动作接入完整开发任务；保留未能触发的方案。"
+            next_step="备用动作的辅助诊断已封存。继续验证多判断、共享现场材料与合法合问在相同信息和计算预算下怎样改变完整任务时间。"
         elif fv_sealed:
-            next_step="恢复研发后，先补齐从封存回复驱动仿真的运行入口，再逐份检验动作、拒绝原因和现场照片。已消耗的八次模型请求无需重发。"
+            next_step="先在原仿真验证八份已封存回复，新增模型请求为零。随后用第三批两种场景的真实时钟分解整项差异，并在公共证据和同等计算预算下比较多判断、共享材料、合法合问如何改变任务交付的关键路径。"
         else:
             next_step="完成同一首帧上原版与附带可选备用动作的正常决策，封存全部回复后才做独立仿真重放。"
     elif measured:
@@ -184,9 +213,11 @@ def main():
     stage="paired native development and measured serial inference dependencies" if not measured else "source-bound evidence and mandatory inspection travel"
     if fv_reg:
         stage="frozen first-decision replies and pending simulator verification"
+    if event_grid:
+        stage="event-driven scheduling of physical evidence and dependent semantic requests"
     execution_state=requested_state or doc.get("execution_state","active")
     if execution_state=="paused":
-        if workers or fv_pids:
+        if workers or fv_pids or room_workers:
             raise ValueError("A study worker is still active at the requested pause")
         status="执行已按用户要求暂停，当前研究任务进程为 0。"+status
     doc.update(as_of_utc=timestamp,method_version=versions,
@@ -204,6 +235,9 @@ def main():
         task_roster_on_fresh_camera=optional("scoped-mission-dev01/preflight.json"),
         region_assay_result=regional,measured_range_result=measured,
         mandatory_itinerary_direct=direct_travel,mandatory_itinerary_measured_return=routed_travel,
+        event_workflow=event_grid,matched_rooms=dict(calibration=room_cal,prior_bounds=room_bounds,
+            scheduled=room_slots,settled=room_settled,sends=room_sends,workers=room_workers,
+            graded=None if not room_live else {"strict":room_live["strict"],"registered":room_live["registered"]}),
         first_decision_study=dict(registered=fv_slots,sends=fv_sends,sealed=fv_sealed,pids=fv_pids,
           sealed_file_sha256=digest(first_view/"sealed_replies.json") if fv_sealed else None,receipts=fv_rows,
           replay_entry_present=Path("scripts/continuing_first_view_replay.py").is_file(),replay=fv_replay),
@@ -215,7 +249,8 @@ def main():
         pending_workers=workers,paired_rgb_assay=dict(sends=assay_sends,results=assay_results),
         accounted_sends=dict(historical_formal=3842,historical_revision_development=93,
           continued_native_development=totals,archived_rgb_assay=assay_sends,one_image_regions=regional_sends,
-          explicit_roster_mechanism=scoped_sends,standalone_first_decisions=fv_sends),
+          explicit_roster_mechanism=scoped_sends,standalone_first_decisions=fv_sends,
+          matched_room_cost_calibration=room_cal.get("actual_sends",0),matched_room_tasks=room_sends),
         next=next_step)
     save(Path("RESEARCH_STATE.json"),doc)
     tally="；".join(f"{k} 主对照 {v['primary']}/{planned_counts[k]['primary']}、强对照 {v['comparators']}/{planned_counts[k]['comparators']}" for k,v in cohorts.items())
@@ -236,10 +271,13 @@ def main():
     for f in other_undelivered:
         table.append("| %s | %s | %s | 未交付 | %.2f | %.2f | %d |"%(labels.get(f["case"],f["case"]),
             labels.get(f["method"],f["method"]),f["code"],f["task_seconds"],f["restricted_if_counted_s"],f["actual_sends"]))
-    upsert(Path("PROGRESS.md"),"## 持续研发最新实测",stat+"\n\n"+"\n".join(table))
+    focus="本轮研究问题是同一张已取得的照片能否服务多个后续判断，以及机器人在真实回复返回后能否重新安排尚未完成的工作。先比较整项关键路径的上限，再用匹配的开发任务检验。"
+    upsert(Path("PROGRESS.md"),"## 持续研发最新实测",stat+"\n\n"+focus+"\n\n"+"\n".join(table))
     recovery="在仓库项目环境中运行 `scripts/continuing_registered_blocks.py` 可核对全部已登记批次与额度状态。运行 `scripts/continuing_region_assay.py grade` 和 `scripts/continuing_condition_range.py grade` 可用已有原始数据独立复核两项诊断。"
     if fv_reg:
         recovery+="用 `scripts/continuing_first_views.py status` 核对首次决策位置，用 `scripts/continuing_first_views.py seal` 核对封存回复，两条命令均为零新增模型请求。"
+    if event_grid:
+        recovery+="主线的零请求复核命令是 `scripts/continuing_v3_attribution.py`、`scripts/continuing_concurrent_workflow.py summary`。运行 `scripts/continuing_matched_event_rooms.py status` 可核对正式登记的六个开发位置。"
     upsert(Path("NEXT_ACTION.md"),"## 最近一次恢复位置",stat+"\n\n"+next_step+"\n\n"+recovery)
     manuscript=Path("docs/DEVELOPMENT_EVIDENCE_CN.md")
     if manuscript.exists():

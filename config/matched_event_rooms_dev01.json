@@ -1,0 +1,78 @@
+{
+  "id": "matched-event-rooms-dev01",
+  "scope": "Small matched closed-loop development on real ProcTHOR simulator observations with live GPT-6.1 Terra max. Public work orders and region-free image-wide class predicates isolate execution scheduling. This block is not the original aircraft controller, not open-ended language understanding, and not the independent test.",
+  "model": "gpt-6.1-terra",
+  "effort": "max",
+  "runtime_catalog": "outputs/public-visual/validation-pilot-v1/pilot_manifest.json",
+  "calibration": [
+    {
+      "id": "already-exposed-82",
+      "house": 82,
+      "categories": [
+        "Chair",
+        "Window"
+      ],
+      "order": [
+        "joint",
+        "first",
+        "second"
+      ]
+    },
+    {
+      "id": "already-exposed-76",
+      "house": 76,
+      "categories": [
+        "Sofa",
+        "HousePlant"
+      ],
+      "order": [
+        "second",
+        "first",
+        "joint"
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "id": "two-screens-house-29",
+      "house": 29,
+      "direction": "right",
+      "structure": "paired-screen",
+      "categories": [
+        "Chair",
+        "Window",
+        "Desk",
+        "HousePlant"
+      ],
+      "order": [
+        "serial",
+        "joint",
+        "strong-prefetch"
+      ]
+    },
+    {
+      "id": "crossed-screens-house-56",
+      "house": 56,
+      "direction": "left",
+      "structure": "relay-inspection",
+      "categories": [
+        "Chair",
+        "Window",
+        "HousePlant",
+        "Sofa",
+        "CoffeeTable"
+      ],
+      "order": [
+        "strong-prefetch",
+        "joint",
+        "serial"
+      ]
+    }
+  ],
+  "calibration_design": "The two houses already used for camera checks supply two new same-photo class questions each. On exactly the same fresh front RGB and class wording request both jointly and then separately in counterbalanced order. Six genuine inference calls total. Seal all raw replies before grading any segmentation. Every class, difficult image, refusal, timeout and uncertain remains. This calibrates marginal cost and recognition; spending is independent of the direction of the accuracy result.",
+  "physical_tasks": "The other two previously exposed validation-pilot houses supply two new closed work orders. In the first task judge two front classes and, only after each actual positive, its corresponding side class. Early capture of a single side frame is allowed; early reading of side fields is forbidden. Finish at the initial heading. In the second task inspect the front and side primary classes independently; if the front class is present read a side detail; if the side class is present read a front detail. If either detail is positive inspect the last side class. Finish at the side heading. No return to anchor between queries. Both methods have the same published task, static frame storage, original sensor, navigation and evidence rules.",
+  "live_matrix": "Six genuine tasks, three methods per house, with counterbalanced order. Same-engine optimized serial can form any legal batch; joint event planner; strong multi-start conditional prefetch with shared legal batching, no unnecessary expensive groups, and two-dispatch lookahead. Identical schedules are allowed and retained as real same-policy repetition to expose service and recognition variability. Complete-task times measured from first fresh front shutter, initialization and teardown reported separately. Same 240 s execution clock, 120 s per send, zero retries, one in-flight model call and per-arm cap equal to number of distinct declared fields (4 or 5). No repeat or escalation for significance.",
+  "costs": "All controllers share integer decisecond estimates. Use median of the four calibration singleton service durations and median of the two joint call durations including any observed timeouts at their cutoff, without imputing a missing semantic reply. For each direction use previously measured turn and capture durations from the corresponding prior instrumentation, bounded below by one tick. Priors .5 independently as a planning convention. Use the fixed 256-state expansion budget for planning. Timers never delay the physical task to match estimates.",
+  "accuracy": "A genuine usable report requires every active field, including negatives, to match independent saved official instance segmentation (minimum 36 pixels per instance), exact source hash and legal source time. An uncertain or missing active judgment fails. No inactive field may be reported or inferred before its grant. Every startup and terminal failure is retained; report restricted time at 240s for any undelivered task separately. No hidden perception or object categories are exposed to the planner. Only score full tasks after the six outcomes are sealed.",
+  "causal": "Reconstruct actual dispatch, camera and movement intervals, shared input SHA/method-independent prompt and fields. Compare actual tasks against same-source, fixed-response serial replay to isolate realized overlap. Differences across identical request bindings estimate the observed variability of service/output; without identical inputs or joint deliveries, a natural difference is not identified as an algorithmic effect. No holdout access and no claim about population speed from two houses."
+}
