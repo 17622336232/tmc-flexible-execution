@@ -291,7 +291,7 @@ def main():
     save(dest/"summary.json",dict(scored=len(runs),sends=sum(r["requests"] for r in runs),
         successes=sum(r["strict"] for r in runs),early_handoffs=sum(r["early_handoffs"] for r in runs),
         final_early_citations=sum(r["early_final_citations"] for r in runs),
-        verified_model_and_photos=True, token_counts=None,energy_joules=None,
+        verified_model_and_photos=bool(runs), token_counts=None,energy_joules=None,
         note="Transport without logged motion is a descriptive blocking proxy. Handoff alone does not imply a benefit or a verified final fact."))
     if args.admit_comparators:
         from scripts.continuing_recovery import interruptions,acknowledged

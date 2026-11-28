@@ -5,6 +5,7 @@ from pathlib import Path
 from experiments.flexible_execution.revision_audit import read,save,write_table
 from experiments.flexible_execution.timeline import read_trace_rows
 from experiments.flexible_execution.pilot_schedule import FAMILIES
+from scripts.continuing_exposures import before_restoration
 
 
 OUT=Path("outputs/continuing/observed-queries")
@@ -73,7 +74,8 @@ def main():
         ep=f.parents[2];paths.append((f,"historical-custom",ep.parents[2].name,ep.parents[1].name))
     for f in sorted((BASE/"public-final").glob("procthor-*/*/attempt-*/episode/model_calls.jsonl")):
         ep=f.parent;paths.append((f,"historical-houses",ep.parents[2].name,ep.parents[1].name))
-    for f in sorted(Path("outputs/continuing").glob("native-*-dev*/*/*/private/robot/model_calls.jsonl")):
+    for receipt in before_restoration(include_interrupted=True):
+        f=receipt.with_name(read(receipt)["method"])/"private/robot/model_calls.jsonl"
         ep=f.parents[2];paths.append((f,ep.parents[1].name,ep.parent.name,ep.name))
     rows=[];groups=[]
     for p,domain,c,m in paths:

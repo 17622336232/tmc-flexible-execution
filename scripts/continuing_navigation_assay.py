@@ -2,7 +2,6 @@
 import argparse
 from collections import Counter
 from hashlib import sha256
-from io import BytesIO
 import json
 import math
 from pathlib import Path
@@ -12,11 +11,8 @@ from time import monotonic,time
 from urllib.parse import unquote
 import fcntl
 
-import cv2
-import numpy as np
-from PIL import Image
-
 from experiments.flexible_execution.adapters.native_views import close_pose
+from research.flexible_scheduling.scoped_execution import match_source
 from experiments.flexible_execution.revision_audit import digest,read,save,write_table
 from scripts.continuing_crossworld_views import assert_snapshot,copied_renderer
 from scripts.continuing_ocr import decode,projected_label_boxes,inside
@@ -66,22 +62,6 @@ def register():
     reg=dict(config_sha256=digest(CFG),proposals_sha256=digest(path),cases=cases)
     assert_snapshot(OUT/"registration.json",reg)
     return reg
-
-
-def match_source(old,new,bbox):
-    src=np.array(Image.open(BytesIO(old)).convert("L"))
-    rgb=np.array(Image.open(BytesIO(new)).convert("L"))
-    if src.shape!=rgb.shape:
-        return None
-    h,w=src.shape
-    x0,y0,x1,y1=[round(x*y) for x,y in zip(bbox,(w,h,w,h))]
-    roi=src[y0:y1,x0:x1]
-    if min(roi.shape)<6 or roi.std()<4:
-        return None
-    l,t=max(0,x0-16),max(0,y0-16)
-    region=rgb[t:min(h,y1+16),l:min(w,x1+16)]
-    _,peak,_,(x,y)=cv2.minMaxLoc(cv2.matchTemplate(region,roi,cv2.TM_CCOEFF_NORMED))
-    return dict(ncc=float(peak),delta_pixels=[l+x-x0,t+y-y0])
 
 
 def execute(case,arm,ep):

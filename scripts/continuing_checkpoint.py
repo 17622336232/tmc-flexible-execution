@@ -86,11 +86,29 @@ def main():
               calibration["registered"],arms["frontal_same_distance"]["grounded_read_and_return"],arms["frontal_same_distance"]["trials"],
               arms["radial_same_distance"]["grounded_read_and_return"],arms["radial_same_distance"]["trials"]))
     local=Path("outputs/continuing")
-    timing=read(local/"observed-queries/wait_bounds.json")
-    scope=read(local/"scope-closure-dev01-parserfix/summary.json")
-    slots=timing["actual_offered_slots"]
-    status+=(f"已有 {slots['turns_with_selected_offer']} 次普通回复选了补图，均先观察，其中 {slots['following_ordinary_actions']['move']} 次下一轮才选移动。"
-             "新登记的同轮取图与导航尚待实测。")
+    def optional(relative):
+        path=local/relative
+        return read(path) if path.is_file() else {}
+    timing=optional("observed-queries/wait_bounds.json")
+    scope=optional("scope-closure-dev01-parserfix/summary.json")
+    slots=timing.get("actual_offered_slots",{})
+    if slots:
+        status+=(f"已有 {slots['turns_with_selected_offer']} 次普通回复选了补图，其中 {slots['following_ordinary_actions'].get('move',0)} 次下一轮选移动。")
+    new_ledger=local/"same-frame-region-assay01/sends.jsonl"
+    regional_sends=len(new_ledger.read_text().splitlines()) if new_ledger.exists() else 0
+    scoped_sends=sum(len(f.read_text().splitlines()) for f in (local/"scoped-mission-dev01").glob("*/*/sends.jsonl"))
+    registration=optional("same-frame-region-assay01/registration.json")
+    planned_assay=sum(len(c["order"]) for c in registration.get("cases",[]))
+    mechanism=optional("scoped-mission-dev01/registration.json")
+    if planned_assay:
+        status+=f"另行登记的单图多区域感知比较实发 {regional_sends}/{planned_assay} 次。"
+    if unavailable:
+        next_step="等待现有 Diff-VLA 套餐显示可用，再从未发送且已登记的位置恢复。"
+    elif workers:
+        next_step="跟踪正在进行的 "+workers[0]["cohort"]+" 批次，逐一保留原始收据并复核完整评分。"
+    else:
+        next_step="从各批次收据与原有门槛检查下一项尚未发送的作业，继续当前版本的开发分析。"
+    stage="paired native development and measured serial inference dependencies"
     doc.update(as_of_utc=timestamp,method_version=versions,
         new_dev=dict(scored_episodes=len(scored),strict_successes=sum(r["strict"] for r in scored),
         scored_sends=closed,in_flight_sends_at_snapshot=live_sends,closed_unscored_sends=stopped,
@@ -99,12 +117,18 @@ def main():
         early_photos_cited_in_final=cites,early_field_violations=field_errors),
         closed_external_attempts=terminal_external,unresolved_endpoint_limits=[f["code"] for f in unavailable],
         zero_model_navigation=calibration,source_binding_assay=source_assay,scoped_evidence_replay=scope,
-        scoped_wait_censoring=timing["service"],actual_offered_action_slots=slots,
-        registered_slots=planned_counts,phase="coordinating actual material handoff, ordinary movement and source-bound completion",
+        scoped_wait_censoring=timing.get("service"),actual_offered_action_slots=slots,
+        critical_path=optional("results/critical_path.json"),matched_sparse_and_generic=optional("results/actual_offer_planners.json"),
+        task_roster_on_fresh_camera=optional("scoped-mission-dev01/preflight.json"),
+        optional_development=dict(region_assay_registered_sends=planned_assay,region_assay_actual_sends=regional_sends,
+            closed_mechanism_registered_arms=mechanism.get("bounded_online_order",[]),closed_mechanism_actual_sends=scoped_sends),
+        current_hypothesis="Test whether co-issuing a grounded photo with an ordinary move or judging several regions on one image can remove serial model service. Test public-scope assembly only with externally defined regions.",
+        registered_slots=planned_counts,stage=stage,phase="coordinating actual material handoff, ordinary movement and source-bound completion",
         pending_workers=workers,paired_rgb_assay=dict(sends=assay_sends,results=assay_results),
         accounted_sends=dict(historical_formal=3842,historical_revision_development=93,
-          continued_native_development=totals,archived_rgb_assay=assay_sends),
-        next="Complete source-bound offline diagnostics. On confirmed service restoration use the launch-matched frozen tree for cohort 02's single unsent primary slot; then assess its registered comparator gate. The separate coordinated-handoff-03 development registration has six primary and eight conditional comparator slots.")
+          continued_native_development=totals,archived_rgb_assay=assay_sends,one_image_regions=regional_sends,
+          explicit_roster_mechanism=scoped_sends),
+        next=next_step)
     save(Path("RESEARCH_STATE.json"),doc)
     tally="；".join(f"{k} 主对照 {v['primary']}/{planned_counts[k]['primary']}、强对照 {v['comparators']}/{planned_counts[k]['comparators']}" for k,v in cohorts.items())
     stat=f"UTC {timestamp[:19]}。{tally} 已取得完整评分。严格通过 {sum(r['strict'] for r in scored)}/{len(scored)}。新完整任务累计实发 {totals} 次，其中取得评分的回合 {closed} 次。独立核对提前交图 {photos} 次，其中 {supported} 张支持正确字段，最终报告直接引用提前图 {cites} 次。单独的历史照片感知试验实发 {assay_sends} 次。{status}"
@@ -122,7 +146,10 @@ def main():
         table.append("| %s | %s | 套餐限额 | 未交付 | %.2f | %.2f | %d |"%(labels.get(f["case"],f["case"]),
               labels.get(f["method"],f["method"]),f["task_seconds"],f["restricted_if_counted_s"],f["actual_sends"]))
     upsert(Path("PROGRESS.md"),"## 持续研发最新实测",stat+"\n\n"+"\n".join(table))
-    upsert(Path("NEXT_ACTION.md"),"## 最近一次恢复位置",stat+"\n\n在仓库根目录，用下文相同的 Python 环境运行 `scripts/continuing_recovery.py` 零请求列出断点。账户端确认同一套餐恢复后，运行 `scripts/continuing_recovery.py --run --restoration-evidence '这里填实际恢复凭据或确认时间'`，只启动预登记且尚未发送的主对照。保留中断回合。用 `scripts/continuing_native_report.py --config config/native_evidence_dev02.json` 独立重查，再运行 `scripts/continuing_checkpoint.py` 更新统计。")
+    upsert(Path("NEXT_ACTION.md"),"## 最近一次恢复位置",stat+"\n\n"+next_step+"在仓库根目录使用项目 Python 环境运行 `scripts/continuing_recovery.py` 可零请求列出第二批主对照断点，追加 `--block comparators` 查看强对照。确认同一套餐恢复后可用 `--run --restoration-evidence '实际恢复凭据或确认时间'` 恢复首个未发送位置。用 `scripts/continuing_native_report.py --config config/native_evidence_dev02.json` 独立重查，再运行 `scripts/continuing_checkpoint.py` 更新统计。")
+    manuscript=Path("docs/DEVELOPMENT_EVIDENCE_CN.md")
+    if manuscript.exists():
+        upsert(manuscript,"## 当前完整任务样本",f"截至 {timestamp[:19]} UTC，新的自然在线开发共有 {sum(bool(r['sends']) for r in data)} 个已启动回合，{len(scored)} 个已有完整评分，其中 {sum(r['strict'] for r in scored)} 个严格通过。全部已启动回合累计发送 {totals} 次。以下时间下限与决策重算使用恢复前封存的 16 个有评分回合。逐回合新结果和中断记录见[完整进度表](../PROGRESS.md)。")
     print(stat)
 
 

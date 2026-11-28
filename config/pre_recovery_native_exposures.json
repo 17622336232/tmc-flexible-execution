@@ -1,0 +1,108 @@
+{
+  "role": "diagnostic source cutoff before weekly-plan recovery; retain the separate prospective subsequent dates",
+  "cutoff_utc": "2026-11-28T14:00:00Z",
+  "records": [
+    {
+      "receipt": "native-views-dev01/cracked-row/native-async.receipt.json",
+      "state": "scored",
+      "receipt_sha256": "213725d0a4f914607202b063104e85dbd9e5f13864a5ef8f4f23f622e9b15be0",
+      "model_log_sha256": "fa63e8072773a0000c63cbc00f476879bbe0874f322070d5728343543446d17f"
+    },
+    {
+      "receipt": "native-views-dev01/cracked-row/native-deferred.receipt.json",
+      "state": "scored",
+      "receipt_sha256": "1ccc374de616e1605a2f249e29c2e53ca8e502f05a7f18c1dd070f195ddddaa4",
+      "model_log_sha256": "c1f4ae80b0daedc53c270d29d346fb6ad2c24adc83cb275acf39d5d53a764d77"
+    },
+    {
+      "receipt": "native-views-dev01/cracked-row/native-off.receipt.json",
+      "state": "scored",
+      "receipt_sha256": "b7382417f9067fa2e5ecacceeeb1fc43293f8521a5bba457748f4b7926e9f781",
+      "model_log_sha256": "81bed53738d3cb1941b57c3f917b8f0914fed8ceb70a8c459c6367d91f5707c5"
+    },
+    {
+      "receipt": "native-views-dev01/cracked-row/native-planner.receipt.json",
+      "state": "scored",
+      "receipt_sha256": "113c4bc298c8330bcefce29dbc2982f27c3d5443cd23916acf1482e82d4695b6",
+      "model_log_sha256": "90b052b7e6c17eea7a466686ce115996be7bed33f4adbc06d0961888dd2a500f"
+    },
+    {
+      "receipt": "native-views-dev01/cracked-row/native-prefetch.receipt.json",
+      "state": "scored",
+      "receipt_sha256": "5a14963f960362870f5e289c95859e31f01c1d922566c127586e2727587da4ae",
+      "model_log_sha256": "19a7465621164f3c5a034e4a71bae80269063a63735a5eabe960588d66c275a7"
+    },
+    {
+      "receipt": "native-views-dev01/cracked-row/original-gpt.receipt.json",
+      "state": "scored",
+      "receipt_sha256": "2c332abfc5efce3c5c7a442b7819232e04e1eb26f3b00b8d89a479b764b4451b",
+      "model_log_sha256": "4f348a91bbb921a3a3607b2fdf4985d13a629e99d6015732e7c97c28379ddea4"
+    },
+    {
+      "receipt": "native-views-dev01/warehouse-filter/native-async.receipt.json",
+      "state": "scored",
+      "receipt_sha256": "77553b5fa6a831ed80eecb5b4f84221149212a1d466f4b374eb17a2f56039b97",
+      "model_log_sha256": "eb7d6c7f52675e7ab4d885dfc8135f9f680b5af36c536190c47226562aa0bbe8"
+    },
+    {
+      "receipt": "native-views-dev01/warehouse-filter/native-deferred.receipt.json",
+      "state": "scored",
+      "receipt_sha256": "cf1d00bf8cdba2fe77d27eb993a1c70ce761c78d25b07ebe54f3393c137c523a",
+      "model_log_sha256": "96c75df021f378c4c22bbd09714c3383c76a2652689b63fb465909c6ac770d4b"
+    },
+    {
+      "receipt": "native-views-dev01/warehouse-filter/native-off.receipt.json",
+      "state": "scored",
+      "receipt_sha256": "a6e3dccb32b99403235c2464eaa4f0cd9ac46fd79f8fbb7e993f3791abc2c398",
+      "model_log_sha256": "7cbb2e8e36802e0e7d689a96aa5a02c638a5f84cab6ceb7aa09a0619bb2133ce"
+    },
+    {
+      "receipt": "native-views-dev01/warehouse-filter/native-planner.receipt.json",
+      "state": "scored",
+      "receipt_sha256": "7e05b1c6abcfd9e954c82321dd31aaedfb6e04b61aef8c15a71819c322003817",
+      "model_log_sha256": "f2560e1c0c1ed9cbe7fa8b417081e23f9f0c3402d946498d418b7695e164f706"
+    },
+    {
+      "receipt": "native-views-dev01/warehouse-filter/native-prefetch.receipt.json",
+      "state": "scored",
+      "receipt_sha256": "a9855e2f6327f6d56e21ef083bde6d8e8efcdd0e4090978803dfa3c202c859a0",
+      "model_log_sha256": "396f689279f51fc17d10d89201d4722b79f01bbcea4647e53304f5a80916d9a9"
+    },
+    {
+      "receipt": "native-views-dev01/warehouse-filter/original-gpt.receipt.json",
+      "state": "scored",
+      "receipt_sha256": "f5c2094ab58dbe1e88b6ad237f031c51dd66f5adb2169d151de472e61b5b0260",
+      "model_log_sha256": "072dec827ecf0ceaf7a7417a930d80d3c43c67f39c6c36ef89f39ec912398112"
+    },
+    {
+      "receipt": "native-evidence-dev02/cracked-row-02/evidence-deferred.receipt.json",
+      "state": "scored",
+      "receipt_sha256": "e40618bd7264f7038f2850e5700b0b43818266805acdfc4604f08563ee588ecd",
+      "model_log_sha256": "a0139bf666e4408a350b97005e6892497b3f04f993d905361b15c4966cfa6625"
+    },
+    {
+      "receipt": "native-evidence-dev02/cracked-row-02/evidence-off.receipt.json",
+      "state": "scored",
+      "receipt_sha256": "b75776fc77587a177088c20cd26e2a6ebc94d64acf8abc1de02bc82d38ac5a04",
+      "model_log_sha256": "fe64e96163b9818c45bcfb974c81fdfae30a28a10137553243c4d24a6719b848"
+    },
+    {
+      "receipt": "native-evidence-dev02/cracked-row-02/original-gpt.receipt.json",
+      "state": "scored",
+      "receipt_sha256": "150d4df3b07b36153eb4c2b98823ad7618bf4639dd4ef38d9e9be37bf78f4edb",
+      "model_log_sha256": "891b980d5f900833eb19e280da95b6f31aa1a44c2613dc623c2ab79e8bc992b2"
+    },
+    {
+      "receipt": "native-evidence-dev02/warehouse-filter-02/evidence-off.receipt.json",
+      "state": "scored",
+      "receipt_sha256": "d176ef80aef1ead24e8334593271e7ab1f3713a454ddd8436a55a545d6564b57",
+      "model_log_sha256": "c92af71096b9bca6d330103d9b76bfa5d66c6a449d8cc2272e33ee8007e9857f"
+    },
+    {
+      "receipt": "native-evidence-dev02/warehouse-filter-02/original-gpt.receipt.json",
+      "state": "interrupted-after-dispatch",
+      "receipt_sha256": "0f71cc1c59cfc4024421f76d196fad46080b40afdb90760e2863b48455468d3e",
+      "model_log_sha256": "08305d2bce45db0edd4409385eedd16a01a62662429b8d612b280718a2bbf627"
+    }
+  ]
+}

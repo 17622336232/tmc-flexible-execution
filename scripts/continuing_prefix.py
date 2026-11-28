@@ -8,6 +8,7 @@ from hashlib import sha256
 
 from experiments.flexible_execution.revision_audit import read,write_table,save,digest
 from experiments.flexible_execution.timeline import read_trace_rows
+from scripts.continuing_exposures import before_restoration
 
 
 def public_filter(task):
@@ -78,14 +79,11 @@ def main():
     dest=Path("outputs/continuing/results")
     dest.mkdir(parents=True,exist_ok=True)
     rows=[]
-    for root in sorted(Path("outputs/continuing").glob("native-*-dev*")):
-        for rec in sorted(root.glob("*/*.receipt.json")):
-            d=read(rec)
-            if d.get("state")!="scored":
-                continue
-            r=episode(rec.with_name(d["method"]))
-            if r:
-                rows.append(dict(cohort=root.name,**r))
+    for rec in before_restoration():
+        d=read(rec)
+        r=episode(rec.with_name(d["method"]))
+        if r:
+            rows.append(dict(cohort=rec.parents[1].name,**r))
     if rows:
         write_table(dest/"record_sufficiency_prefixes.csv",rows)
     result=dict(exposed_episodes=len(rows),ever_sufficient=sum(r["first_retrospectively_complete"] is not None for r in rows),

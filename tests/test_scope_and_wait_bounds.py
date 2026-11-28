@@ -3,6 +3,7 @@ import unittest
 
 from experiments.flexible_execution.evidence import Frame
 from research.flexible_scheduling.closed_scope import ClosedInspection, QUESTION, is_front_crack_question
+from research.flexible_scheduling.grouped_regions import Region,dispatch,request_binding,answers
 from scripts.continuing_native_report import comparator_witnesses
 from scripts.continuing_wait_bounds import interval
 
@@ -57,6 +58,39 @@ class ClosureTests(unittest.TestCase):
         self.assertIn(("mission","distinct-body-identities"),self.roster.assemble(at_anchor=True)[1])
         self.judgment("a","uncertain")
         self.assertFalse(self.roster.needs_identity("a"))
+
+    def test_partial_group_retains_only_committed_source_and_regions(self):
+        cells=[Region(k,v,QUESTION) for k,v in self.roster.regions.items()]
+        bound=request_binding(self.source.id,self.source.digest,cells)
+        one={"answers":[{"id":"a","outcome":"negative"}]}
+        for invalid in ({"answers":[{"id":"x","outcome":"negative"}]},
+                        {"answers":one["answers"]*2},{"answers":[{"id":"a","outcome":[]}]}):
+            self.assertFalse(self.roster.record_group(bound,[self.source.digest],invalid))
+        self.assertFalse(self.roster.record_group(bound,["wrong"],one))
+        self.assertFalse(self.roster.record_group({**bound,"regions":[{**cells[0].public(),"bbox":[0,0,1,1]}]},[self.source.digest],one))
+        self.assertTrue(self.roster.record_group(bound,[self.source.digest],one))
+        self.assertEqual(self.roster.conditions,{"a":"negative"})
+        self.assertIsNone(self.roster.assemble(at_anchor=True)[0])
+        other={"answers":[{"id":"b","outcome":"negative"}]}
+        self.assertTrue(self.roster.record_group(bound,[self.source.digest],other))
+        self.assertEqual(self.roster.assemble(at_anchor=True)[0]["findings"],[])
+
+    def test_singleton_and_group_share_one_transport_and_prompt(self):
+        class Client:
+            def request(self,prompt,content,images,attempt_limit):
+                self.actual=(prompt,content,images,attempt_limit)
+                return {"answers":[{"id":r["id"],"outcome":"uncertain"} for r in content["regions"]]}
+        client=Client()
+        cells=[Region(k,v,QUESTION) for k,v in self.roster.regions.items()]
+        prompts=[]
+        for portion in (cells,cells[:1],cells[1:]):
+            b,out=dispatch(client,self.source.id,self.source.digest,self.source.payload,portion)
+            prompts.append(client.actual[0])
+            self.assertEqual(([r["data"] for r in client.actual[2]],client.actual[3]),([self.source.payload],1))
+            self.assertEqual(set(answers(b,[self.source.digest],out)),{r.id for r in portion})
+        self.assertEqual(len(set(prompts)),1)
+        with self.assertRaises(ValueError):
+            dispatch(client,self.source.id,self.source.digest,b"different",cells)
 
 
 class TimingAndAdmissionTests(unittest.TestCase):

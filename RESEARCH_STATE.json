@@ -1,9 +1,9 @@
 {
   "status": "RESEARCH_IN_PROGRESS",
-  "stage": "original-loop paired development, independent image-chain audit and remaining-task planning",
+  "stage": "paired native development and measured serial inference dependencies",
   "resumed_remote": "94bd1e78953164dce48ec38c8cc15dbd010f2e56",
   "resumed_local": "90f390c8ee332c866f4204dee628d447f8ddab2c",
-  "as_of_utc": "2026-11-28T13:30:04+00:00",
+  "as_of_utc": "2026-11-28T14:07:17+00:00",
   "method_version": {
     "native-views-dev01": "2e8e26cb8f0099bb68d02e5aa1c1e9569423706ec413227f9d9aa7714ffcef2b",
     "native-evidence-dev02": "6c5dab53a9faf9d2de88df4c2d988619c066176423a1223341f30e75b84c2577",
@@ -18,35 +18,47 @@
     "sends": 93
   },
   "new_dev": {
-    "scored_episodes": 16,
-    "strict_successes": 10,
-    "scored_sends": 84,
-    "in_flight_sends_at_snapshot": 0,
+    "scored_episodes": 18,
+    "strict_successes": 12,
+    "scored_sends": 93,
+    "in_flight_sends_at_snapshot": 2,
     "closed_unscored_sends": 4,
-    "started_episodes": 17,
+    "started_episodes": 20,
     "blocks_completed": {
       "native-views-dev01": {
         "primary": 6,
         "comparators": 6
       },
       "native-evidence-dev02": {
-        "primary": 4,
-        "comparators": 0
+        "primary": 5,
+        "comparators": 1
       },
       "coordinated-handoff-dev03": {
         "primary": 0,
         "comparators": 0
       }
     },
-    "early_source_verified_handoffs": 3,
-    "early_photos_supporting_correct_fields": 1,
+    "early_source_verified_handoffs": 4,
+    "early_photos_supporting_correct_fields": 2,
     "early_photos_cited_in_final": 0,
     "early_field_violations": 0
   },
-  "pending_workers": [],
+  "pending_workers": [
+    {
+      "utc": "2026-11-28T14:07:14.567954+00:00",
+      "state": "running",
+      "controller_pid": 3780030,
+      "worker_pid": 3782284,
+      "case": "cracked-row-02",
+      "method": "evidence-planner",
+      "sends": 2,
+      "cohort": "native-evidence-dev02",
+      "heartbeat": "outputs/continuing/native-evidence-dev02/heartbeat.json"
+    }
+  ],
   "account_remaining_requests": null,
   "hardware_motion_authorized": false,
-  "current_hypothesis": "Use the original decision loop. Acquire admissible secondary photos during an already outstanding request; interpret them in a subsequent ordinary decision only when useful.",
+  "current_hypothesis": "Test whether co-issuing a grounded photo with an ordinary move or judging several regions on one image can remove serial model service. Test public-scope assembly only with externally defined regions.",
   "validated": [
     "93 prior sends attributed to six roles",
     "with original requests fixed the nonrequest ceiling is 10.50% on cracks and 5.14% on inventory",
@@ -55,7 +67,7 @@
   "rejected": [
     "fixed conservative OCR has zero detections on 64 sampled historical image/ROI questions; 31 had independently assigned target identity"
   ],
-  "next": "Complete source-bound offline diagnostics. On confirmed service restoration use the launch-matched frozen tree for cohort 02's single unsent primary slot; then assess its registered comparator gate. The separate coordinated-handoff-03 development registration has six primary and eight conditional comparator slots.",
+  "next": "跟踪正在进行的 native-evidence-dev02 批次，逐一保留原始收据并复核完整评分。",
   "phase": "coordinating actual material handoff, ordinary movement and source-bound completion",
   "paired_rgb_assay": {
     "sends": 18,
@@ -72,8 +84,10 @@
   "accounted_sends": {
     "historical_formal": 3842,
     "historical_revision_development": 93,
-    "continued_native_development": 88,
-    "archived_rgb_assay": 18
+    "continued_native_development": 99,
+    "archived_rgb_assay": 18,
+    "one_image_regions": 0,
+    "explicit_roster_mechanism": 0
   },
   "closed_external_attempts": [
     {
@@ -94,9 +108,7 @@
       "end_utc": "2026-11-28T11:10:57.187335+00:00"
     }
   ],
-  "unresolved_endpoint_limits": [
-    "subscription_sharing_usage_limit_exceeded"
-  ],
+  "unresolved_endpoint_limits": [],
   "zero_model_navigation": {
     "registered": 8,
     "started": 8,
@@ -220,5 +232,113 @@
       "primary": 6,
       "comparators": 8
     }
+  },
+  "critical_path": {
+    "scored": 16,
+    "paired_strict_device_tasks": [
+      {
+        "case": "cracked-row-02",
+        "original_time_s": 109.91545665398007,
+        "observed_proposed_time_s": 141.20771186298225,
+        "original_fixed_transport_s": 100.12730157002807,
+        "proposed_fixed_transport_s": 132.26502700697165,
+        "target_wall_s": 87.93236532318406,
+        "minimum_proposed_transport_to_remove_s": 44.33266168378759,
+        "minimum_original_transport_to_remove_s": 12.194936246844009,
+        "proposed_transport_above_entire_original_s": 22.349570352991577,
+        "proposed_post_reply_excursion_delay_s": 0.0010474379523657262
+      },
+      {
+        "case": "cracked-row",
+        "original_time_s": 141.04339243896538,
+        "observed_proposed_time_s": 169.11534497101093,
+        "original_fixed_transport_s": 127.60011344100349,
+        "proposed_fixed_transport_s": 149.37821298703784,
+        "target_wall_s": 112.83471395117232,
+        "minimum_proposed_transport_to_remove_s": 36.54349903586552,
+        "minimum_original_transport_to_remove_s": 14.765399489831168,
+        "proposed_transport_above_entire_original_s": 8.334820548072457,
+        "proposed_post_reply_excursion_delay_s": 0.0014682969776913524
+      }
+    ],
+    "ordinary_turns_offering_views": 19,
+    "turns_requesting_a_view": 9,
+    "early_excursions": 9,
+    "unrequested_early_excursions": 6,
+    "measured_demanded_route_turns": 8,
+    "comparison": "Frozen realized prompts, replies and service times in the two scored cohorts. With serial sends, their union is a lower bound even if all motion and local work vanish. Removing or regrouping requests can change both outputs and service. Do not extrapolate the bound to a changed controller.",
+    "route_scope": "One frozen ordinary call. For available options use the real returned demand after dispatch; this is an oracle diagnostic. Observed route time includes acquisition and verified return. An untraveled demanded alternative has unknown cost, at most one service window can be hidden. The separate nominal table uses pre-request trip estimates for unrealized routes. These are not whole-task effects.",
+    "new_model_requests": 0
+  },
+  "matched_sparse_and_generic": {
+    "real_decisions_with_eligible_options": 19,
+    "unique_layouts": 4,
+    "options_histogram": {
+      "2": 7,
+      "1": 12
+    },
+    "actual_v2_reproductions": [
+      5,
+      5
+    ],
+    "fixed_compute_repeats": 15,
+    "planners": {
+      "factored": {
+        "snapshots": 19,
+        "equal_value_to_exact": 19,
+        "equal_choice_to_exact": 19,
+        "maximum_median_compute_ms": 0.04917895421385765,
+        "realized_demand_oracle_nominal_regret_s": 2.7283850486933705
+      },
+      "generic": {
+        "snapshots": 19,
+        "equal_value_to_exact": 19,
+        "equal_choice_to_exact": 19,
+        "maximum_median_compute_ms": 0.06519496673718095,
+        "realized_demand_oracle_nominal_regret_s": 2.7283850486933705
+      },
+      "strong-prefetch": {
+        "snapshots": 19,
+        "equal_value_to_exact": 19,
+        "equal_choice_to_exact": 19,
+        "maximum_median_compute_ms": 0.06697594653815031,
+        "realized_demand_oracle_nominal_regret_s": 2.7283850486933705
+      },
+      "async": {
+        "snapshots": 19,
+        "equal_value_to_exact": 0,
+        "equal_choice_to_exact": 0,
+        "maximum_median_compute_ms": 0.028774025849997997,
+        "realized_demand_oracle_nominal_regret_s": 84.14622174926467
+      },
+      "serial": {
+        "snapshots": 19,
+        "equal_value_to_exact": 0,
+        "equal_choice_to_exact": 0,
+        "maximum_median_compute_ms": 0.025173998437821865,
+        "realized_demand_oracle_nominal_regret_s": 84.14622174926467
+      }
+    },
+    "new_model_requests": 0,
+    "interpretation": "Frozen real pre-request camera candidates and costs. The full factored and generic algorithms use identical legal subsets and priors. At this point an in-flight image request cannot accept additional photos, so strong physical prefetch can enumerate the same feasible acquisitions. The oracle regret uses nominal trip costs and the subsequently realized model choice, never task time."
+  },
+  "task_roster_on_fresh_camera": {
+    "camera_resets": 8,
+    "layouts": 4,
+    "all_regions_registered": 5,
+    "public_region_exposures": 20,
+    "registered_region_exposures": 11,
+    "regions_with_measured_view": 5,
+    "new_model_requests": 0,
+    "note": "Initial onboard RGBs stored during the eight completed navigation resets. Candidate geometry requires a later live map check. No semantic answers, model-latency observations or full task success are claimed."
+  },
+  "optional_development": {
+    "region_assay_registered_sends": 6,
+    "region_assay_actual_sends": 0,
+    "closed_mechanism_registered_arms": [
+      "evidence-off",
+      "evidence-deferred"
+    ],
+    "closed_mechanism_actual_sends": 0
   }
 }

@@ -55,6 +55,31 @@ class ClosedInspection:
     def needs_identity(self,region):
         return region not in self.conflicts and self.conditions.get(region)=="positive"
 
+    def record_group(self,binding,image_hashes,reply):
+        from .grouped_regions import answers
+        if (not isinstance(binding,dict) or binding.get("frame_id")!=self.reference.id
+                or binding.get("photo_sha256")!=self.reference.digest or not isinstance(binding.get("regions"),list)):
+            return False
+        ids=set()
+        targets={}
+        for row in binding["regions"]:
+            if (not isinstance(row,dict) or not isinstance(row.get("id"),str) or row["id"] not in self.regions
+                    or row["id"] in ids or row.get("bbox")!=list(self.regions[row["id"]])
+                    or not is_front_crack_question(row.get("question"))):
+                return False
+            ids.add(row["id"])
+            targets[row["id"]]=row
+        if not ids:
+            return False
+        values=answers(binding,image_hashes,reply)
+        if values is None:
+            return False
+        for label,val in values.items():
+            row=targets[label]
+            self.record_judgment(label,dict(frame_id=self.reference.id,target_id=label,question=row["question"],
+                                 bbox_in_attached_photo=row["bbox"]),image_hashes,{"outcome":val})
+        return True
+
     def record_identity(self,region,frame,hint,at):
         if not self.needs_identity(region) or not isinstance(hint,dict) or not isinstance(frame,Frame):
             return False

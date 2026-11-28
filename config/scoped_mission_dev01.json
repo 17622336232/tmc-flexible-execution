@@ -1,0 +1,22 @@
+{
+  "id": "scoped-mission-dev01",
+  "scope": "Mechanism integration on four previously exposed static equipment layouts. Scope is defined by an externally enumerated photographed roster; an open row never receives this completion shortcut.",
+  "selection_salt": "public-roster-grouped-semantic-motion-01",
+  "model": "gpt-6.1-terra",
+  "effort": "max",
+  "costs": "outputs/protocol-v2-optimization/custom-final/calibrated_costs.json",
+  "task_deadline_s": 180,
+  "per_call_s": 120,
+  "online_order": ["evidence-off","evidence-deferred"],
+  "runtime_files": [
+    "research/flexible_scheduling/scoped_execution.py","research/flexible_scheduling/grouped_regions.py",
+    "research/flexible_scheduling/closed_scope.py","research/flexible_scheduling/native_controller.py",
+    "research/flexible_scheduling/front_facing.py","research/flexible_scheduling/material_binding.py",
+    "research/flexible_scheduling/label_geometry.py","research/flexible_scheduling/literal_ocr.py",
+    "research/flexible_scheduling/workflow.py"
+  ],
+  "preflight": "On every recorded starting RGB of the eight already executed route resets, align every public region to the actual fresh onboard image and compute proposed view geometry. Reject the whole roster if any region fails NCC 0.90 or requires more than eight pixels of translation. Log every miss; do not generate or invent a return.",
+  "online_admission": "Only after verified plan restoration, resolution of the pre-existing cohort-02 primary, and actual complete, independently correct standalone joint and singleton judgments for both sources in the one-image region assay. Select one of the four exposed mission rosters by salted hash. At most two physical simulator resets, one group request each, no repeats. This diagnostic does not enter the natural open-task results.",
+  "policy": "Same normal simulator navigation, public reference, actual fresh camera, early photography permission, local OCR, one genuine vision dispatch and post-task scorer for both arms. Reserve the planning wait and full task deadline separately. Semantic interpretation of captured body identities only follows the matching positive on the current frame. No extra remote fallback in this bounded mechanism check; unsatisfied obligations remain failures.",
+  "scoring": "Seal both original outcomes first. Verify all regions against the public source and fresh image, the single actual model message and response, camera return, all positive and negative physical regions, and the separate attached body ID photo for every positive region. Post-task reference assignment requires one body ID plate center in the region with >=36 pixels, re-render agreement >=0.90 within 18 intensity units and >=144 identity-plate pixels in each submitted close-up."
+}

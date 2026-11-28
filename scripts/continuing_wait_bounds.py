@@ -7,6 +7,7 @@ from statistics import mean, median
 
 from experiments.flexible_execution.revision_audit import digest, read, save, write_table
 from experiments.flexible_execution.timeline import read_trace_rows
+from scripts.continuing_exposures import before_restoration
 
 
 ROOT = Path("outputs/protocol-v2-optimization/custom-final")
@@ -75,8 +76,10 @@ def analyze(rows):
 
 def action_slots(dest):
     rows=[]
-    for base in sorted(Path("outputs/continuing").glob("*-dev*")):
-        for path in sorted(base.glob("*/*/private/robot/model_calls.jsonl")):
+    frozen=before_restoration(include_interrupted=True)
+    for base in sorted({p.parents[1] for p in frozen}):
+        for receipt in (p for p in frozen if p.parents[1]==base):
+            path=receipt.with_name(read(receipt)["method"])/"private/robot/model_calls.jsonl"
             log=read_trace_rows(path,allow_truncated=True)[0]
             checksum=digest(path)
             for i,r in enumerate(log):

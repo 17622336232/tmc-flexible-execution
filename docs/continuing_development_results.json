@@ -328,11 +328,11 @@
       ]
     },
     "native-evidence-dev02": {
-      "scored": 4,
-      "strict": 4,
-      "sends": 17,
-      "started": 5,
-      "all_started_sends": 21,
+      "scored": 6,
+      "strict": 6,
+      "sends": 26,
+      "started": 7,
+      "all_started_sends": 30,
       "service_interrupted": [
         {
           "cohort": "native-evidence-dev02",
@@ -406,6 +406,23 @@
         },
         {
           "cohort": "native-evidence-dev02",
+          "case": "cracked-row-02",
+          "method": "Strong prefetch",
+          "passed": true,
+          "whole_s": 161.34199278999586,
+          "restricted_s": 161.34199278999586,
+          "requests": 6,
+          "transport_s": 146.693204908981,
+          "concurrent_motion_s": 19.35250146902399,
+          "idle_transport_s": 127.340703439957,
+          "first_valid_move_start_s": 13.217430012999102,
+          "early_handoff": 1,
+          "early_field_support": 1,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "native-evidence-dev02",
           "case": "warehouse-filter-02",
           "method": "Enhanced serial",
           "passed": true,
@@ -416,6 +433,23 @@
           "concurrent_motion_s": 0.0,
           "idle_transport_s": 69.27598741895054,
           "first_valid_move_start_s": 27.86891486099921,
+          "early_handoff": 0,
+          "early_field_support": 0,
+          "early_final_citation": 0,
+          "field_violations": 0
+        },
+        {
+          "cohort": "native-evidence-dev02",
+          "case": "warehouse-filter-02",
+          "method": "Proposed",
+          "passed": true,
+          "whole_s": 102.67876779800281,
+          "restricted_s": 102.67876779800281,
+          "requests": 3,
+          "transport_s": 87.01753407804063,
+          "concurrent_motion_s": 13.532147959980648,
+          "idle_transport_s": 73.48538611805998,
+          "first_valid_move_start_s": 27.985597860009875,
           "early_handoff": 0,
           "early_field_support": 0,
           "early_final_citation": 0,
@@ -443,6 +477,28 @@
           "delta_restricted_s": 24.455121986975428,
           "delta_restricted_pct": 20.946106645640295,
           "delta_transport_s": 26.275459297990892,
+          "delta_requests": 0
+        },
+        {
+          "cohort": "native-evidence-dev02",
+          "case": "cracked-row-02",
+          "baseline": "Strong prefetch",
+          "proposed_pass": true,
+          "baseline_pass": true,
+          "delta_restricted_s": -20.134280927013606,
+          "delta_restricted_pct": -12.479256378852687,
+          "delta_transport_s": -14.428177902009338,
+          "delta_requests": -1
+        },
+        {
+          "cohort": "native-evidence-dev02",
+          "case": "warehouse-filter-02",
+          "baseline": "Enhanced serial",
+          "proposed_pass": true,
+          "baseline_pass": true,
+          "delta_restricted_s": 22.69042461400386,
+          "delta_restricted_pct": 28.367164152667314,
+          "delta_transport_s": 17.74154665909009,
           "delta_requests": 0
         }
       ]
@@ -951,5 +1007,170 @@
     "definition": "Each actually completed route provides a fixed motion duration evaluated against the archival query clocks. No simultaneous paired camera/service measurement is inferred. A cutoff supplies only a lower bound on time to a hypothetical valid reply, which can be infinite. No missing judgment is imputed.",
     "break_even": "Illustrative risk-neutral one-trip model: if a later on-demand trip costs the same duration d, and a useful early capture eliminates that trip, expected time advantage equals p*d minus mean uncovered motion. The probability interval is the range of thresholds allowed by censoring, not a measured activation rate. Excludes recognition, route changes and task success.",
     "new_model_requests": 0
+  },
+  "real_offer_planners": {
+    "real_decisions_with_eligible_options": 19,
+    "unique_layouts": 4,
+    "options_histogram": {
+      "2": 7,
+      "1": 12
+    },
+    "actual_v2_reproductions": [
+      5,
+      5
+    ],
+    "fixed_compute_repeats": 15,
+    "planners": {
+      "factored": {
+        "snapshots": 19,
+        "equal_value_to_exact": 19,
+        "equal_choice_to_exact": 19,
+        "maximum_median_compute_ms": 0.04917895421385765,
+        "realized_demand_oracle_nominal_regret_s": 2.7283850486933705
+      },
+      "generic": {
+        "snapshots": 19,
+        "equal_value_to_exact": 19,
+        "equal_choice_to_exact": 19,
+        "maximum_median_compute_ms": 0.06519496673718095,
+        "realized_demand_oracle_nominal_regret_s": 2.7283850486933705
+      },
+      "strong-prefetch": {
+        "snapshots": 19,
+        "equal_value_to_exact": 19,
+        "equal_choice_to_exact": 19,
+        "maximum_median_compute_ms": 0.06697594653815031,
+        "realized_demand_oracle_nominal_regret_s": 2.7283850486933705
+      },
+      "async": {
+        "snapshots": 19,
+        "equal_value_to_exact": 0,
+        "equal_choice_to_exact": 0,
+        "maximum_median_compute_ms": 0.028774025849997997,
+        "realized_demand_oracle_nominal_regret_s": 84.14622174926467
+      },
+      "serial": {
+        "snapshots": 19,
+        "equal_value_to_exact": 0,
+        "equal_choice_to_exact": 0,
+        "maximum_median_compute_ms": 0.025173998437821865,
+        "realized_demand_oracle_nominal_regret_s": 84.14622174926467
+      }
+    },
+    "new_model_requests": 0,
+    "interpretation": "Frozen real pre-request camera candidates and costs. The full factored and generic algorithms use identical legal subsets and priors. At this point an in-flight image request cannot accept additional photos, so strong physical prefetch can enumerate the same feasible acquisitions. The oracle regret uses nominal trip costs and the subsequently realized model choice, never task time."
+  },
+  "fixed_transport_critical_path": {
+    "scored": 16,
+    "paired_strict_device_tasks": [
+      {
+        "case": "cracked-row-02",
+        "original_time_s": 109.91545665398007,
+        "observed_proposed_time_s": 141.20771186298225,
+        "original_fixed_transport_s": 100.12730157002807,
+        "proposed_fixed_transport_s": 132.26502700697165,
+        "target_wall_s": 87.93236532318406,
+        "minimum_proposed_transport_to_remove_s": 44.33266168378759,
+        "minimum_original_transport_to_remove_s": 12.194936246844009,
+        "proposed_transport_above_entire_original_s": 22.349570352991577,
+        "proposed_post_reply_excursion_delay_s": 0.0010474379523657262
+      },
+      {
+        "case": "cracked-row",
+        "original_time_s": 141.04339243896538,
+        "observed_proposed_time_s": 169.11534497101093,
+        "original_fixed_transport_s": 127.60011344100349,
+        "proposed_fixed_transport_s": 149.37821298703784,
+        "target_wall_s": 112.83471395117232,
+        "minimum_proposed_transport_to_remove_s": 36.54349903586552,
+        "minimum_original_transport_to_remove_s": 14.765399489831168,
+        "proposed_transport_above_entire_original_s": 8.334820548072457,
+        "proposed_post_reply_excursion_delay_s": 0.0014682969776913524
+      }
+    ],
+    "ordinary_turns_offering_views": 19,
+    "turns_requesting_a_view": 9,
+    "early_excursions": 9,
+    "unrequested_early_excursions": 6,
+    "measured_demanded_route_turns": 8,
+    "comparison": "Frozen realized prompts, replies and service times in the two scored cohorts. With serial sends, their union is a lower bound even if all motion and local work vanish. Removing or regrouping requests can change both outputs and service. Do not extrapolate the bound to a changed controller.",
+    "route_scope": "One frozen ordinary call. For available options use the real returned demand after dispatch; this is an oracle diagnostic. Observed route time includes acquisition and verified return. An untraveled demanded alternative has unknown cost, at most one service window can be hidden. The separate nominal table uses pre-request trip estimates for unrealized routes. These are not whole-task effects.",
+    "new_model_requests": 0
+  },
+  "same_photo_claim_comparison": {
+    "unique_multi_object_photos": 107,
+    "actual_reply_photo_pairs": 123,
+    "unique_explicit_box_photos": 233,
+    "identical_photo_overlaps": 5,
+    "matched_layouts": 5,
+    "response_comparisons": 12,
+    "identifiable_pairs": 9,
+    "ordinary_unique_case_region_judgments": {
+      "correct": 8,
+      "unresolved": 1
+    },
+    "specialized_unique_attempts": {
+      "correct": 6,
+      "unresolved": 1
+    },
+    "sources": {
+      "0185b7abad2e12a06040973e32390f332b83c279c873c89165b11d5b5af9bfda": {
+        "ordinary_replies": 1,
+        "single_attempts": 2,
+        "registered_boxes": 1,
+        "matched_response_pairs": 1,
+        "spatially_assigned_pairs": 0,
+        "extra_image_in_all": true,
+        "specialized_preceded_ordinary": true
+      },
+      "2bb24a0394b22f22cef5407c2ba415fc60ce2bdba49b9698a42b0146635a7ee8": {
+        "ordinary_replies": 1,
+        "single_attempts": 2,
+        "registered_boxes": 2,
+        "matched_response_pairs": 2,
+        "spatially_assigned_pairs": 0,
+        "extra_image_in_all": true,
+        "specialized_preceded_ordinary": true
+      },
+      "301bb3d3467197ecba438f569407af14a959b8fa88bf4fe4a632a00f49dde3ed": {
+        "ordinary_replies": 1,
+        "single_attempts": 2,
+        "registered_boxes": 2,
+        "matched_response_pairs": 2,
+        "spatially_assigned_pairs": 2,
+        "extra_image_in_all": true,
+        "specialized_preceded_ordinary": true
+      },
+      "b1023109b8e5cd1296523788fe503faf39e95e35da38fecd2f9d3e17fab1d18e": {
+        "ordinary_replies": 1,
+        "single_attempts": 3,
+        "registered_boxes": 3,
+        "matched_response_pairs": 3,
+        "spatially_assigned_pairs": 3,
+        "extra_image_in_all": true,
+        "specialized_preceded_ordinary": true
+      },
+      "ce4be49d26554e8561422fedbfefb685637e0e2a98297e4e08bda1e8f9a25c58": {
+        "ordinary_replies": 2,
+        "single_attempts": 2,
+        "registered_boxes": 2,
+        "matched_response_pairs": 4,
+        "spatially_assigned_pairs": 4,
+        "extra_image_in_all": true,
+        "specialized_preceded_ordinary": true
+      }
+    },
+    "new_model_requests": 0,
+    "interpretation": "Selected actual multi-object citations matched to specialized queries, not a controlled joint/single comparison. Ordinary replies may see earlier material, memory and additional photographs. No timing or one-image accuracy effect can be attributed to batching from these samples."
+  },
+  "public_roster_on_fresh_camera": {
+    "camera_resets": 8,
+    "layouts": 4,
+    "all_regions_registered": 5,
+    "public_region_exposures": 20,
+    "registered_region_exposures": 11,
+    "regions_with_measured_view": 5,
+    "new_model_requests": 0,
+    "note": "Initial onboard RGBs stored during the eight completed navigation resets. Candidate geometry requires a later live map check. No semantic answers, model-latency observations or full task success are claimed."
   }
 }

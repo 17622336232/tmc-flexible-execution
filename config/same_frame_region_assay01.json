@@ -1,0 +1,18 @@
+{
+  "id": "same-frame-region-assay01",
+  "scope": "Exposure-only perception assay. One already acquired robot photo, multiple region predicates. No vehicle task, flight or pipeline time.",
+  "model": "gpt-6.1-terra",
+  "effort": "max",
+  "max_total_sends": 6,
+  "per_call_seconds": 120,
+  "salt": "same-pixels-independent-predicates-01",
+  "priority": "Use only after confirmed plan restoration and the pending native-evidence-dev02 primary. This optional six-send diagnostic is lower priority than resuming that cohort. Do not automatically launch a larger evaluation or retry for significance.",
+  "cases": [
+    {"domain":"equipment","order":["group","first","second"]},
+    {"domain":"campus","order":["second","first","group"]}
+  ],
+  "selection": "From historical onboard images with at least two distinct boxes on the same frozen frame: (equipment) front-surface crack; (campus) an extinguisher is present AND access is unobstructed. Use the actual archived wording. Rank sources by salted SHA256 of domain, log path, RGB digest and question; rank qualifying boxes by their hash and take two. Source selection ignores outcomes, old latency, textual memories, simulator truth and grader visibility.",
+  "source_availability": "The initial request for the simple blocked-access predicate found no archived two-box group using that wording. Before freezing any input or inspecting these assay outcomes, select the already attested compound campus wording from the all-group question inventory. No photo or slot was replaced after prediction.",
+  "prediction": "Both treatments use the same frozen robot RGB bytes, model, effort, time limit, instruction, region labels, wording and format. Each single dispatch has only one of the two regions. Neither independent request has prior replies or additional photos. No automatic retry, cached responses, synthesized observations or replacements. Retain uncertain, missing, malformed and external failures.",
+  "analysis": "Seal every registered response and ledger first. Score each public box by a unique physical identity center and independently reconstructed image alignment; flag ambiguous or invisible regions. Require overview coverage of both visible sites for a valid perception comparison. Report every region, case joint correctness and paired service time. Formal claims about whole tasks and standalone generalization require separate evidence."
+}

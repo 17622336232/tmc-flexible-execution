@@ -155,6 +155,10 @@ def main():
         "closed_roster_evidence_composition":OUT.parent/"scope-closure-dev01-parserfix/summary.json",
         "observed_query_concurrency":OUT.parent/"observed-queries/summary.json",
         "censored_specialized_service":OUT.parent/"observed-queries/wait_bounds.json",
+        "real_offer_planners":OUT/"actual_offer_planners.json",
+        "fixed_transport_critical_path":OUT/"critical_path.json",
+        "same_photo_claim_comparison":OUT.parent/"same-image-claims/summary.json",
+        "public_roster_on_fresh_camera":OUT.parent/"scoped-mission-dev01/preflight.json",
     }.items():
         if file.is_file():
             brief[name]=read(file)
