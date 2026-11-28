@@ -9657,6 +9657,3236 @@
     ],
     "note": "Timing repetitions use the same topology and price scenarios as the prior development benchmark. Four arms all retain legal options, evaluate revised prices and use the same recursive search and legal actions."
   },
+  "rechecked_dynamic_permission_budget": {
+    "cells": 48,
+    "trials": 960,
+    "comparison_to_generic": {
+      "residual": {
+        "better": 5,
+        "tied": 43,
+        "worse": 0,
+        "maximum_gain_s": 1.7220312500000006
+      },
+      "permissions": {
+        "better": 4,
+        "tied": 43,
+        "worse": 1,
+        "maximum_gain_s": 1.0868749999999991
+      },
+      "future-values": {
+        "better": 6,
+        "tied": 40,
+        "worse": 2,
+        "maximum_gain_s": 1.7220312500000006
+      },
+      "strong": {
+        "better": 5,
+        "tied": 41,
+        "worse": 2,
+        "maximum_gain_s": 1.0868749999999991
+      }
+    },
+    "total_timing_miss": 52,
+    "missed_first_action": 0,
+    "max_first_action_ms": 19.854665035381913,
+    "max_overrun_ms": 15.993338979315013,
+    "new_model_requests": 0,
+    "details": [
+      {
+        "roots": 4,
+        "structure": "shared-followup",
+        "budget_ms": 10,
+        "stage": "transferred",
+        "methods": {
+          "generic": {
+            "median_s": 15.38,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 57.0,
+            "max_first_action_ms": 0.18857000395655632,
+            "max_overrun_ms": 7.30642601614818
+          },
+          "residual": {
+            "median_s": 15.38,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 51.0,
+            "max_first_action_ms": 0.17620500875636935,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 15.38,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 52.5,
+            "max_first_action_ms": 0.2572659868746996,
+            "max_overrun_ms": 11.05695498175919
+          },
+          "future-values": {
+            "median_s": 15.38,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 65.0,
+            "max_first_action_ms": 0.20761997438967228,
+            "max_overrun_ms": 0.39240299724042416
+          },
+          "strong": {
+            "median_s": 15.38,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 67.5,
+            "max_first_action_ms": 0.17402099911123514,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "shared-followup",
+        "budget_ms": 10,
+        "stage": "same-site",
+        "methods": {
+          "generic": {
+            "median_s": 13.97375,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 80.0,
+            "max_first_action_ms": 0.15166797675192356,
+            "max_overrun_ms": 0.1446760236285627
+          },
+          "residual": {
+            "median_s": 13.97375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 60.0,
+            "max_first_action_ms": 0.1450509880669415,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 13.97375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 55.0,
+            "max_first_action_ms": 0.13507698895409703,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 13.97375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 73.0,
+            "max_first_action_ms": 0.13528205454349518,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 13.97375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 70.0,
+            "max_first_action_ms": 0.13109901919960976,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "shared-followup",
+        "budget_ms": 10,
+        "stage": "semantics-updated",
+        "methods": {
+          "generic": {
+            "median_s": 13.833125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 84.0,
+            "max_first_action_ms": 0.1333829713985324,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 13.833125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 60.0,
+            "max_first_action_ms": 0.14236196875572205,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 13.833125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 55.0,
+            "max_first_action_ms": 0.14050002209842205,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 13.833125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 76.5,
+            "max_first_action_ms": 0.15438703121617436,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 13.833125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 70.0,
+            "max_first_action_ms": 0.14845305122435093,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "shared-followup",
+        "budget_ms": 10,
+        "stage": "slow-cross-service",
+        "methods": {
+          "generic": {
+            "median_s": 16.663125,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 94.0,
+            "max_first_action_ms": 0.13512803707271814,
+            "max_overrun_ms": 0.37764502689242363
+          },
+          "residual": {
+            "median_s": 16.663125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 61.0,
+            "max_first_action_ms": 0.15109597006812692,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 16.663125,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 60.0,
+            "max_first_action_ms": 0.1489080023020506,
+            "max_overrun_ms": 11.827592980116606
+          },
+          "future-values": {
+            "median_s": 16.663125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 83.0,
+            "max_first_action_ms": 0.14204002218320966,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 16.663125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 80.0,
+            "max_first_action_ms": 0.1543500111438334,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "shared-followup",
+        "budget_ms": 30,
+        "stage": "transferred",
+        "methods": {
+          "generic": {
+            "median_s": 15.38,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 2,
+            "median_legal_cache_entries": 156.0,
+            "max_first_action_ms": 0.18603599164634943,
+            "max_overrun_ms": 3.6186509812250733
+          },
+          "residual": {
+            "median_s": 15.38,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 64.0,
+            "max_first_action_ms": 0.19933999283239245,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 15.38,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 64.0,
+            "max_first_action_ms": 0.18192199058830738,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 15.38,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 80.0,
+            "max_first_action_ms": 0.1675739767961204,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 15.38,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 70.0,
+            "max_first_action_ms": 0.17458002548664808,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "shared-followup",
+        "budget_ms": 30,
+        "stage": "same-site",
+        "methods": {
+          "generic": {
+            "median_s": 13.97375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 171.0,
+            "max_first_action_ms": 0.14980504056438804,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 13.97375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 64.0,
+            "max_first_action_ms": 0.13936602044850588,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 13.97375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 3,
+            "median_legal_cache_entries": 64.0,
+            "max_first_action_ms": 0.13948295963928103,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 13.97375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 82.0,
+            "max_first_action_ms": 0.13537000631913543,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 13.97375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 70.0,
+            "max_first_action_ms": 0.13972603483125567,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "shared-followup",
+        "budget_ms": 30,
+        "stage": "semantics-updated",
+        "methods": {
+          "generic": {
+            "median_s": 13.833125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 171.0,
+            "max_first_action_ms": 0.14631502563133836,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 13.833125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 64.0,
+            "max_first_action_ms": 0.17482897965237498,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 13.833125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 3,
+            "median_legal_cache_entries": 64.0,
+            "max_first_action_ms": 0.16343500465154648,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 13.833125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 82.0,
+            "max_first_action_ms": 0.19365298794582486,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 13.833125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 70.0,
+            "max_first_action_ms": 0.138097966555506,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "shared-followup",
+        "budget_ms": 30,
+        "stage": "slow-cross-service",
+        "methods": {
+          "generic": {
+            "median_s": 16.663125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 3,
+            "median_legal_cache_entries": 193.0,
+            "max_first_action_ms": 0.1484460080973804,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 16.663125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 68.0,
+            "max_first_action_ms": 0.1402209745720029,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 16.663125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 3,
+            "median_legal_cache_entries": 68.0,
+            "max_first_action_ms": 0.17690297681838274,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 16.663125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 92.0,
+            "max_first_action_ms": 0.14249596279114485,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 16.663125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 80.0,
+            "max_first_action_ms": 0.13696198584511876,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "shared-followup",
+        "budget_ms": 80,
+        "stage": "transferred",
+        "methods": {
+          "generic": {
+            "median_s": 15.38,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 171.0,
+            "max_first_action_ms": 0.17720198957249522,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 15.38,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 64.0,
+            "max_first_action_ms": 0.19814498955383897,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 15.38,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 64.0,
+            "max_first_action_ms": 0.1796300057321787,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 15.38,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 80.0,
+            "max_first_action_ms": 0.1957680215127766,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 15.38,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 70.0,
+            "max_first_action_ms": 0.20216201664879918,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "shared-followup",
+        "budget_ms": 80,
+        "stage": "same-site",
+        "methods": {
+          "generic": {
+            "median_s": 13.97375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 171.0,
+            "max_first_action_ms": 0.14587497571483254,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 13.97375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 64.0,
+            "max_first_action_ms": 0.1543280086480081,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 13.97375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 64.0,
+            "max_first_action_ms": 0.13364502228796482,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 13.97375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 82.0,
+            "max_first_action_ms": 0.1334120170213282,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 13.97375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 70.0,
+            "max_first_action_ms": 0.17762300558388233,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "shared-followup",
+        "budget_ms": 80,
+        "stage": "semantics-updated",
+        "methods": {
+          "generic": {
+            "median_s": 13.833125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 171.0,
+            "max_first_action_ms": 0.22448995150625706,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 13.833125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 64.0,
+            "max_first_action_ms": 0.16191398026421666,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 13.833125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 64.0,
+            "max_first_action_ms": 0.1555680064484477,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 13.833125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 82.0,
+            "max_first_action_ms": 0.24348398437723517,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 13.833125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 70.0,
+            "max_first_action_ms": 0.13459299225360155,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "shared-followup",
+        "budget_ms": 80,
+        "stage": "slow-cross-service",
+        "methods": {
+          "generic": {
+            "median_s": 16.663125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 193.0,
+            "max_first_action_ms": 0.1431410200893879,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 16.663125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 68.0,
+            "max_first_action_ms": 0.13896299060434103,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 16.663125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 68.0,
+            "max_first_action_ms": 0.15047402121126652,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 16.663125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 92.0,
+            "max_first_action_ms": 0.14546402962878346,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 16.663125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 80.0,
+            "max_first_action_ms": 0.14210998779162765,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "linked-followups",
+        "budget_ms": 10,
+        "stage": "transferred",
+        "methods": {
+          "generic": {
+            "median_s": 16.96875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 68.0,
+            "max_first_action_ms": 0.17379201017320156,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 16.96875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 64.5,
+            "max_first_action_ms": 0.21486298646777868,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 16.96875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 63.0,
+            "max_first_action_ms": 0.20875397603958845,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 16.96875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 66.5,
+            "max_first_action_ms": 0.17738400492817163,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 16.96875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 67.5,
+            "max_first_action_ms": 0.18632796127349138,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "linked-followups",
+        "budget_ms": 10,
+        "stage": "same-site",
+        "methods": {
+          "generic": {
+            "median_s": 17.540625,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 83.5,
+            "max_first_action_ms": 0.14647102216258645,
+            "max_overrun_ms": 12.237771947402507
+          },
+          "residual": {
+            "median_s": 17.540625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 76.0,
+            "max_first_action_ms": 0.13995799235999584,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 17.540625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 78.0,
+            "max_first_action_ms": 0.1374449930153787,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 17.540625,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 86.0,
+            "max_first_action_ms": 0.1474929740652442,
+            "max_overrun_ms": 5.882518026046455
+          },
+          "strong": {
+            "median_s": 17.540625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 84.5,
+            "max_first_action_ms": 0.15458703273907304,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "linked-followups",
+        "budget_ms": 10,
+        "stage": "semantics-updated",
+        "methods": {
+          "generic": {
+            "median_s": 17.484375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 88.0,
+            "max_first_action_ms": 0.14328601537272334,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 17.484375,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 79.0,
+            "max_first_action_ms": 0.1460330095142126,
+            "max_overrun_ms": 9.554801983758807
+          },
+          "permissions": {
+            "median_s": 17.484375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 79.0,
+            "max_first_action_ms": 0.1359910238534212,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 17.484375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 87.5,
+            "max_first_action_ms": 0.1425200025551021,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 17.484375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 88.0,
+            "max_first_action_ms": 1.670899975579232,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "linked-followups",
+        "budget_ms": 10,
+        "stage": "slow-cross-service",
+        "methods": {
+          "generic": {
+            "median_s": 18.705,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 101.5,
+            "max_first_action_ms": 0.20105199655517936,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 18.705,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 91.0,
+            "max_first_action_ms": 0.13977399794384837,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 18.705,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 92.0,
+            "max_first_action_ms": 0.14510599430650473,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 18.705,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 101.0,
+            "max_first_action_ms": 0.2120229764841497,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 18.705,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 101.0,
+            "max_first_action_ms": 0.14533696230500937,
+            "max_overrun_ms": 14.000483972486109
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "linked-followups",
+        "budget_ms": 30,
+        "stage": "transferred",
+        "methods": {
+          "generic": {
+            "median_s": 16.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 244.0,
+            "max_first_action_ms": 0.17838797066360712,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 16.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 119.0,
+            "max_first_action_ms": 0.18382101552560925,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 16.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 102.5,
+            "max_first_action_ms": 0.30462798895314336,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 16.621875,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 3,
+            "median_legal_cache_entries": 132.0,
+            "max_first_action_ms": 0.23353396682068706,
+            "max_overrun_ms": 0.5180940194986761
+          },
+          "strong": {
+            "median_s": 16.96875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 92.0,
+            "max_first_action_ms": 0.20795001182705164,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "linked-followups",
+        "budget_ms": 30,
+        "stage": "same-site",
+        "methods": {
+          "generic": {
+            "median_s": 14.710625,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 278.0,
+            "max_first_action_ms": 0.14143198495730758,
+            "max_overrun_ms": 5.5774349882267416
+          },
+          "residual": {
+            "median_s": 14.710625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 119.0,
+            "max_first_action_ms": 0.23440702352672815,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 16.125625,
+            "fallback": 2,
+            "timing_miss": 2,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 107.0,
+            "max_first_action_ms": 0.18943200120702386,
+            "max_overrun_ms": 15.993338979315013
+          },
+          "future-values": {
+            "median_s": 14.710625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 3,
+            "median_legal_cache_entries": 132.0,
+            "max_first_action_ms": 0.15561201144009829,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 14.710625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 92.0,
+            "max_first_action_ms": 0.15091901877894998,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "linked-followups",
+        "budget_ms": 30,
+        "stage": "semantics-updated",
+        "methods": {
+          "generic": {
+            "median_s": 14.654375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 293.0,
+            "max_first_action_ms": 0.18120702588930726,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 14.654375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 119.0,
+            "max_first_action_ms": 0.1612009946256876,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 14.654375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 114.0,
+            "max_first_action_ms": 0.14911103062331676,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 14.654375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 132.0,
+            "max_first_action_ms": 0.14473701594397426,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 14.654375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 92.0,
+            "max_first_action_ms": 0.17595704412087798,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "linked-followups",
+        "budget_ms": 30,
+        "stage": "slow-cross-service",
+        "methods": {
+          "generic": {
+            "median_s": 18.705,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 309.5,
+            "max_first_action_ms": 0.14320097398012877,
+            "max_overrun_ms": 1.9190399604849517
+          },
+          "residual": {
+            "median_s": 18.705,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 119.0,
+            "max_first_action_ms": 0.1728879869915545,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 18.705,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 117.0,
+            "max_first_action_ms": 0.17164699966087937,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 18.705,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 137.0,
+            "max_first_action_ms": 0.15731301391497254,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 18.705,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 112.0,
+            "max_first_action_ms": 0.1436480088159442,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "linked-followups",
+        "budget_ms": 80,
+        "stage": "transferred",
+        "methods": {
+          "generic": {
+            "median_s": 16.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 303.0,
+            "max_first_action_ms": 0.20065903663635254,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 16.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 119.0,
+            "max_first_action_ms": 0.17653999384492636,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 16.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 119.0,
+            "max_first_action_ms": 19.854665035381913,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 16.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 132.0,
+            "max_first_action_ms": 0.18965499475598335,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 16.96875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 92.0,
+            "max_first_action_ms": 0.17588899936527014,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "linked-followups",
+        "budget_ms": 80,
+        "stage": "same-site",
+        "methods": {
+          "generic": {
+            "median_s": 14.710625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 303.0,
+            "max_first_action_ms": 0.15972397523000836,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 14.710625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 119.0,
+            "max_first_action_ms": 0.13963395031169057,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 14.710625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 119.0,
+            "max_first_action_ms": 0.14678301522508264,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 14.710625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 132.0,
+            "max_first_action_ms": 0.14153204392641783,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 14.710625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 92.0,
+            "max_first_action_ms": 0.16242702258750796,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "linked-followups",
+        "budget_ms": 80,
+        "stage": "semantics-updated",
+        "methods": {
+          "generic": {
+            "median_s": 14.654375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 303.0,
+            "max_first_action_ms": 0.14966499293223023,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 14.654375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 119.0,
+            "max_first_action_ms": 0.17414300236850977,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 14.654375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 119.0,
+            "max_first_action_ms": 0.16965402755886316,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 14.654375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 132.0,
+            "max_first_action_ms": 0.15143101336434484,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 14.654375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 92.0,
+            "max_first_action_ms": 0.1376260188408196,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 4,
+        "structure": "linked-followups",
+        "budget_ms": 80,
+        "stage": "slow-cross-service",
+        "methods": {
+          "generic": {
+            "median_s": 18.705,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 327.0,
+            "max_first_action_ms": 0.14668697258457541,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 18.705,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 119.0,
+            "max_first_action_ms": 0.16531295841559768,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 18.705,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 119.0,
+            "max_first_action_ms": 0.16436900477856398,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 18.705,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 137.0,
+            "max_first_action_ms": 0.1446399837732315,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 18.705,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 112.0,
+            "max_first_action_ms": 0.1588710001669824,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "shared-followup",
+        "budget_ms": 10,
+        "stage": "transferred",
+        "methods": {
+          "generic": {
+            "median_s": 17.955937499999997,
+            "fallback": 2,
+            "timing_miss": 2,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 31.0,
+            "max_first_action_ms": 0.23218401474878192,
+            "max_overrun_ms": 7.038627993315458
+          },
+          "residual": {
+            "median_s": 17.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 41.0,
+            "max_first_action_ms": 0.2894700155593455,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 17.621875,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 43.0,
+            "max_first_action_ms": 0.280392006970942,
+            "max_overrun_ms": 0.04540699068456888
+          },
+          "future-values": {
+            "median_s": 17.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 41.5,
+            "max_first_action_ms": 0.8711959817446768,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 17.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 45.0,
+            "max_first_action_ms": 0.28289895271882415,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "shared-followup",
+        "budget_ms": 10,
+        "stage": "same-site",
+        "methods": {
+          "generic": {
+            "median_s": 15.55625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 52.5,
+            "max_first_action_ms": 0.17918198136612773,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 15.55625,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 53.5,
+            "max_first_action_ms": 0.2508970210328698,
+            "max_overrun_ms": 0.23613999132066965
+          },
+          "permissions": {
+            "median_s": 15.55625,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 55.5,
+            "max_first_action_ms": 0.18659804482012987,
+            "max_overrun_ms": 0.05148101830855012
+          },
+          "future-values": {
+            "median_s": 16.923125,
+            "fallback": 2,
+            "timing_miss": 2,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 58.5,
+            "max_first_action_ms": 0.1919739879667759,
+            "max_overrun_ms": 0.21962001686915755
+          },
+          "strong": {
+            "median_s": 15.55625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 62.5,
+            "max_first_action_ms": 0.18578895833343267,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "shared-followup",
+        "budget_ms": 10,
+        "stage": "semantics-updated",
+        "methods": {
+          "generic": {
+            "median_s": 15.5421875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 53.0,
+            "max_first_action_ms": 0.21705403923988342,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 15.5421875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 55.0,
+            "max_first_action_ms": 0.19466097000986338,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 15.5421875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 56.5,
+            "max_first_action_ms": 0.18815702060237527,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 15.5421875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 60.5,
+            "max_first_action_ms": 0.17938698874786496,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 15.5421875,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 65.0,
+            "max_first_action_ms": 0.22355100372806191,
+            "max_overrun_ms": 12.528656991198659
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "shared-followup",
+        "budget_ms": 10,
+        "stage": "slow-cross-service",
+        "methods": {
+          "generic": {
+            "median_s": 20.4065625,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 74.5,
+            "max_first_action_ms": 0.18269300926476717,
+            "max_overrun_ms": 5.12181299040094
+          },
+          "residual": {
+            "median_s": 20.4065625,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 71.5,
+            "max_first_action_ms": 0.27782999677583575,
+            "max_overrun_ms": 6.350812977179885
+          },
+          "permissions": {
+            "median_s": 20.4065625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 72.0,
+            "max_first_action_ms": 0.2461430267430842,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 20.4065625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 88.0,
+            "max_first_action_ms": 0.19546400289982557,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 20.4065625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 88.5,
+            "max_first_action_ms": 0.24584197672083974,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "shared-followup",
+        "budget_ms": 30,
+        "stage": "transferred",
+        "methods": {
+          "generic": {
+            "median_s": 17.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 170.5,
+            "max_first_action_ms": 0.5657930159941316,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 17.621875,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 129.0,
+            "max_first_action_ms": 0.26131095364689827,
+            "max_overrun_ms": 9.736844948492944
+          },
+          "permissions": {
+            "median_s": 17.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 133.0,
+            "max_first_action_ms": 0.3602679935283959,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 17.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 182.5,
+            "max_first_action_ms": 0.23399502970278263,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 17.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 172.5,
+            "max_first_action_ms": 0.3656809567473829,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "shared-followup",
+        "budget_ms": 30,
+        "stage": "same-site",
+        "methods": {
+          "generic": {
+            "median_s": 15.55625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 210.5,
+            "max_first_action_ms": 0.20997400861233473,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 15.55625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 144.0,
+            "max_first_action_ms": 0.27773098554462194,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 15.55625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 137.0,
+            "max_first_action_ms": 0.2813519677147269,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 15.55625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 199.5,
+            "max_first_action_ms": 0.44749799417331815,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 15.55625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 187.0,
+            "max_first_action_ms": 0.18815597286447883,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "shared-followup",
+        "budget_ms": 30,
+        "stage": "semantics-updated",
+        "methods": {
+          "generic": {
+            "median_s": 15.5421875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 230.5,
+            "max_first_action_ms": 0.18908799393102527,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 15.5421875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 150.5,
+            "max_first_action_ms": 0.18800405086949468,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 15.5421875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 141.0,
+            "max_first_action_ms": 0.193625979591161,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 15.5421875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 207.0,
+            "max_first_action_ms": 0.21458399714902043,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 15.5421875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 187.0,
+            "max_first_action_ms": 0.18755701603367925,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "shared-followup",
+        "budget_ms": 30,
+        "stage": "slow-cross-service",
+        "methods": {
+          "generic": {
+            "median_s": 20.4065625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 264.5,
+            "max_first_action_ms": 0.2730209962464869,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 20.4065625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 158.0,
+            "max_first_action_ms": 0.18521799938753247,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 20.4065625,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 148.5,
+            "max_first_action_ms": 0.19620900275185704,
+            "max_overrun_ms": 6.81944397976622
+          },
+          "future-values": {
+            "median_s": 20.4065625,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 225.0,
+            "max_first_action_ms": 0.6925010238774121,
+            "max_overrun_ms": 11.704895033035427
+          },
+          "strong": {
+            "median_s": 20.4065625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 203.0,
+            "max_first_action_ms": 0.21505897166207433,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "shared-followup",
+        "budget_ms": 80,
+        "stage": "transferred",
+        "methods": {
+          "generic": {
+            "median_s": 17.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 507.0,
+            "max_first_action_ms": 0.53369504166767,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 17.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 170.0,
+            "max_first_action_ms": 0.2480719704180956,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 17.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 1,
+            "median_legal_cache_entries": 167.5,
+            "max_first_action_ms": 0.4756550188176334,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 17.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 223.0,
+            "max_first_action_ms": 0.24032098008319736,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 17.621875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 187.0,
+            "max_first_action_ms": 0.24498999118804932,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "shared-followup",
+        "budget_ms": 80,
+        "stage": "same-site",
+        "methods": {
+          "generic": {
+            "median_s": 15.55625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 3,
+            "median_legal_cache_entries": 586.0,
+            "max_first_action_ms": 0.1850599655881524,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 15.55625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 170.0,
+            "max_first_action_ms": 0.18414703663438559,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 15.55625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 3,
+            "median_legal_cache_entries": 170.0,
+            "max_first_action_ms": 0.22078200709074736,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 15.55625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 226.0,
+            "max_first_action_ms": 0.18695899052545428,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 15.55625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 187.0,
+            "max_first_action_ms": 0.2126920153386891,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "shared-followup",
+        "budget_ms": 80,
+        "stage": "semantics-updated",
+        "methods": {
+          "generic": {
+            "median_s": 15.5421875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 3,
+            "median_legal_cache_entries": 586.0,
+            "max_first_action_ms": 0.22056896705180407,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 15.5421875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 170.0,
+            "max_first_action_ms": 0.23143499856814742,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 15.5421875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 3,
+            "median_legal_cache_entries": 170.0,
+            "max_first_action_ms": 0.20974501967430115,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 15.5421875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 226.0,
+            "max_first_action_ms": 0.30459900153800845,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 15.5421875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 187.0,
+            "max_first_action_ms": 0.2160239964723587,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "shared-followup",
+        "budget_ms": 80,
+        "stage": "slow-cross-service",
+        "methods": {
+          "generic": {
+            "median_s": 20.4065625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 687.0,
+            "max_first_action_ms": 0.2998730051331222,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 20.4065625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 176.0,
+            "max_first_action_ms": 0.1928890123963356,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 20.4065625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 1,
+            "median_legal_cache_entries": 176.0,
+            "max_first_action_ms": 0.2889600000344217,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 20.4065625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 4,
+            "median_legal_cache_entries": 250.0,
+            "max_first_action_ms": 0.199312053155154,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 20.4065625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 203.0,
+            "max_first_action_ms": 0.20587595645338297,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "linked-followups",
+        "budget_ms": 10,
+        "stage": "transferred",
+        "methods": {
+          "generic": {
+            "median_s": 20.578125,
+            "fallback": 3,
+            "timing_miss": 3,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 47.5,
+            "max_first_action_ms": 0.34542701905593276,
+            "max_overrun_ms": 10.93937696190551
+          },
+          "residual": {
+            "median_s": 19.8290625,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 45.0,
+            "max_first_action_ms": 0.6576209561899304,
+            "max_overrun_ms": 0.031109966803342104
+          },
+          "permissions": {
+            "median_s": 19.8290625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 46.0,
+            "max_first_action_ms": 0.4602550179697573,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 19.8290625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 46.5,
+            "max_first_action_ms": 0.3982390044257045,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 19.8290625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 48.5,
+            "max_first_action_ms": 0.2593480166979134,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "linked-followups",
+        "budget_ms": 10,
+        "stage": "same-site",
+        "methods": {
+          "generic": {
+            "median_s": 20.578125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 60.0,
+            "max_first_action_ms": 0.19019097089767456,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 20.578125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 60.0,
+            "max_first_action_ms": 0.25897700106725097,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 20.578125,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 58.5,
+            "max_first_action_ms": 0.319102022331208,
+            "max_overrun_ms": 15.080096034798771
+          },
+          "future-values": {
+            "median_s": 20.578125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 62.5,
+            "max_first_action_ms": 0.18231099238619208,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 20.578125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 63.5,
+            "max_first_action_ms": 0.2844430273398757,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "linked-followups",
+        "budget_ms": 10,
+        "stage": "semantics-updated",
+        "methods": {
+          "generic": {
+            "median_s": 20.465625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 65.0,
+            "max_first_action_ms": 0.18701597582548857,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 20.465625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 63.0,
+            "max_first_action_ms": 0.2872449695132673,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 20.465625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 64.5,
+            "max_first_action_ms": 0.18990697572007775,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 20.465625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 64.5,
+            "max_first_action_ms": 0.19459699979051948,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 20.465625,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 66.5,
+            "max_first_action_ms": 0.19016402075067163,
+            "max_overrun_ms": 0.1749940076842904
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "linked-followups",
+        "budget_ms": 10,
+        "stage": "slow-cross-service",
+        "methods": {
+          "generic": {
+            "median_s": 22.31625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 107.0,
+            "max_first_action_ms": 0.20776299061253667,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 22.31625,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 90.5,
+            "max_first_action_ms": 0.20144099835306406,
+            "max_overrun_ms": 8.590888008475304
+          },
+          "permissions": {
+            "median_s": 22.31625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 93.5,
+            "max_first_action_ms": 0.20700902678072453,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 22.31625,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 106.5,
+            "max_first_action_ms": 0.2373700262978673,
+            "max_overrun_ms": 0.006239055655896664
+          },
+          "strong": {
+            "median_s": 22.31625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 108.5,
+            "max_first_action_ms": 0.19880698528140783,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "linked-followups",
+        "budget_ms": 30,
+        "stage": "transferred",
+        "methods": {
+          "generic": {
+            "median_s": 19.8290625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 183.5,
+            "max_first_action_ms": 0.23122102720662951,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 19.8290625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 163.0,
+            "max_first_action_ms": 0.2904110006056726,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 19.8290625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 164.5,
+            "max_first_action_ms": 0.23271399550139904,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 19.8290625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 182.5,
+            "max_first_action_ms": 0.2753220032900572,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 19.8290625,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 175.5,
+            "max_first_action_ms": 0.22851000539958477,
+            "max_overrun_ms": 8.690779998432845
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "linked-followups",
+        "budget_ms": 30,
+        "stage": "same-site",
+        "methods": {
+          "generic": {
+            "median_s": 19.509999999999998,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 189.5,
+            "max_first_action_ms": 0.17848500283434987,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 19.509999999999998,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 199.0,
+            "max_first_action_ms": 0.1911200233735144,
+            "max_overrun_ms": 10.664347994606942
+          },
+          "permissions": {
+            "median_s": 19.509999999999998,
+            "fallback": 2,
+            "timing_miss": 2,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 195.0,
+            "max_first_action_ms": 0.19705196609720588,
+            "max_overrun_ms": 6.484065989498049
+          },
+          "future-values": {
+            "median_s": 18.441875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 227.0,
+            "max_first_action_ms": 0.43795001693069935,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 18.441875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 227.0,
+            "max_first_action_ms": 0.19275699742138386,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "linked-followups",
+        "budget_ms": 30,
+        "stage": "semantics-updated",
+        "methods": {
+          "generic": {
+            "median_s": 18.291875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 227.0,
+            "max_first_action_ms": 0.2051849733106792,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 18.291875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 199.0,
+            "max_first_action_ms": 0.1982800313271582,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 18.291875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 199.0,
+            "max_first_action_ms": 0.1876350142993033,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 19.37875,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 227.0,
+            "max_first_action_ms": 0.18405495211482048,
+            "max_overrun_ms": 9.732433040626347
+          },
+          "strong": {
+            "median_s": 18.291875,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 227.0,
+            "max_first_action_ms": 0.18851400818675756,
+            "max_overrun_ms": 11.951690975110978
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "linked-followups",
+        "budget_ms": 30,
+        "stage": "slow-cross-service",
+        "methods": {
+          "generic": {
+            "median_s": 22.31625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 246.0,
+            "max_first_action_ms": 0.188132980838418,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 22.31625,
+            "fallback": 2,
+            "timing_miss": 2,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 219.5,
+            "max_first_action_ms": 0.18734397599473596,
+            "max_overrun_ms": 10.156828006729484
+          },
+          "permissions": {
+            "median_s": 22.31625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 220.0,
+            "max_first_action_ms": 0.20026502897962928,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 22.31625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 253.0,
+            "max_first_action_ms": 0.19124295795336366,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 22.31625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 244.5,
+            "max_first_action_ms": 0.1824360224418342,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "linked-followups",
+        "budget_ms": 80,
+        "stage": "transferred",
+        "methods": {
+          "generic": {
+            "median_s": 20.20359375,
+            "fallback": 2,
+            "timing_miss": 2,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 498.5,
+            "max_first_action_ms": 0.26486098067834973,
+            "max_overrun_ms": 11.404625971335918
+          },
+          "residual": {
+            "median_s": 18.4815625,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 260.5,
+            "max_first_action_ms": 0.2681110054254532,
+            "max_overrun_ms": 2.461968995630741
+          },
+          "permissions": {
+            "median_s": 19.8290625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 226.0,
+            "max_first_action_ms": 0.24399301037192345,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 18.4815625,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 343.0,
+            "max_first_action_ms": 0.23755396250635386,
+            "max_overrun_ms": 2.3859759839251637
+          },
+          "strong": {
+            "median_s": 19.8290625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 242.0,
+            "max_first_action_ms": 0.24633400607854128,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "linked-followups",
+        "budget_ms": 80,
+        "stage": "same-site",
+        "methods": {
+          "generic": {
+            "median_s": 18.441875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 690.5,
+            "max_first_action_ms": 0.20159600535407662,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 18.2684375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 2,
+            "median_legal_cache_entries": 299.0,
+            "max_first_action_ms": 0.1946109696291387,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 18.441875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 226.0,
+            "max_first_action_ms": 0.19718398107215762,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 18.2684375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 3,
+            "median_legal_cache_entries": 360.0,
+            "max_first_action_ms": 0.20160299027338624,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 18.441875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 242.0,
+            "max_first_action_ms": 0.18784397980198264,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "linked-followups",
+        "budget_ms": 80,
+        "stage": "semantics-updated",
+        "methods": {
+          "generic": {
+            "median_s": 19.37875,
+            "fallback": 2,
+            "timing_miss": 2,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 690.5,
+            "max_first_action_ms": 0.19858096493408084,
+            "max_overrun_ms": 5.712601023260504
+          },
+          "residual": {
+            "median_s": 18.1278125,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 3,
+            "median_legal_cache_entries": 299.0,
+            "max_first_action_ms": 0.2201839815825224,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 18.291875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 231.5,
+            "max_first_action_ms": 0.2035429934039712,
+            "max_overrun_ms": 0
+          },
+          "future-values": {
+            "median_s": 18.20984375,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 2,
+            "median_legal_cache_entries": 360.0,
+            "max_first_action_ms": 0.20860601216554642,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 18.291875,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 242.0,
+            "max_first_action_ms": 0.20322995260357857,
+            "max_overrun_ms": 0
+          }
+        }
+      },
+      {
+        "roots": 5,
+        "structure": "linked-followups",
+        "budget_ms": 80,
+        "stage": "slow-cross-service",
+        "methods": {
+          "generic": {
+            "median_s": 22.31625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 796.5,
+            "max_first_action_ms": 0.19244302529841661,
+            "max_overrun_ms": 0
+          },
+          "residual": {
+            "median_s": 22.31625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 1,
+            "median_legal_cache_entries": 305.0,
+            "max_first_action_ms": 0.22868899395689368,
+            "max_overrun_ms": 0
+          },
+          "permissions": {
+            "median_s": 22.31625,
+            "fallback": 1,
+            "timing_miss": 1,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 244.5,
+            "max_first_action_ms": 0.19300199346616864,
+            "max_overrun_ms": 6.343934002798051
+          },
+          "future-values": {
+            "median_s": 22.31625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 2,
+            "median_legal_cache_entries": 374.0,
+            "max_first_action_ms": 0.2172730164602399,
+            "max_overrun_ms": 0
+          },
+          "strong": {
+            "median_s": 22.31625,
+            "fallback": 0,
+            "timing_miss": 0,
+            "missing_action": 0,
+            "proofs": 0,
+            "median_legal_cache_entries": 268.0,
+            "max_first_action_ms": 0.22366695338860154,
+            "max_overrun_ms": 0
+          }
+        }
+      }
+    ]
+  },
+  "three_question_order_switch": {
+    "rows": [
+      {
+        "prior": 0,
+        "turn_s": 2.88,
+        "cross_s": null,
+        "ask_first_s": 7.56,
+        "collect_merge_s": null,
+        "joint_s": 7.56,
+        "first": {
+          "motion": [
+            1,
+            false
+          ],
+          "reads": [
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "strong_s": 7.56
+      },
+      {
+        "prior": 0.5,
+        "turn_s": 2.88,
+        "cross_s": null,
+        "ask_first_s": 8.985,
+        "collect_merge_s": null,
+        "joint_s": 8.985,
+        "first": {
+          "motion": [
+            1,
+            false
+          ],
+          "reads": [
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "strong_s": 8.985
+      },
+      {
+        "prior": 1,
+        "turn_s": 2.88,
+        "cross_s": null,
+        "ask_first_s": 10.41,
+        "collect_merge_s": null,
+        "joint_s": 10.41,
+        "first": {
+          "motion": [
+            1,
+            false
+          ],
+          "reads": [
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "strong_s": 10.41
+      },
+      {
+        "prior": 0,
+        "turn_s": 2.88,
+        "cross_s": 5.09,
+        "ask_first_s": 7.56,
+        "collect_merge_s": 7.97,
+        "joint_s": 7.56,
+        "first": {
+          "motion": [
+            1,
+            false
+          ],
+          "reads": [
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "strong_s": 7.56
+      },
+      {
+        "prior": 0.5,
+        "turn_s": 2.88,
+        "cross_s": 5.09,
+        "ask_first_s": 8.985,
+        "collect_merge_s": 9.86,
+        "joint_s": 8.985,
+        "first": {
+          "motion": [
+            1,
+            false
+          ],
+          "reads": [
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "strong_s": 8.985
+      },
+      {
+        "prior": 1,
+        "turn_s": 2.88,
+        "cross_s": 5.09,
+        "ask_first_s": 10.41,
+        "collect_merge_s": 11.75,
+        "joint_s": 10.41,
+        "first": {
+          "motion": [
+            1,
+            false
+          ],
+          "reads": [
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "strong_s": 10.41
+      },
+      {
+        "prior": 0,
+        "turn_s": 2.88,
+        "cross_s": 101.4,
+        "ask_first_s": 7.56,
+        "collect_merge_s": 104.28,
+        "joint_s": 7.56,
+        "first": {
+          "motion": [
+            1,
+            false
+          ],
+          "reads": [
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "strong_s": 7.56
+      },
+      {
+        "prior": 0.5,
+        "turn_s": 2.88,
+        "cross_s": 101.4,
+        "ask_first_s": 8.985,
+        "collect_merge_s": 106.17,
+        "joint_s": 8.985,
+        "first": {
+          "motion": [
+            1,
+            false
+          ],
+          "reads": [
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "strong_s": 8.985
+      },
+      {
+        "prior": 1,
+        "turn_s": 2.88,
+        "cross_s": 101.4,
+        "ask_first_s": 10.41,
+        "collect_merge_s": 108.06,
+        "joint_s": 10.41,
+        "first": {
+          "motion": [
+            1,
+            false
+          ],
+          "reads": [
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "strong_s": 10.41
+      },
+      {
+        "prior": 0,
+        "turn_s": 0.24,
+        "cross_s": null,
+        "ask_first_s": 7.56,
+        "collect_merge_s": null,
+        "joint_s": 7.56,
+        "first": {
+          "motion": [
+            1,
+            false
+          ],
+          "reads": [
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "strong_s": 7.56
+      },
+      {
+        "prior": 0.5,
+        "turn_s": 0.24,
+        "cross_s": null,
+        "ask_first_s": 8.985,
+        "collect_merge_s": null,
+        "joint_s": 8.985,
+        "first": {
+          "motion": [
+            1,
+            false
+          ],
+          "reads": [
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "strong_s": 8.985
+      },
+      {
+        "prior": 1,
+        "turn_s": 0.24,
+        "cross_s": null,
+        "ask_first_s": 10.41,
+        "collect_merge_s": null,
+        "joint_s": 10.41,
+        "first": {
+          "motion": [
+            1,
+            false
+          ],
+          "reads": [
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "strong_s": 10.41
+      },
+      {
+        "prior": 0,
+        "turn_s": 0.24,
+        "cross_s": 5.09,
+        "ask_first_s": 7.56,
+        "collect_merge_s": 5.33,
+        "joint_s": 5.33,
+        "first": {
+          "motion": [
+            1,
+            true
+          ],
+          "reads": []
+        },
+        "strong_s": 5.33
+      },
+      {
+        "prior": 0.5,
+        "turn_s": 0.24,
+        "cross_s": 5.09,
+        "ask_first_s": 8.985,
+        "collect_merge_s": 7.22,
+        "joint_s": 7.22,
+        "first": {
+          "motion": [
+            1,
+            true
+          ],
+          "reads": []
+        },
+        "strong_s": 7.22
+      },
+      {
+        "prior": 1,
+        "turn_s": 0.24,
+        "cross_s": 5.09,
+        "ask_first_s": 10.41,
+        "collect_merge_s": 9.11,
+        "joint_s": 9.11,
+        "first": {
+          "motion": [
+            1,
+            true
+          ],
+          "reads": []
+        },
+        "strong_s": 9.11
+      },
+      {
+        "prior": 0,
+        "turn_s": 0.24,
+        "cross_s": 101.4,
+        "ask_first_s": 7.56,
+        "collect_merge_s": 101.64,
+        "joint_s": 7.56,
+        "first": {
+          "motion": [
+            1,
+            false
+          ],
+          "reads": [
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "strong_s": 7.56
+      },
+      {
+        "prior": 0.5,
+        "turn_s": 0.24,
+        "cross_s": 101.4,
+        "ask_first_s": 8.985,
+        "collect_merge_s": 103.53,
+        "joint_s": 8.985,
+        "first": {
+          "motion": [
+            1,
+            false
+          ],
+          "reads": [
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "strong_s": 8.985
+      },
+      {
+        "prior": 1,
+        "turn_s": 0.24,
+        "cross_s": 101.4,
+        "ask_first_s": 10.41,
+        "collect_merge_s": 105.42,
+        "joint_s": 10.41,
+        "first": {
+          "motion": [
+            1,
+            false
+          ],
+          "reads": [
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "strong_s": 10.41
+      }
+    ],
+    "count": 18,
+    "new_model_requests": 0,
+    "cost_switches_at_half_prior": [
+      {
+        "prior": 0.5,
+        "turn_s": 2.88,
+        "cross_s": 5.09,
+        "ask_first_s": 8.985,
+        "collect_merge_s": 9.86,
+        "joint_s": 8.985,
+        "first": {
+          "motion": [
+            1,
+            false
+          ],
+          "reads": [
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "strong_s": 8.985
+      },
+      {
+        "prior": 0.5,
+        "turn_s": 0.24,
+        "cross_s": 5.09,
+        "ask_first_s": 8.985,
+        "collect_merge_s": 7.22,
+        "joint_s": 7.22,
+        "first": {
+          "motion": [
+            1,
+            true
+          ],
+          "reads": []
+        },
+        "strong_s": 7.22
+      }
+    ],
+    "status": "development sensitivity, the expensive service profile is an observed sensitivity and not a predicted outcome"
+  },
   "fixed_transport_critical_path": {
     "scored": 16,
     "paired_strict_device_tasks": [

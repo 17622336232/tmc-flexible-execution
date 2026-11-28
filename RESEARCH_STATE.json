@@ -3,7 +3,7 @@
   "stage": "causal timing, cross-camera batch calibration and native task discovery",
   "resumed_remote": "94bd1e78953164dce48ec38c8cc15dbd010f2e56",
   "resumed_local": "90f390c8ee332c866f4204dee628d447f8ddab2c",
-  "as_of_utc": "2026-11-28T17:15:34+00:00",
+  "as_of_utc": "2026-11-28T17:34:53+00:00",
   "method_version": {
     "native-views-dev01": "2e8e26cb8f0099bb68d02e5aa1c1e9569423706ec413227f9d9aa7714ffcef2b",
     "native-evidence-dev02": "6c5dab53a9faf9d2de88df4c2d988619c066176423a1223341f30e75b84c2577",
@@ -46,7 +46,7 @@
   "pending_workers": [],
   "account_remaining_requests": null,
   "hardware_motion_authorized": false,
-  "current_hypothesis": "为实际闭环准备一项新的无编号自然任务。以独立来源、实际返回的字段和测得的动作代价为输入，先检查现有证据能否让跨图合问在合理的服务波动下少一轮串行请求。原版、共用优化串行和强预取同时获得相同的材料许可、时钟和合问能力。",
+  "current_hypothesis": "用仓库封存的真实首轮判断，放行实际侧面照片里的两项已开放问题。先复核登记，只使用一轮原版模型回复并独立验收来源和许可。该检查用于验证从用户自然语言到真实后续请求的连接。三问顺序切换的整项匹配仍须保留通用和强预取，不使用正式数据。",
   "validated": [
     "93 prior sends attributed to six roles",
     "with original requests fixed the nonrequest ceiling is 10.50% on cracks and 5.14% on inventory",
@@ -55,7 +55,7 @@
   "rejected": [
     "fixed conservative OCR has zero detections on 64 sampled historical image/ROI questions; 31 had independently assigned target identity"
   ],
-  "next": "为实际闭环准备一项新的无编号自然任务。以独立来源、实际返回的字段和测得的动作代价为输入，先检查现有证据能否让跨图合问在合理的服务波动下少一轮串行请求。原版、共用优化串行和强预取同时获得相同的材料许可、时钟和合问能力。",
+  "next": "用仓库封存的真实首轮判断，放行实际侧面照片里的两项已开放问题。先复核登记，只使用一轮原版模型回复并独立验收来源和许可。该检查用于验证从用户自然语言到真实后续请求的连接。三问顺序切换的整项匹配仍须保留通用和强预取，不使用正式数据。",
   "phase": "causal timing, cross-camera batch calibration and native task discovery",
   "paired_rgb_assay": {
     "sends": 18,
@@ -81,7 +81,8 @@
     "matched_room_tasks": 9,
     "ordinary_section_first_decisions": 4,
     "cross_source_calibration": 6,
-    "natural_ordinary_gate": 2
+    "natural_ordinary_gate": 2,
+    "natural_bound_followup": 0
   },
   "closed_external_attempts": [
     {
@@ -2500,6 +2501,89 @@
       "worse_than_strong": 0,
       "worst_overrun_ms": 18.39360498590395,
       "no_model_requests": true
+    },
+    "corrected_budget": {
+      "cells": 48,
+      "trials": 960,
+      "comparison_to_generic": {
+        "residual": {
+          "better": 5,
+          "tied": 43,
+          "worse": 0,
+          "maximum_gain_s": 1.7220312500000006
+        },
+        "permissions": {
+          "better": 4,
+          "tied": 43,
+          "worse": 1,
+          "maximum_gain_s": 1.0868749999999991
+        },
+        "future-values": {
+          "better": 6,
+          "tied": 40,
+          "worse": 2,
+          "maximum_gain_s": 1.7220312500000006
+        },
+        "strong": {
+          "better": 5,
+          "tied": 41,
+          "worse": 2,
+          "maximum_gain_s": 1.0868749999999991
+        }
+      },
+      "total_timing_miss": 52,
+      "missed_first_action": 0,
+      "max_first_action_ms": 19.854665035381913,
+      "max_overrun_ms": 15.993338979315013,
+      "new_model_requests": 0
+    },
+    "three_question_switch": {
+      "count": 18,
+      "new_model_requests": 0,
+      "cost_switches_at_half_prior": [
+        {
+          "prior": 0.5,
+          "turn_s": 2.88,
+          "cross_s": 5.09,
+          "ask_first_s": 8.985,
+          "collect_merge_s": 9.86,
+          "joint_s": 8.985,
+          "first": {
+            "motion": [
+              1,
+              false
+            ],
+            "reads": [
+              [
+                0,
+                1
+              ]
+            ]
+          },
+          "strong_s": 8.985
+        },
+        {
+          "prior": 0.5,
+          "turn_s": 0.24,
+          "cross_s": 5.09,
+          "ask_first_s": 8.985,
+          "collect_merge_s": 7.22,
+          "joint_s": 7.22,
+          "first": {
+            "motion": [
+              1,
+              true
+            ],
+            "reads": []
+          },
+          "strong_s": 7.22
+        }
+      ],
+      "status": "development sensitivity, the expensive service profile is an observed sensitivity and not a predicted outcome"
+    },
+    "native_fixed_followup": {
+      "registered": true,
+      "result": {}
     }
   }
 }

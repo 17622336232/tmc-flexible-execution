@@ -9,19 +9,23 @@ class SearchDeadline(Exception):
     pass
 
 
-def limited_replan(planner, initial, milliseconds, *, prefetch_only=False):
+def limited_replan(planner, initial, milliseconds, *, prefetch_only=False, absolute_deadline=None):
     """Stop selection at a wall-clock budget and preserve the best complete evaluated policy."""
     model = planner.model
     candidate = None
     source = "common-collect"
     certificate = False
     began = perf_counter()
+    if model.complete(initial):
+        return (0.,None),"complete",True,(perf_counter()-began)*1000
 
     def timeout(*_):
         raise SearchDeadline()
 
     def improve(value, action, label):
         nonlocal candidate, source
+        if absolute_deadline is not None and perf_counter()>=absolute_deadline:
+            return
         if candidate is None or (round(value,8),order(action)) < (round(candidate[0],8),order(candidate[1])):
             candidate, source = (value,action), label
 
@@ -29,7 +33,10 @@ def limited_replan(planner, initial, milliseconds, *, prefetch_only=False):
     old = signal.signal(signal.SIGALRM,timeout)
     values = {}
     try:
-        signal.setitimer(signal.ITIMER_REAL,milliseconds/1000.)
+        remaining = milliseconds/1000. if absolute_deadline is None else absolute_deadline-perf_counter()
+        if remaining<=0:
+            raise SearchDeadline()
+        signal.setitimer(signal.ITIMER_REAL,remaining)
         for style in ("collect","prepare","cost"):
             improve(planner.roll(initial,style),planner.greedy(initial,style),"rollout")
 
@@ -63,7 +70,7 @@ def limited_replan(planner, initial, milliseconds, *, prefetch_only=False):
                 if lower>=candidate[0]-1e-8:
                     break
                 improve(elapsed+sum(prob*exact(child) for prob,child in branches),action,"complete-recourse")
-            certificate = True
+            certificate = absolute_deadline is None or perf_counter()<absolute_deadline
     except SearchDeadline:
         pass
     finally:

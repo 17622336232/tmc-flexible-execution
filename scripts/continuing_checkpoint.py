@@ -137,6 +137,10 @@ def main():
     natural_probe=optional("native-natural-frontier-dev01/summary.json")
     permission_cache=optional("online-cost-dev01/permission-cache/summary.json")
     permission_wall=optional("online-cost-dev01/permission-cache/wall/summary.json")
+    corrected_budget=optional("online-cost-dev01/permission-cache/budget-v2-guarded/summary.json")
+    switch_witness=optional("online-cost-dev01/switch-witness/summary.json")
+    native_followup=optional("native-natural-followup-dev01/summary.json")
+    followup_registered=(local/"native-natural-followup-dev01/registration.json").is_file()
     section_ledger=local/"native-section-dev01/sends.jsonl"
     section_sends=len(section_ledger.read_bytes().splitlines()) if section_ledger.is_file() else 0
     ordinary_workers=[]
@@ -145,6 +149,7 @@ def main():
         b"continuing_native_acquisition_clocks.py":(b"run",b"worker"),
         b"continuing_cross_source_assay.py":(b"run",),
         b"continuing_natural_frontier_probe.py":(b"run",),
+        b"continuing_native_bound_followup.py":(b"run",),
     }
     for proc in Path("/proc").glob("[0-9]*/cmdline"):
         try:
@@ -246,14 +251,28 @@ def main():
         accepted=sum(r["ready_for_new_closed_loop"] for r in natural_probe["rows"])
         status+=f"无编号任务用原版提示实发 {natural_probe['closed']}/2 次，{accepted}/2 达到预先登记的接入条件。"
     if permission_wall:
-        status+=(f"新跨图事件模型完成 {permission_wall['trials']} 次等墙钟规划，"
-                 f"合并版对通用规划更快的可行任务方案出现在 {permission_wall['residual_better']}/{permission_wall['cells']} 组。")
+        status+=(f"初版跨图事件模型完成 {permission_wall['trials']} 次名义等时预算规划，"
+                 f"合并版对通用规划更低的可行成本出现在 {permission_wall['residual_better']}/{permission_wall['cells']} 组。")
+    if corrected_budget:
+        n=corrected_budget["comparison_to_generic"]["residual"]
+        status+=(f"按实际合问代价重测 {corrected_budget['trials']} 次，"
+                 f"合并版 {n['better']} 组低于通用规划，{n['tied']} 组持平，{n['worse']} 组更高。"
+                 f"搜索晚于预算 {corrected_budget['total_timing_miss']} 次，按预选动作计分。")
+    if switch_witness:
+        status+=f"真实时钟驱动的三问换序记录 {switch_witness['count']} 个离线条件。"
+    if followup_registered and not native_followup:
+        status+="一次仓库侧面后续判断已登记，当前无发送收据。"
     if ordinary_workers:
         status+="当前首轮答复或动作测量进程 "+", ".join(str(w["pid"]) for w in ordinary_workers)+"。"
     if unavailable:
         next_step="等待现有 Diff-VLA 套餐显示可用，再从未发送且已登记的位置恢复。"
     elif workers:
         next_step="跟踪正在进行的 "+workers[0]["cohort"]+" 批次，逐一保留原始收据并复核完整评分。"
+    elif followup_registered and not native_followup:
+        next_step=("用仓库封存的真实首轮判断，放行实际侧面照片里的两项已开放问题。"
+                   "先复核登记，只使用一轮原版模型回复并独立验收来源和许可。"
+                   "该检查用于验证从用户自然语言到真实后续请求的连接。"
+                   "三问顺序切换的整项匹配仍须保留通用和强预取，不使用正式数据。")
     elif natural_probe and cost_replay:
         next_step=("为实际闭环准备一项新的无编号自然任务。以独立来源、实际返回的字段和测得的动作代价为输入，"
                    "先检查现有证据能否让跨图合问在合理的服务波动下少一轮串行请求。"
@@ -319,7 +338,10 @@ def main():
         adaptive_cost_development=dict(clock=clock_audit,cross_source_calibration=cross_source,
             native_natural=natural_probe,cost_scenarios=cost_replay.get("comparisons",0),
             node_budget={k:v for k,v in permission_cache.items() if k!="rows"},
-            wall_budget={k:v for k,v in permission_wall.items() if k!="comparisons"}),
+            wall_budget={k:v for k,v in permission_wall.items() if k!="comparisons"},
+            corrected_budget={k:v for k,v in corrected_budget.items() if k!="details"},
+            three_question_switch={k:v for k,v in switch_witness.items() if k!="rows"},
+            native_fixed_followup=dict(registered=followup_registered,result=native_followup)),
         first_decision_study=dict(registered=fv_slots,sends=fv_sends,sealed=fv_sealed,pids=fv_pids,
           sealed_file_sha256=digest(first_view/"sealed_replies.json") if fv_sealed else None,receipts=fv_rows,
           replay_entry_present=Path("scripts/continuing_first_view_replay.py").is_file(),replay=fv_replay),
@@ -335,7 +357,8 @@ def main():
           matched_room_cost_calibration=room_cal.get("actual_sends",0),matched_room_tasks=room_sends,
           ordinary_section_first_decisions=section_sends,
           cross_source_calibration=cross_source.get("actual_sends",0),
-          natural_ordinary_gate=natural_probe.get("closed",0)),
+          natural_ordinary_gate=natural_probe.get("closed",0),
+          natural_bound_followup=native_followup.get("actual_sends",0)),
         next=next_step)
     save(Path("RESEARCH_STATE.json"),doc)
     tally="；".join(f"{k} 主对照 {v['primary']}/{planned_counts[k]['primary']}、强对照 {v['comparators']}/{planned_counts[k]['comparators']}" for k,v in cohorts.items())
@@ -367,6 +390,8 @@ def main():
         recovery+="可用 `python scripts/continuing_native_action_binding.py grade` 核验四份封存答复，用 `python scripts/continuing_native_acquisition_clocks.py summary` 核对两条实测记录。两条命令均为零新增模型请求。"
     if cost_replay:
         recovery+="签出当前版本后运行 `python scripts/continuing_room_clock_replay.py`、`python scripts/continuing_online_cost_replay.py`。使用 `python scripts/continuing_cross_source_assay.py grade` 和 `python scripts/continuing_natural_frontier_probe.py grade` 复核真实回复。这四个命令均不发送请求。"
+    if switch_witness:
+        recovery+="用 `python scripts/continuing_switch_witness.py` 核对三问换序。用 `python scripts/continuing_native_bound_followup.py register` 核对仓库真实来源与两项许可，这两条也不发送请求。"
     upsert(Path("NEXT_ACTION.md"),"## 最近一次恢复位置",stat+"\n\n"+next_step+"\n\n"+recovery)
     manuscript=Path("docs/DEVELOPMENT_EVIDENCE_CN.md")
     if manuscript.exists():
